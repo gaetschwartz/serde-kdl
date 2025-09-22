@@ -1,0 +1,26 @@
+[package]
+name = "serde-kdl"
+version = "0.1.0"
+edition = "2021"
+description = "Serde serialization and deserialization for KDL (Kindly Document Language)"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/kdl-org/serde-kdl"
+documentation = "https://docs.rs/serde-kdl"
+keywords = ["kdl", "serde", "serialization", "config", "parser"]
+categories = ["encoding", "parser-implementations", "config"]
+authors = ["KDL Community"]
+
+[features]
+default = ["bytes"]
+bytes = []
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+kdl = "4.7"
+thiserror = "1.0"
+
+[dev-dependencies]
+serde_derive = "1.0"
+serde_json = "1.0"
+rstest = "0.18"
+rand = "0.8"
