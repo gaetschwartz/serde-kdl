@@ -3,7 +3,26 @@ use proc_macro2::TokenStream as TokenStream2;
 use syn::Result;
 
 pub(crate) fn kdl_impl2(input: TokenStream2) -> Result<TokenStream2> {
-    crate::kdl_impl(TokenStream::from(input))
+    // Preprocess input to handle line continuations
+    let processed_input = preprocess_line_continuations_proc_macro2(input)?;
+    let document = syn::parse2::<crate::KdlDocument>(processed_input)?;
+
+    crate::generate_kdl_code(&document)
+}
+
+/// Preprocesses the input TokenStream2 to handle KDL line continuations for testing.
+fn preprocess_line_continuations_proc_macro2(input: TokenStream2) -> Result<TokenStream2> {
+    let input_str = input.to_string();
+    let processed_str = crate::process_line_continuation_string(&input_str)?;
+
+    // Parse the processed string back into a TokenStream2
+    match processed_str.parse() {
+        Ok(tokens) => Ok(tokens),
+        Err(e) => Err(syn::Error::new(
+            proc_macro2::Span::call_site(),
+            format!("Failed to parse processed KDL: {}", e),
+        )),
+    }
 }
 
 #[cfg(test)]
