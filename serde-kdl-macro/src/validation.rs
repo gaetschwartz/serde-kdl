@@ -78,10 +78,6 @@ pub(crate) fn validate_type_annotation(type_annotation: &str, value: &KdlValue) 
 // Identifier String Validation (Section 3.10)
 // =============================================================================
 
-/// Validates an identifier string according to Section 3.10
-pub(crate) fn validate_identifier_string(identifier: &str, span: proc_macro2::Span) -> Result<()> {
-    validate_identifier_string_with_context(identifier, span, true)
-}
 
 /// Validates an identifier string with context about whether keywords should be rejected
 pub(crate) fn validate_identifier_string_with_context(identifier: &str, span: proc_macro2::Span, reject_keywords: bool) -> Result<()> {
@@ -304,17 +300,17 @@ pub(crate) fn is_disallowed_code_point(ch: char) -> bool {
     // U+0000-0008 control characters
     (code_point <= 0x0008) ||
     // U+000E-001F control characters
-    (code_point >= 0x000E && code_point <= 0x001F) ||
+    (0x000E..=0x001F).contains(&code_point) ||
     // U+007F Delete control character
     (code_point == 0x007F) ||
     // U+D800-DFFF Non-Unicode Scalar Values
-    (code_point >= 0xD800 && code_point <= 0xDFFF) ||
+    (0xD800..=0xDFFF).contains(&code_point) ||
     // U+200E-200F direction control
-    (code_point >= 0x200E && code_point <= 0x200F) ||
+    (0x200E..=0x200F).contains(&code_point) ||
     // U+202A-202E direction control
-    (code_point >= 0x202A && code_point <= 0x202E) ||
+    (0x202A..=0x202E).contains(&code_point) ||
     // U+2066-2069 direction control
-    (code_point >= 0x2066 && code_point <= 0x2069) ||
+    (0x2066..=0x2069).contains(&code_point) ||
     // U+FEFF BOM (except at document start, but we don't handle that exception here)
     (code_point == 0xFEFF)
 }

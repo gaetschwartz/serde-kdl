@@ -38,7 +38,7 @@ fn test_deserialize_simple_struct() {
 
     assert_eq!(config.name, "my-app");
     assert_eq!(config.version, "1.0.0");
-    assert_eq!(config.debug, true);
+    assert!(config.debug);
     assert_eq!(config.port, 8080);
 }
 
@@ -63,15 +63,15 @@ fn test_serialize_primitive_types() {
     assert_eq!(to_string(&42i32).unwrap(), "root 42\n");
     assert_eq!(to_string(&true).unwrap(), "root true\n");
     assert_eq!(to_string(&"hello").unwrap(), "root \"hello\"\n");
-    assert_eq!(to_string(&3.14f64).unwrap(), "root 3.14\n");
+    assert_eq!(to_string(&2.5f64).unwrap(), "root 2.5\n");
 }
 
 #[test]
 fn test_deserialize_primitive_types() {
     assert_eq!(from_str::<i32>("root 42").unwrap(), 42);
-    assert_eq!(from_str::<bool>("root true").unwrap(), true);
+    assert!(from_str::<bool>("root true").unwrap());
     assert_eq!(from_str::<String>("root \"hello\"").unwrap(), "hello");
-    assert_eq!(from_str::<f64>("root 3.14").unwrap(), 3.14);
+    assert_eq!(from_str::<f64>("root 2.5").unwrap(), 2.5);
 }
 
 #[test]

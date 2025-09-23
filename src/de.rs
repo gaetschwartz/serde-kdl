@@ -60,7 +60,7 @@ impl<'de> Deserializer<'de> {
     }
 }
 
-impl<'de, 'a> DeserializerTrait<'de> for &'a mut Deserializer<'de> {
+impl<'de> DeserializerTrait<'de> for &mut Deserializer<'de> {
     type Error = Error;
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value>
@@ -373,7 +373,7 @@ impl<'de, 'a> DeserializerTrait<'de> for &'a mut Deserializer<'de> {
     {
         // For KDL, we treat missing fields as None and present fields as Some
         if let Some(node) = self.current_node {
-            let has_children = node.children().map_or(false, |c| !c.nodes().is_empty());
+            let has_children = node.children().is_some_and(|c| !c.nodes().is_empty());
             if node.entries().is_empty() && !has_children {
                 visitor.visit_none()
             } else {
@@ -1065,7 +1065,7 @@ impl<'de> DeserializerTrait<'de> for NodeDeserializer<'de> {
 /// This is useful for deserializing sequence elements that could be enums
 enum EntryDeserializer<'de> {
     Borrowed(&'de kdl::KdlEntry),
-    Owned(kdl::KdlEntry),
+    Owned(Box<kdl::KdlEntry>),
 }
 
 impl<'de> EntryDeserializer<'de> {
@@ -1074,13 +1074,13 @@ impl<'de> EntryDeserializer<'de> {
     }
 
     fn new_owned(entry: kdl::KdlEntry) -> Self {
-        Self::Owned(entry)
+        Self::Owned(Box::new(entry))
     }
 
     fn entry(&self) -> &kdl::KdlEntry {
         match self {
             Self::Borrowed(entry) => entry,
-            Self::Owned(entry) => entry,
+            Self::Owned(entry) => entry.as_ref(),
         }
     }
 }

@@ -14,7 +14,7 @@ pub fn encode_hex(bytes: &[u8]) -> String {
 /// Decode a hex string into bytes.
 /// Returns an error if the string contains invalid hex characters or has odd length.
 pub fn decode_hex(hex_str: &str) -> Result<Vec<u8>> {
-    if hex_str.len() % 2 != 0 {
+    if !hex_str.len().is_multiple_of(2) {
         return Err(Error::InvalidHexString("hex string must have even length".to_string()));
     }
 

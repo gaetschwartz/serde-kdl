@@ -81,10 +81,6 @@ pub(crate) enum KdlString {
     Identifier { value: String, span: proc_macro2::Span },
     /// Quoted String (Section 3.11) - like `"foo"`
     Quoted { value: String, span: proc_macro2::Span },
-    /// Multi-Line String (Section 3.12) - not yet implemented
-    MultiLine { value: String, span: proc_macro2::Span },
-    /// Raw String (Section 3.13) - like `#"foo"#`
-    Raw { value: String, hash_count: usize, span: proc_macro2::Span },
 }
 
 impl KdlString {
@@ -92,9 +88,7 @@ impl KdlString {
     pub(crate) fn value(&self) -> &str {
         match self {
             KdlString::Identifier { value, .. } |
-            KdlString::Quoted { value, .. } |
-            KdlString::MultiLine { value, .. } |
-            KdlString::Raw { value, .. } => value,
+            KdlString::Quoted { value, .. } => value,
         }
     }
 
@@ -102,9 +96,7 @@ impl KdlString {
     pub(crate) fn span(&self) -> proc_macro2::Span {
         match self {
             KdlString::Identifier { span, .. } |
-            KdlString::Quoted { span, .. } |
-            KdlString::MultiLine { span, .. } |
-            KdlString::Raw { span, .. } => *span,
+            KdlString::Quoted { span, .. } => *span,
         }
     }
 
@@ -117,57 +109,10 @@ impl KdlString {
         })
     }
 
-    /// Create a multi-line string from raw content with processing
-    pub(crate) fn from_multiline_content(content: String, span: proc_macro2::Span) -> Result<Self> {
-        let processed_value = crate::parse::string::process_multiline_string(&content, span)?;
-        Ok(KdlString::MultiLine {
-            value: processed_value,
-            span,
-        })
-    }
-
     /// Create an identifier string from a string value and span
     #[allow(dead_code)]
     pub(crate) fn identifier(value: String, span: proc_macro2::Span) -> Self {
         KdlString::Identifier { value, span }
-    }
-
-    /// Create a raw string from content, hash count, and span
-    pub(crate) fn from_raw_content(value: String, hash_count: usize, span: proc_macro2::Span) -> Self {
-        KdlString::Raw { value, hash_count, span }
-    }
-
-    /// Create a raw string from raw content with processing
-    pub(crate) fn from_raw_string_content(content: String, hash_count: usize, span: proc_macro2::Span) -> Result<Self> {
-        let processed_value = crate::parse::string::process_raw_string(&content, hash_count, span)?;
-        Ok(KdlString::Raw {
-            value: processed_value,
-            hash_count,
-            span,
-        })
-    }
-
-    /// Create a raw multi-line string from raw content with processing
-    pub(crate) fn from_raw_multiline_content(content: String, hash_count: usize, span: proc_macro2::Span) -> Result<Self> {
-        let processed_value = crate::parse::string::process_raw_multiline_string(&content, hash_count, span)?;
-        Ok(KdlString::Raw {
-            value: processed_value,
-            hash_count,
-            span,
-        })
-    }
-
-    /// Get the hash count for raw strings, or None for other string types
-    pub(crate) fn hash_count(&self) -> Option<usize> {
-        match self {
-            KdlString::Raw { hash_count, .. } => Some(*hash_count),
-            _ => None,
-        }
-    }
-
-    /// Check if this is a raw string
-    pub(crate) fn is_raw(&self) -> bool {
-        matches!(self, KdlString::Raw { .. })
     }
 
     /// Validate the string according to Section 3.9 requirements
@@ -191,8 +136,8 @@ impl KdlString {
                 // For identifier strings, apply Section 3.10 validation
                 crate::validation::validate_identifier_string_with_context(self.value(), self.span(), reject_keywords)?;
             },
-            KdlString::Quoted { .. } | KdlString::MultiLine { .. } | KdlString::Raw { .. } => {
-                // Quoted, multi-line, and raw strings can contain disallowed code points via escapes
+            KdlString::Quoted { .. } => {
+                // Quoted strings can contain disallowed code points via escapes
                 // We don't validate them here since they may have come from valid Unicode escapes
             }
         }
@@ -270,33 +215,6 @@ pub(crate) fn is_reserved_type(type_annotation: &str) -> bool {
         || RESERVED_STRING_TYPES.contains(&type_annotation)
 }
 
-/// Validates string content against disallowed literal code points (Section 3.19)
-pub(crate) fn validate_disallowed_code_points(value: &str, span: proc_macro2::Span) -> Result<()> {
-    for ch in value.chars() {
-        let code_point = ch as u32;
-
-        // Check for disallowed code points - but allow tab (U+0009), line feed (U+000A), and carriage return (U+000D)
-        if (code_point <= 0x0008) ||                    // U+0000-0008 control characters
-           (code_point >= 0x000E && code_point <= 0x001F) ||  // U+000E-001F control characters
-           (code_point == 0x007F) ||                    // U+007F Delete control character
-           (code_point >= 0xD800 && code_point <= 0xDFFF) ||  // U+D800-DFFF Non-Unicode Scalar Values
-           (code_point >= 0x200E && code_point <= 0x200F) ||  // U+200E-200F direction control
-           (code_point >= 0x202A && code_point <= 0x202E) ||  // U+202A-202E direction control
-           (code_point >= 0x2066 && code_point <= 0x2069) ||  // U+2066-2069 direction control
-           (code_point == 0xFEFF)                       // U+FEFF BOM (except at document start)
-        {
-            return Err(syn::Error::new(
-                span,
-                format!(
-                    "String contains disallowed literal code point U+{:04X} ({}). Use \\u{{...}} escape sequence instead.",
-                    code_point,
-                    ch.escape_unicode()
-                ),
-            ));
-        }
-    }
-    Ok(())
-}
 
 pub(crate) struct SerdeKdlPrivate<'a>(&'a [&'static str]);
 

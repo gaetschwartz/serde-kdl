@@ -7,11 +7,14 @@ use serde::ser::{
 use serde::Serializer as SerializerTrait;
 use std::collections::BTreeMap;
 
+/// Node context for serialization: (node_name, children, properties)
+type NodeContext = (String, Vec<KdlNode>, Vec<(String, KdlValue)>);
+
 /// A serializer that converts Rust values directly to KDL documents.
 pub struct Serializer {
     document: KdlDocument,
     current_node: Option<KdlNode>,
-    node_stack: Vec<(String, Vec<KdlNode>, Vec<(String, KdlValue)>)>, // (node_name, children, properties)
+    node_stack: Vec<NodeContext>,
 }
 
 impl Serializer {
@@ -234,9 +237,9 @@ impl<'a> SerializerTrait for &'a mut Serializer {
         Ok(())
     }
 
-    fn serialize_some<T: ?Sized>(self, value: &T) -> Result<Self::Ok>
+    fn serialize_some<T>(self, value: &T) -> Result<Self::Ok>
     where
-        T: serde::Serialize,
+        T: ?Sized + serde::Serialize,
     {
         value.serialize(self)
     }
@@ -260,20 +263,20 @@ impl<'a> SerializerTrait for &'a mut Serializer {
         self.create_value_node("root", KdlValue::String(variant.to_string()))
     }
 
-    fn serialize_newtype_struct<T: ?Sized>(
+    fn serialize_newtype_struct<T>(
         self,
         name: &'static str,
         value: &T,
     ) -> Result<Self::Ok>
     where
-        T: serde::Serialize,
+        T: ?Sized + serde::Serialize,
     {
         self.push_node_context(name.to_string());
         value.serialize(&mut *self)?;
         self.pop_node_context()
     }
 
-    fn serialize_newtype_variant<T: ?Sized>(
+    fn serialize_newtype_variant<T>(
         self,
         _name: &'static str,
         _variant_index: u32,
@@ -281,7 +284,7 @@ impl<'a> SerializerTrait for &'a mut Serializer {
         value: &T,
     ) -> Result<Self::Ok>
     where
-        T: serde::Serialize,
+        T: ?Sized + serde::Serialize,
     {
         self.push_node_context(variant.to_string());
         value.serialize(&mut *self)?;
@@ -383,9 +386,9 @@ impl<'a> SerializeSeq for SerializeSeqImpl<'a> {
     type Ok = ();
     type Error = Error;
 
-    fn serialize_element<T: ?Sized>(&mut self, value: &T) -> Result<()>
+    fn serialize_element<T>(&mut self, value: &T) -> Result<()>
     where
-        T: serde::Serialize,
+        T: ?Sized + serde::Serialize,
     {
         // Create a temporary serializer for the item
         let mut item_serializer = Serializer::new();
@@ -397,7 +400,7 @@ impl<'a> SerializeSeq for SerializeSeqImpl<'a> {
             // Also consider enum variants (nodes with meaningful names) as complex
             let is_complex = node.entries().len() > 1
                 || !node.entries().iter().all(|e| e.name().is_none()) // has properties
-                || node.children().map_or(false, |c| !c.nodes().is_empty()) // has children
+                || node.children().is_some_and(|c| !c.nodes().is_empty()) // has children
                 || node.name().value() != "root"; // enum variants or other meaningful node names
 
             if is_complex {
@@ -498,9 +501,9 @@ impl<'a> SerializeTuple for SerializeTupleImpl<'a> {
     type Ok = ();
     type Error = Error;
 
-    fn serialize_element<T: ?Sized>(&mut self, value: &T) -> Result<()>
+    fn serialize_element<T>(&mut self, value: &T) -> Result<()>
     where
-        T: serde::Serialize,
+        T: ?Sized + serde::Serialize,
     {
         let mut item_serializer = Serializer::new();
         value.serialize(&mut item_serializer)?;
@@ -539,9 +542,9 @@ impl<'a> SerializeTupleStruct for SerializeTupleStructImpl<'a> {
     type Ok = ();
     type Error = Error;
 
-    fn serialize_field<T: ?Sized>(&mut self, value: &T) -> Result<()>
+    fn serialize_field<T>(&mut self, value: &T) -> Result<()>
     where
-        T: serde::Serialize,
+        T: ?Sized + serde::Serialize,
     {
         let mut item_serializer = Serializer::new();
         value.serialize(&mut item_serializer)?;
@@ -583,9 +586,9 @@ impl<'a> SerializeTupleVariant for SerializeTupleVariantImpl<'a> {
     type Ok = ();
     type Error = Error;
 
-    fn serialize_field<T: ?Sized>(&mut self, value: &T) -> Result<()>
+    fn serialize_field<T>(&mut self, value: &T) -> Result<()>
     where
-        T: serde::Serialize,
+        T: ?Sized + serde::Serialize,
     {
         let mut item_serializer = Serializer::new();
         value.serialize(&mut item_serializer)?;
@@ -627,9 +630,9 @@ impl<'a> SerializeMap for SerializeMapImpl<'a> {
     type Ok = ();
     type Error = Error;
 
-    fn serialize_key<T: ?Sized>(&mut self, key: &T) -> Result<()>
+    fn serialize_key<T>(&mut self, key: &T) -> Result<()>
     where
-        T: serde::Serialize,
+        T: ?Sized + serde::Serialize,
     {
         let mut key_serializer = Serializer::new();
         key.serialize(&mut key_serializer)?;
@@ -650,9 +653,9 @@ impl<'a> SerializeMap for SerializeMapImpl<'a> {
         Ok(())
     }
 
-    fn serialize_value<T: ?Sized>(&mut self, value: &T) -> Result<()>
+    fn serialize_value<T>(&mut self, value: &T) -> Result<()>
     where
-        T: serde::Serialize,
+        T: ?Sized + serde::Serialize,
     {
         let key = self.pending_key.take().unwrap_or_else(|| "unknown".to_string());
 
@@ -698,9 +701,9 @@ impl<'a> SerializeStruct for SerializeStructImpl<'a> {
     type Ok = ();
     type Error = Error;
 
-    fn serialize_field<T: ?Sized>(&mut self, key: &'static str, value: &T) -> Result<()>
+    fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<()>
     where
-        T: serde::Serialize,
+        T: ?Sized + serde::Serialize,
     {
         // Handle Option<T> specially - skip None values
         if std::any::type_name::<T>().starts_with("core::option::Option") {
@@ -742,7 +745,7 @@ impl<'a> SerializeStruct for SerializeStructImpl<'a> {
             let field_doc = field_serializer.into_document();
 
             if let Some(node) = field_doc.nodes().first() {
-                if node.entries().len() == 1 && node.children().map_or(true, |c| c.nodes().is_empty()) {
+                if node.entries().len() == 1 && node.children().is_none_or(|c| c.nodes().is_empty()) {
                     // Single simple value - use as property
                     let entry = &node.entries()[0];
                     self.ser.add_property_to_current(key, entry.value().clone())?;
@@ -790,9 +793,9 @@ impl<'a> SerializeStructVariant for SerializeStructVariantImpl<'a> {
     type Ok = ();
     type Error = Error;
 
-    fn serialize_field<T: ?Sized>(&mut self, key: &'static str, value: &T) -> Result<()>
+    fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<()>
     where
-        T: serde::Serialize,
+        T: ?Sized + serde::Serialize,
     {
         let mut field_serializer = Serializer::new();
         value.serialize(&mut field_serializer)?;
@@ -813,10 +816,8 @@ impl<'a> SerializeStructVariant for SerializeStructVariantImpl<'a> {
                         children.push(field_node);
                     }
                 }
-            } else {
-                if let Some((_, children, _)) = self.ser.node_stack.last_mut() {
-                    children.push(KdlNode::new(format!("{}_{}", key, node.name().value())));
-                }
+            } else if let Some((_, children, _)) = self.ser.node_stack.last_mut() {
+                children.push(KdlNode::new(format!("{}_{}", key, node.name().value())));
             }
         }
 

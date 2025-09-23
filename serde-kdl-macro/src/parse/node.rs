@@ -294,14 +294,14 @@ fn is_property_ahead(input: &syn::parse::ParseBuffer) -> bool {
             if checkpoint.parse::<syn::token::Minus>().is_err() { break; }
         } else if checkpoint.peek(syn::token::Plus) {
             if checkpoint.parse::<syn::token::Plus>().is_err() { break; }
-        } else if checkpoint.peek(syn::token::Dot) {
-            if checkpoint.parse::<syn::token::Dot>().is_err() { break; }
+        } else if checkpoint.peek(syn::token::Dot)
+            && checkpoint.parse::<syn::token::Dot>().is_err() { break;
         }
     }
 
     // Try to parse the main identifier part
     if checkpoint.peek(Ident) {
-        if let Ok(_) = checkpoint.parse::<Ident>() {
+        if checkpoint.parse::<Ident>().is_ok() {
             // Parse potential dash-separated parts
             while checkpoint.peek(syn::token::Minus) && checkpoint.peek2(Ident) {
                 if checkpoint.parse::<syn::token::Minus>().is_err() {

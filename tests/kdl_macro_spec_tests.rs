@@ -36,14 +36,14 @@ fn test_node_arguments() {
     assert_eq!(entry.value().as_i64().unwrap(), 42);
 
     // Float argument
-    let doc = kdl! { node 3.14 };
+    let doc = kdl! { node 2.5 };
     let entry = &doc.nodes()[0].entries()[0];
-    assert_eq!(entry.value().as_f64().unwrap(), 3.14);
+    assert_eq!(entry.value().as_f64().unwrap(), 2.5);
 
     // Boolean arguments
     let doc = kdl! { node true false };
-    assert_eq!(doc.nodes()[0].entries()[0].value().as_bool().unwrap(), true);
-    assert_eq!(doc.nodes()[0].entries()[1].value().as_bool().unwrap(), false);
+    assert!(doc.nodes()[0].entries()[0].value().as_bool().unwrap());
+    assert!(!doc.nodes()[0].entries()[1].value().as_bool().unwrap());
 
     // Multiple arguments
     let doc = kdl! { node "arg1" 42 true };
@@ -92,8 +92,8 @@ fn test_children_blocks() {
 fn test_boolean_values() {
     // Basic boolean values
     let doc = kdl! { node true false };
-    assert_eq!(doc.nodes()[0].entries()[0].value().as_bool().unwrap(), true);
-    assert_eq!(doc.nodes()[0].entries()[1].value().as_bool().unwrap(), false);
+    assert!(doc.nodes()[0].entries()[0].value().as_bool().unwrap());
+    assert!(!doc.nodes()[0].entries()[1].value().as_bool().unwrap());
 }
 
 /// Test null values (section 3.16)
@@ -122,9 +122,9 @@ fn test_hyphenated_identifiers() {
 /// Test negative numbers
 #[test]
 fn test_negative_numbers() {
-    let doc = kdl! { node -42 -3.14 };
+    let doc = kdl! { node -42 -2.5 };
     assert_eq!(doc.nodes()[0].entries()[0].value().as_i64().unwrap(), -42);
-    assert_eq!(doc.nodes()[0].entries()[1].value().as_f64().unwrap(), -3.14);
+    assert_eq!(doc.nodes()[0].entries()[1].value().as_f64().unwrap(), -2.5);
 }
 
 /// Test complex nested structures

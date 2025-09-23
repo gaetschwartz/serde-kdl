@@ -99,7 +99,7 @@ fn parse_keyword_number(input: ParseStream) -> Result<KdlValue> {
     if input.peek(syn::token::Minus) {
         let _: syn::token::Minus = input.parse()?;
         let ident: syn::Ident = input.parse()?;
-        if ident.to_string() == "inf" {
+        if ident == "inf" {
             Ok(KdlValue::Float(f64::NEG_INFINITY))
         } else {
             Err(Error::new(ident.span(), "Expected 'inf' after '#-'"))
@@ -116,50 +116,6 @@ fn parse_keyword_number(input: ParseStream) -> Result<KdlValue> {
 }
 
 
-/// Parse decimal numbers (including scientific notation)
-fn parse_decimal(number_str: &str, is_negative: bool, span: Span) -> Result<KdlValue> {
-    // Remove underscores for parsing
-    let clean_str = number_str.replace('_', "");
-
-    // Validate decimal format
-    validate_decimal_format(&clean_str, span)?;
-
-    // Try to parse as integer first, then as float
-    if clean_str.contains('.') || clean_str.contains('e') || clean_str.contains('E') {
-        // Parse as float
-        match clean_str.parse::<f64>() {
-            Ok(mut value) => {
-                if is_negative {
-                    value = -value;
-                }
-                Ok(KdlValue::Float(value))
-            }
-            Err(_) => Err(Error::new(span, format!("Invalid decimal number: {}", number_str)))
-        }
-    } else {
-        // Parse as integer
-        match clean_str.parse::<i64>() {
-            Ok(mut value) => {
-                if is_negative {
-                    value = -value;
-                }
-                Ok(KdlValue::Integer(value))
-            }
-            Err(_) => {
-                // Try as float if integer parsing fails (number too large)
-                match clean_str.parse::<f64>() {
-                    Ok(mut value) => {
-                        if is_negative {
-                            value = -value;
-                        }
-                        Ok(KdlValue::Float(value))
-                    }
-                    Err(_) => Err(Error::new(span, format!("Invalid decimal number: {}", number_str)))
-                }
-            }
-        }
-    }
-}
 
 /// Parse hexadecimal numbers (0x/0X prefix)
 fn parse_hexadecimal(number_str: &str, is_negative: bool, span: Span) -> Result<KdlValue> {
@@ -266,26 +222,6 @@ fn parse_binary(number_str: &str, is_negative: bool, span: Span) -> Result<KdlVa
     }
 }
 
-/// Validate decimal number format according to KDL specification
-fn validate_decimal_format(number_str: &str, span: Span) -> Result<()> {
-    if number_str.is_empty() {
-        return Err(Error::new(span, "Empty number"));
-    }
-
-    // Check for illegal patterns like ".1" (must be "0.1")
-    if number_str.starts_with('.') {
-        return Err(Error::new(span,
-            "Numbers without integer digit (like '.1') are illegal. Use '0.1' instead"));
-    }
-
-    // Check for trailing decimal point without digits
-    if number_str.ends_with('.') {
-        return Err(Error::new(span, "Decimal point must be followed by digits"));
-    }
-
-    // Additional validation could be added here for exponent format, etc.
-    Ok(())
-}
 
 /// Validate hexadecimal digits
 fn validate_hex_digits(hex_str: &str, span: Span) -> Result<()> {

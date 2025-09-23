@@ -31,7 +31,7 @@ impl Parse for KdlValue {
 
         // Try to parse as a number first (handles all formats including negative numbers)
         if let Some(number_value) = try_parse_number(input)? {
-            return Ok(number_value);
+            Ok(number_value)
         }
         // Check for string literals
         else if input.peek(LitStr) {
@@ -91,7 +91,7 @@ impl Parse for KdlValue {
                 // Handle #-inf
                 let _minus: syn::token::Minus = input.parse()?;
                 let ident: Ident = input.parse()?;
-                if ident.to_string() == "inf" {
+                if ident == "inf" {
                     Ok(KdlValue::Float(f64::NEG_INFINITY))
                 } else {
                     Err(syn::Error::new(
@@ -151,50 +151,4 @@ impl Parse for KdlValue {
     }
 }
 
-// Helper function to parse identifier sequences like "ubuntu-latest"
-fn parse_identifier_sequence(input: ParseStream) -> Result<KdlValue> {
-    let mut parts = String::new();
-
-    // Handle first token (could be minus or identifier)
-    if input.peek(syn::token::Minus) {
-        let _minus: syn::token::Minus = input.parse()?;
-        parts.push('-');
-    }
-
-    // Parse the rest of the sequence
-    while input.peek(Ident) {
-        let ident: Ident = input.parse()?;
-        parts.push_str(&ident.to_string());
-
-        // Check for more dash-identifier pairs
-        if input.peek(syn::token::Minus) && input.peek2(Ident) {
-            let _minus: syn::token::Minus = input.parse()?;
-            parts.push('-');
-        } else {
-            break;
-        }
-    }
-
-    if parts.is_empty() {
-        return Err(syn::Error::new(input.span(), "Expected identifier"));
-    }
-
-    // Check for keywords even in identifier sequences
-    if parts == "null" {
-        Ok(KdlValue::Null)
-    } else if parts == "true" {
-        Ok(KdlValue::Boolean(true))
-    } else if parts == "false" {
-        Ok(KdlValue::Boolean(false))
-    } else {
-        let span = input.span();
-        let kdl_string = KdlString::Identifier {
-            value: parts,
-            span
-        };
-        // When parsing values, allow keywords since they should be treated as actual values
-            kdl_string.validate_with_context(false)?;
-        Ok(KdlValue::String(kdl_string))
-    }
-}
 

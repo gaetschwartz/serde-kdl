@@ -60,7 +60,7 @@ fn test_disallowed_surrogate_code_points() {
         // Even if char::from_u32 returns None, these code points should be disallowed
         // Our implementation checks the numeric range directly
         assert!(
-            (code_point >= 0xD800 && code_point <= 0xDFFF),
+            (0xD800..=0xDFFF).contains(&code_point),
             "Code point U+{:04X} should be in disallowed surrogate range",
             code_point
         );

@@ -68,7 +68,7 @@ fn test_special_float_serialization() {
     let inf = f64::INFINITY;
     let neg_inf = f64::NEG_INFINITY;
     let nan = f64::NAN;
-    let normal = 3.14f64;
+    let normal = 2.5f64;
 
     let inf_result = to_string(&inf).unwrap();
     let neg_inf_result = to_string(&neg_inf).unwrap();
@@ -86,5 +86,5 @@ fn test_special_float_serialization() {
     assert!(inf_result.contains("root"));
     assert!(neg_inf_result.contains("root"));
     assert!(nan_result.contains("0.0"));
-    assert!(normal_result.contains("3.14"));
+    assert!(normal_result.contains("2.5"));
 }
