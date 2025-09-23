@@ -1,14 +1,14 @@
-- [ ] 3.1. Document
-  - [ ] 3.1.1. Example
-- [ ] 3.2. Node
-  - [ ] 3.2.1. Example
+- [x] 3.1. Document
+  - [x] 3.1.1. Example
+- [x] 3.2. Node
+  - [x] 3.2.1. Example
 - [ ] 3.3. Line Continuation
   - [ ] 3.3.1. Example
-- [ ] 3.4. Property
-- [ ] 3.5. Argument
-  - [ ] 3.5.1. Example
-- [ ] 3.6. Children Block
-  - [ ] 3.6.1. Example
+- [x] 3.4. Property
+- [x] 3.5. Argument
+  - [x] 3.5.1. Example
+- [x] 3.6. Children Block
+  - [x] 3.6.1. Example
 - [ ] 3.7. Value
 - [ ] 3.8. Type Annotation
   - [ ] 3.8.1. Reserved Type Annotations for Numbers Without Decimals
@@ -35,10 +35,10 @@
   - [ ] 3.13.1. Example
 - [ ] 3.14. Number
   - [ ] 3.14.1. Keyword Numbers
-- [ ] 3.15. Boolean
-  - [ ] 3.15.1. Example
-- [ ] 3.16. Null
-  - [ ] 3.16.1. Example
+- [x] 3.15. Boolean
+  - [x] 3.15.1. Example
+- [x] 3.16. Null
+  - [x] 3.16.1. Example
 - [ ] 3.17. Whitespace
   - [ ] 3.17.1. Single-line comments
   - [ ] 3.17.2. Multi-line comments

@@ -144,11 +144,33 @@ impl Parse for KdlNode {
                 properties.push(KdlProperty { key, value });
             } else {
                 // Check if this looks like the start of a new node
-                // (identifier not followed by = that comes after we've already parsed some content)
-                if !arguments.is_empty() || !properties.is_empty() {
-                    if input.peek(Ident) {
-                        // This looks like a new node name, stop parsing this node
-                        break;
+                // For bare identifiers, we need to be more careful about when to stop parsing
+                if input.peek(Ident) {
+                    // Look ahead to see if this identifier is followed by something that would
+                    // make it clearly an argument vs a new node
+                    let checkpoint = input.fork();
+                    let ident: Ident = checkpoint.parse().unwrap();
+                    let ident_str = ident.to_string();
+
+                    // Don't treat KDL keywords as new nodes - they're values
+                    if ident_str == "null" || ident_str == "true" || ident_str == "false" {
+                        // This is a keyword value, continue parsing as an argument
+                    } else {
+                        // If the identifier is followed by =, it's definitely a property key for the next node
+                        // If it's followed by another identifier, string, number, or {, it's likely a new node
+                        // If it's at the end or followed by ;, it's definitely a new node
+                        if checkpoint.is_empty() ||
+                           checkpoint.peek(Ident) ||
+                           checkpoint.peek(syn::LitStr) ||
+                           checkpoint.peek(syn::LitInt) ||
+                           checkpoint.peek(syn::LitFloat) ||
+                           checkpoint.peek(syn::LitBool) ||
+                           checkpoint.peek(Brace) ||
+                           checkpoint.peek(Token![;]) ||
+                           checkpoint.peek(Eq) {
+                            // This looks like a new node, stop parsing this one
+                            break;
+                        }
                     }
                 }
 
