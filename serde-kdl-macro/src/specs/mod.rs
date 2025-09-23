@@ -1,19 +1,18 @@
-use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use syn::Result;
 
 pub(crate) fn kdl_impl2(input: TokenStream2) -> Result<TokenStream2> {
     // Preprocess input to handle line continuations
     let processed_input = preprocess_line_continuations_proc_macro2(input)?;
-    let document = syn::parse2::<crate::KdlDocument>(processed_input)?;
+    let document = syn::parse2::<crate::ast::KdlDocument>(processed_input)?;
 
-    crate::generate_kdl_code(&document)
+    crate::codegen::generate_kdl_code(&document)
 }
 
 /// Preprocesses the input TokenStream2 to handle KDL line continuations for testing.
 fn preprocess_line_continuations_proc_macro2(input: TokenStream2) -> Result<TokenStream2> {
     let input_str = input.to_string();
-    let processed_str = crate::process_line_continuation_string(&input_str)?;
+    let processed_str = crate::utils::process_line_continuation_string(&input_str)?;
 
     // Parse the processed string back into a TokenStream2
     match processed_str.parse() {
@@ -41,8 +40,8 @@ macro_rules! assert_eq_tk {
 // #[cfg(test)]
 // mod section_3_2_test;
 
-// #[cfg(test)]
-// mod section_3_3_test;
+#[cfg(test)]
+mod section_3_3;
 
 // #[cfg(test)]
 // mod section_3_4_test;
@@ -53,17 +52,17 @@ macro_rules! assert_eq_tk {
 // #[cfg(test)]
 // mod section_3_6_test;
 
-// #[cfg(test)]
-// mod section_3_7_test;
+#[cfg(test)]
+mod section_3_7;
 
-// #[cfg(test)]
-// mod section_3_8_test;
+#[cfg(test)]
+mod section_3_8;
 
-// #[cfg(test)]
-// mod section_3_9_test;
+#[cfg(test)]
+mod section_3_9;
 
-// #[cfg(test)]
-// mod section_3_10_test;
+#[cfg(test)]
+mod section_3_10;
 
 // #[cfg(test)]
 // mod section_3_11_test;

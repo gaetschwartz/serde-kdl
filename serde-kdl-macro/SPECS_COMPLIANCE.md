@@ -2,23 +2,23 @@
   - [x] 3.1.1. Example
 - [x] 3.2. Node
   - [x] 3.2.1. Example
-- [ ] 3.3. Line Continuation
-  - [ ] 3.3.1. Example
+- [x] 3.3. Line Continuation
+  - [x] 3.3.1. Example
 - [x] 3.4. Property
 - [x] 3.5. Argument
   - [x] 3.5.1. Example
 - [x] 3.6. Children Block
   - [x] 3.6.1. Example
-- [ ] 3.7. Value
-- [ ] 3.8. Type Annotation
-  - [ ] 3.8.1. Reserved Type Annotations for Numbers Without Decimals
-  - [ ] 3.8.2. Reserved Type Annotations for Numbers With Decimals
-  - [ ] 3.8.3. Reserved Type Annotations for Strings
-  - [ ] 3.8.4. Examples
-- [ ] 3.9. String
-- [ ] 3.10. Identifier String
-  - [ ] 3.10.1. Non-initial characters
-  - [ ] 3.10.2. Non-identifier characters
+- [x] 3.7. Value
+- [x] 3.8. Type Annotation
+  - [x] 3.8.1. Reserved Type Annotations for Numbers Without Decimals
+  - [x] 3.8.2. Reserved Type Annotations for Numbers With Decimals
+  - [x] 3.8.3. Reserved Type Annotations for Strings
+  - [x] 3.8.4. Examples
+- [x] 3.9. String
+- [x] 3.10. Identifier String
+  - [x] 3.10.1. Non-initial characters
+  - [x] 3.10.2. Non-identifier characters
 - [ ] 3.11. Quoted String
   - [ ] 3.11.1. Escapes
     - [ ] 3.11.1.1. Escaped Whitespace
