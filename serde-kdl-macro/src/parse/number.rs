@@ -7,9 +7,12 @@
 //! - Octal: 0o17, 0O77, +0o123, -0o456, 0o12_34
 //! - Binary: 0b101, 0B111, +0b101, -0b110, 0b10_11
 
-use syn::{Result, Error, parse::{ParseStream, discouraged::Speculative}};
-use proc_macro2::Span;
 use crate::ast::KdlValue;
+use proc_macro2::Span;
+use syn::{
+    parse::{discouraged::Speculative, ParseStream},
+    Error, Result,
+};
 
 /// Parse a number from the input stream
 ///
@@ -67,24 +70,28 @@ pub(crate) fn parse_number(input: ParseStream) -> Result<KdlValue> {
                                     }
                                     Ok(KdlValue::Float(value))
                                 }
-                                Err(e) => Err(Error::new(lit_int.span(), format!("Invalid integer: {}", e)))
+                                Err(e) => Err(Error::new(
+                                    lit_int.span(),
+                                    format!("Invalid integer: {}", e),
+                                )),
                             }
                         }
                     }
                 }
             }
-            syn::Lit::Float(lit_float) => {
-                match lit_float.base10_parse::<f64>() {
-                    Ok(mut value) => {
-                        if is_negative {
-                            value = -value;
-                        }
-                        Ok(KdlValue::Float(value))
+            syn::Lit::Float(lit_float) => match lit_float.base10_parse::<f64>() {
+                Ok(mut value) => {
+                    if is_negative {
+                        value = -value;
                     }
-                    Err(e) => Err(Error::new(lit_float.span(), format!("Invalid float: {}", e)))
+                    Ok(KdlValue::Float(value))
                 }
-            }
-            _ => Err(Error::new(lit.span(), "Expected number literal"))
+                Err(e) => Err(Error::new(
+                    lit_float.span(),
+                    format!("Invalid float: {}", e),
+                )),
+            },
+            _ => Err(Error::new(lit.span(), "Expected number literal")),
         }
     } else {
         Err(Error::new(input.span(), "Expected number"))
@@ -109,18 +116,24 @@ fn parse_keyword_number(input: ParseStream) -> Result<KdlValue> {
         match ident.to_string().as_str() {
             "inf" => Ok(KdlValue::Float(f64::INFINITY)),
             "nan" => Ok(KdlValue::Float(f64::NAN)),
-            _ => Err(Error::new(ident.span(),
-                format!("Invalid keyword number: #{}. Only #inf, #-inf, and #nan are supported", ident)))
+            _ => Err(Error::new(
+                ident.span(),
+                format!(
+                    "Invalid keyword number: #{}. Only #inf, #-inf, and #nan are supported",
+                    ident
+                ),
+            )),
         }
     }
 }
 
-
-
 /// Parse hexadecimal numbers (0x/0X prefix)
 fn parse_hexadecimal(number_str: &str, is_negative: bool, span: Span) -> Result<KdlValue> {
     if number_str.len() <= 2 {
-        return Err(Error::new(span, "Hexadecimal number missing digits after '0x'"));
+        return Err(Error::new(
+            span,
+            "Hexadecimal number missing digits after '0x'",
+        ));
     }
 
     let hex_part = &number_str[2..]; // Remove 0x/0X prefix
@@ -146,7 +159,10 @@ fn parse_hexadecimal(number_str: &str, is_negative: bool, span: Span) -> Result<
                     }
                     Ok(KdlValue::Float(float_value))
                 }
-                Err(_) => Err(Error::new(span, format!("Invalid hexadecimal number: {}", number_str)))
+                Err(_) => Err(Error::new(
+                    span,
+                    format!("Invalid hexadecimal number: {}", number_str),
+                )),
             }
         }
     }
@@ -181,7 +197,10 @@ fn parse_octal(number_str: &str, is_negative: bool, span: Span) -> Result<KdlVal
                     }
                     Ok(KdlValue::Float(float_value))
                 }
-                Err(_) => Err(Error::new(span, format!("Invalid octal number: {}", number_str)))
+                Err(_) => Err(Error::new(
+                    span,
+                    format!("Invalid octal number: {}", number_str),
+                )),
             }
         }
     }
@@ -216,12 +235,14 @@ fn parse_binary(number_str: &str, is_negative: bool, span: Span) -> Result<KdlVa
                     }
                     Ok(KdlValue::Float(float_value))
                 }
-                Err(_) => Err(Error::new(span, format!("Invalid binary number: {}", number_str)))
+                Err(_) => Err(Error::new(
+                    span,
+                    format!("Invalid binary number: {}", number_str),
+                )),
             }
         }
     }
 }
-
 
 /// Validate hexadecimal digits
 fn validate_hex_digits(hex_str: &str, span: Span) -> Result<()> {
@@ -231,8 +252,13 @@ fn validate_hex_digits(hex_str: &str, span: Span) -> Result<()> {
 
     for ch in hex_str.chars() {
         if !ch.is_ascii_hexdigit() {
-            return Err(Error::new(span,
-                format!("Invalid hexadecimal digit: '{}'. Only 0-9, a-f, A-F are allowed", ch)));
+            return Err(Error::new(
+                span,
+                format!(
+                    "Invalid hexadecimal digit: '{}'. Only 0-9, a-f, A-F are allowed",
+                    ch
+                ),
+            ));
         }
     }
     Ok(())
@@ -246,8 +272,10 @@ fn validate_octal_digits(octal_str: &str, span: Span) -> Result<()> {
 
     for ch in octal_str.chars() {
         if !('0'..='7').contains(&ch) {
-            return Err(Error::new(span,
-                format!("Invalid octal digit: '{}'. Only 0-7 are allowed", ch)));
+            return Err(Error::new(
+                span,
+                format!("Invalid octal digit: '{}'. Only 0-7 are allowed", ch),
+            ));
         }
     }
     Ok(())
@@ -261,8 +289,10 @@ fn validate_binary_digits(binary_str: &str, span: Span) -> Result<()> {
 
     for ch in binary_str.chars() {
         if ch != '0' && ch != '1' {
-            return Err(Error::new(span,
-                format!("Invalid binary digit: '{}'. Only 0 and 1 are allowed", ch)));
+            return Err(Error::new(
+                span,
+                format!("Invalid binary digit: '{}'. Only 0 and 1 are allowed", ch),
+            ));
         }
     }
     Ok(())
@@ -280,6 +310,6 @@ pub(crate) fn try_parse_number(input: ParseStream) -> Result<Option<KdlValue>> {
             input.advance_to(&fork);
             Ok(Some(value))
         }
-        Err(_) => Ok(None) // Not a number, let other parsers handle it
+        Err(_) => Ok(None), // Not a number, let other parsers handle it
     }
 }

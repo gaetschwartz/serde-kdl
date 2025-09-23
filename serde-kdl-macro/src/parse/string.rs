@@ -156,7 +156,3 @@ pub(crate) fn process_string_escapes(value: &str, span: proc_macro2::Span) -> Re
 
     Ok(result)
 }
-
-
-
-

@@ -3,8 +3,10 @@
 //! This module contains validation logic for UTF-8 strings, disallowed code points,
 //! identifier string validation, and type annotation validation according to the KDL specification.
 
+use crate::ast::{
+    is_reserved_type, KdlValue, RESERVED_FLOAT_TYPES, RESERVED_INTEGER_TYPES, RESERVED_STRING_TYPES,
+};
 use syn::Result;
-use crate::ast::{KdlValue, RESERVED_INTEGER_TYPES, RESERVED_FLOAT_TYPES, RESERVED_STRING_TYPES, is_reserved_type};
 
 /// Validates type annotation against value according to Section 3.8
 #[allow(dead_code)]
@@ -21,7 +23,10 @@ pub(crate) fn validate_type_annotation(type_annotation: &str, value: &KdlValue) 
                 // This is a reserved type but not for integers
                 Err(syn::Error::new(
                     proc_macro2::Span::call_site(),
-                    format!("Type annotation '{}' is not valid for integer values", type_annotation),
+                    format!(
+                        "Type annotation '{}' is not valid for integer values",
+                        type_annotation
+                    ),
                 ))
             }
         }
@@ -36,7 +41,10 @@ pub(crate) fn validate_type_annotation(type_annotation: &str, value: &KdlValue) 
                 // This is a reserved type but not for floats
                 Err(syn::Error::new(
                     proc_macro2::Span::call_site(),
-                    format!("Type annotation '{}' is not valid for float values", type_annotation),
+                    format!(
+                        "Type annotation '{}' is not valid for float values",
+                        type_annotation
+                    ),
                 ))
             }
         }
@@ -51,7 +59,10 @@ pub(crate) fn validate_type_annotation(type_annotation: &str, value: &KdlValue) 
                 // This is a reserved type but not for strings
                 Err(syn::Error::new(
                     proc_macro2::Span::call_site(),
-                    format!("Type annotation '{}' is not valid for string values", type_annotation),
+                    format!(
+                        "Type annotation '{}' is not valid for string values",
+                        type_annotation
+                    ),
                 ))
             }
         }
@@ -63,7 +74,10 @@ pub(crate) fn validate_type_annotation(type_annotation: &str, value: &KdlValue) 
             } else {
                 Err(syn::Error::new(
                     proc_macro2::Span::call_site(),
-                    format!("Type annotation '{}' is reserved and not valid for this value type", type_annotation),
+                    format!(
+                        "Type annotation '{}' is reserved and not valid for this value type",
+                        type_annotation
+                    ),
                 ))
             }
         }
@@ -78,14 +92,14 @@ pub(crate) fn validate_type_annotation(type_annotation: &str, value: &KdlValue) 
 // Identifier String Validation (Section 3.10)
 // =============================================================================
 
-
 /// Validates an identifier string with context about whether keywords should be rejected
-pub(crate) fn validate_identifier_string_with_context(identifier: &str, span: proc_macro2::Span, reject_keywords: bool) -> Result<()> {
+pub(crate) fn validate_identifier_string_with_context(
+    identifier: &str,
+    span: proc_macro2::Span,
+    reject_keywords: bool,
+) -> Result<()> {
     if identifier.is_empty() {
-        return Err(syn::Error::new(
-            span,
-            "Identifier cannot be empty",
-        ));
+        return Err(syn::Error::new(span, "Identifier cannot be empty"));
     }
 
     let mut chars = identifier.chars();
@@ -113,14 +127,20 @@ pub(crate) fn validate_identifier_string_with_context(identifier: &str, span: pr
     if looks_like_number(identifier) {
         return Err(syn::Error::new(
             span,
-            format!("Identifier '{}' looks like a number and is not allowed", identifier),
+            format!(
+                "Identifier '{}' looks like a number and is not allowed",
+                identifier
+            ),
         ));
     }
 
     if reject_keywords && is_keyword(identifier) {
         return Err(syn::Error::new(
             span,
-            format!("Identifier '{}' is a reserved keyword without '#' prefix", identifier),
+            format!(
+                "Identifier '{}' is a reserved keyword without '#' prefix",
+                identifier
+            ),
         ));
     }
 
@@ -174,7 +194,10 @@ pub(crate) fn is_valid_initial_character(ch: char, remaining_chars: &mut std::st
 /// Checks if a character is valid anywhere in an identifier (Section 3.10.2)
 pub(crate) fn is_valid_identifier_character(ch: char) -> bool {
     // Cannot use specific punctuation characters
-    if matches!(ch, '(' | ')' | '{' | '}' | '[' | ']' | '/' | '\\' | '"' | '#' | ';' | '=') {
+    if matches!(
+        ch,
+        '(' | ')' | '{' | '}' | '[' | ']' | '/' | '\\' | '"' | '#' | ';' | '='
+    ) {
         return false;
     }
 
@@ -245,7 +268,10 @@ pub(crate) fn looks_like_number(identifier: &str) -> bool {
 
 /// Checks if an identifier is a reserved keyword without the '#' prefix
 pub(crate) fn is_keyword(identifier: &str) -> bool {
-    matches!(identifier, "inf" | "-inf" | "nan" | "true" | "false" | "null")
+    matches!(
+        identifier,
+        "inf" | "-inf" | "nan" | "true" | "false" | "null"
+    )
 }
 
 // =============================================================================

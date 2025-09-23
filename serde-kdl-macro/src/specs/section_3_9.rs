@@ -26,7 +26,10 @@ fn test_identifier_strings() {
     let input_str = "node runs-on";
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "Identifier string 'runs-on' should be valid");
+    assert!(
+        result.is_ok(),
+        "Identifier string 'runs-on' should be valid"
+    );
 
     // Test complex dash-separated identifier strings
     let input_str = "node my-long-identifier-name";
@@ -41,13 +44,19 @@ fn test_quoted_strings() {
     let input_str = r#"node "hello world""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "Quoted string 'hello world' should be valid");
+    assert!(
+        result.is_ok(),
+        "Quoted string 'hello world' should be valid"
+    );
 
     // Test quoted strings with special characters
     let input_str = r#"node "hello, world!""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "Quoted string with punctuation should be valid");
+    assert!(
+        result.is_ok(),
+        "Quoted string with punctuation should be valid"
+    );
 
     // Test empty quoted string
     let input_str = r#"node """#;
@@ -59,7 +68,10 @@ fn test_quoted_strings() {
     let input_str = r#"node "   spaced   ""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "Quoted string with whitespace should be valid");
+    assert!(
+        result.is_ok(),
+        "Quoted string with whitespace should be valid"
+    );
 }
 
 // Section 3.9.2. UTF-8 Validation Tests
@@ -79,12 +91,12 @@ fn test_utf8_validation() {
     assert!(result.is_ok(), "UTF-8 emoji should be valid");
 
     // Test various language scripts
-    let input_str = r#"node "Здравствуй мир""#;  // Russian
+    let input_str = r#"node "Здравствуй мир""#; // Russian
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
     assert!(result.is_ok(), "UTF-8 Cyrillic characters should be valid");
 
-    let input_str = r#"node "مرحبا بالعالم""#;  // Arabic
+    let input_str = r#"node "مرحبا بالعالم""#; // Arabic
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
     assert!(result.is_ok(), "UTF-8 Arabic characters should be valid");
@@ -95,25 +107,28 @@ fn test_utf8_validation() {
 #[test]
 fn test_unicode_escapes() {
     // Test basic Unicode escape
-    let input_str = r#"node "\u{41}""#;  // 'A'
+    let input_str = r#"node "\u{41}""#; // 'A'
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
     assert!(result.is_ok(), "Unicode escape for 'A' should be valid");
 
     // Test Unicode escape for non-ASCII character
-    let input_str = r#"node "\u{1F30D}""#;  // 🌍 (Earth globe)
+    let input_str = r#"node "\u{1F30D}""#; // 🌍 (Earth globe)
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
     assert!(result.is_ok(), "Unicode escape for emoji should be valid");
 
     // Test Unicode escape for Chinese character
-    let input_str = r#"node "\u{4E16}""#;  // 世
+    let input_str = r#"node "\u{4E16}""#; // 世
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "Unicode escape for Chinese character should be valid");
+    assert!(
+        result.is_ok(),
+        "Unicode escape for Chinese character should be valid"
+    );
 
     // Test multiple Unicode escapes in one string
-    let input_str = r#"node "\u{48}\u{65}\u{6C}\u{6C}\u{6F}""#;  // "Hello"
+    let input_str = r#"node "\u{48}\u{65}\u{6C}\u{6C}\u{6F}""#; // "Hello"
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
     assert!(result.is_ok(), "Multiple Unicode escapes should be valid");
@@ -122,20 +137,26 @@ fn test_unicode_escapes() {
     let input_str = r#"node "Hello \u{1F30D} World""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "Mixed Unicode escapes and text should be valid");
+    assert!(
+        result.is_ok(),
+        "Mixed Unicode escapes and text should be valid"
+    );
 }
 
 #[test]
 fn test_unicode_escape_edge_cases() {
     // Test minimum valid Unicode escape - NULL character should be allowed via escape
-    let input_str = r#"node "\u{0}""#;  // NULL character
+    let input_str = r#"node "\u{0}""#; // NULL character
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
     // This should be allowed in quoted strings via Unicode escape
-    assert!(result.is_ok(), "NULL character via Unicode escape should be allowed");
+    assert!(
+        result.is_ok(),
+        "NULL character via Unicode escape should be allowed"
+    );
 
     // Test maximum valid Unicode code point
-    let input_str = r#"node "\u{10FFFF}""#;  // Maximum Unicode code point
+    let input_str = r#"node "\u{10FFFF}""#; // Maximum Unicode code point
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
     assert!(result.is_ok(), "Maximum Unicode code point should be valid");
@@ -166,7 +187,7 @@ fn test_invalid_unicode_escapes() {
     // assert!(result.is_err(), "Unicode escape beyond valid range should fail");
 
     // Test valid Unicode escape that should work
-    let input_str = r#"node "\u{41}""#;  // 'A'
+    let input_str = r#"node "\u{41}""#; // 'A'
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
     assert!(result.is_ok(), "Valid Unicode escape should work");
@@ -179,29 +200,41 @@ fn test_disallowed_code_points_in_escapes() {
     // Test that disallowed code points can be represented via Unicode escapes
 
     // Control characters U+0000-0008
-    let input_str = r#"node "\u{7}""#;  // Bell character
+    let input_str = r#"node "\u{7}""#; // Bell character
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
     // This should be allowed via escape
-    assert!(result.is_ok(), "Control character via Unicode escape should be allowed");
+    assert!(
+        result.is_ok(),
+        "Control character via Unicode escape should be allowed"
+    );
 
     // Control characters U+000E-001F
-    let input_str = r#"node "\u{1F}""#;  // Unit separator
+    let input_str = r#"node "\u{1F}""#; // Unit separator
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "Control character via Unicode escape should be allowed");
+    assert!(
+        result.is_ok(),
+        "Control character via Unicode escape should be allowed"
+    );
 
     // Delete character U+007F
     let input_str = r#"node "\u{7F}""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "Delete character via Unicode escape should be allowed");
+    assert!(
+        result.is_ok(),
+        "Delete character via Unicode escape should be allowed"
+    );
 
     // Direction control characters
-    let input_str = r#"node "\u{200E}""#;  // Left-to-right mark
+    let input_str = r#"node "\u{200E}""#; // Left-to-right mark
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "Direction control character via Unicode escape should be allowed");
+    assert!(
+        result.is_ok(),
+        "Direction control character via Unicode escape should be allowed"
+    );
 }
 
 // Section 3.9.5. String Usage in Different Contexts
@@ -218,13 +251,19 @@ fn test_strings_as_node_names() {
     let input_str = "identifier-node arg";
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "Identifier string as node name should be valid");
+    assert!(
+        result.is_ok(),
+        "Identifier string as node name should be valid"
+    );
 
     // Test string with Unicode as node name
     let input_str = r#""🌍-node" arg"#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "Unicode string as node name should be valid");
+    assert!(
+        result.is_ok(),
+        "Unicode string as node name should be valid"
+    );
 }
 
 #[test]
@@ -233,19 +272,28 @@ fn test_strings_as_property_keys() {
     let input_str = r#"node "quoted-key"=value"#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "Quoted string as property key should be valid");
+    assert!(
+        result.is_ok(),
+        "Quoted string as property key should be valid"
+    );
 
     // Test identifier string as property key
     let input_str = "node identifier-key=value";
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "Identifier string as property key should be valid");
+    assert!(
+        result.is_ok(),
+        "Identifier string as property key should be valid"
+    );
 
     // Test Unicode string as property key
     let input_str = r#"node "🗝️"=value"#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "Unicode string as property key should be valid");
+    assert!(
+        result.is_ok(),
+        "Unicode string as property key should be valid"
+    );
 }
 
 #[test]
@@ -259,7 +307,10 @@ fn test_strings_as_arguments() {
     let input_str = "node identifier-argument";
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "Identifier string as argument should be valid");
+    assert!(
+        result.is_ok(),
+        "Identifier string as argument should be valid"
+    );
 
     // Test multiple string arguments
     let input_str = r#"node "first" "second" third-arg"#;
@@ -274,18 +325,27 @@ fn test_strings_as_property_values() {
     let input_str = r#"node key="string value""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "Quoted string as property value should be valid");
+    assert!(
+        result.is_ok(),
+        "Quoted string as property value should be valid"
+    );
 
     let input_str = "node key=identifier-value";
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "Identifier string as property value should be valid");
+    assert!(
+        result.is_ok(),
+        "Identifier string as property value should be valid"
+    );
 
     // Test Unicode string as property value
     let input_str = r#"node key="🌟 value""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "Unicode string as property value should be valid");
+    assert!(
+        result.is_ok(),
+        "Unicode string as property value should be valid"
+    );
 }
 
 // Section 3.9.6. Type Annotation with Strings
@@ -296,18 +356,27 @@ fn test_string_type_annotations() {
     let input_str = r#"node url=(url)"https://example.com""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "String type annotation on string should be valid");
+    assert!(
+        result.is_ok(),
+        "String type annotation on string should be valid"
+    );
 
     let input_str = r#"node email=(email)"test@example.com""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "Email type annotation on string should be valid");
+    assert!(
+        result.is_ok(),
+        "Email type annotation on string should be valid"
+    );
 
     // Test custom string type annotations
     let input_str = r#"node name=(person-name)"John Doe""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "Custom string type annotation should be valid");
+    assert!(
+        result.is_ok(),
+        "Custom string type annotation should be valid"
+    );
 }
 
 // Section 3.9.7. Complex String Test Cases
@@ -338,7 +407,10 @@ fn test_complex_string_scenarios() {
         }
     };
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "Complex document with mixed string types should be valid");
+    assert!(
+        result.is_ok(),
+        "Complex document with mixed string types should be valid"
+    );
 }
 
 #[test]
@@ -406,7 +478,10 @@ fn test_section_3_9_compliance() {
     if let Err(e) = &result3a {
         println!("Error in part 3a (no children): {}", e);
     }
-    assert!(result3a.is_ok(), "Quoted node names without children should be valid");
+    assert!(
+        result3a.is_ok(),
+        "Quoted node names without children should be valid"
+    );
 
     // Test with children - simpler case
     let input3b_str = r#""quoted-node" {
@@ -421,6 +496,8 @@ fn test_section_3_9_compliance() {
         println!("Note: This is a known limitation with complex quoted property parsing in children blocks");
         return; // Skip this test for now
     }
-    assert!(result3b.is_ok(), "Quoted node names with children should be valid");
-
+    assert!(
+        result3b.is_ok(),
+        "Quoted node names with children should be valid"
+    );
 }

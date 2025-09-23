@@ -3,7 +3,7 @@
 //! This module handles parsing of KDL type annotations according to Section 3.8
 //! of the KDL specification.
 
-use syn::{Result, Ident, parse::ParseStream};
+use syn::{parse::ParseStream, Ident, Result};
 
 /// Helper function to parse type annotations with whitespace support
 /// Supports: (type), ( type ), (multi-word-type), etc.

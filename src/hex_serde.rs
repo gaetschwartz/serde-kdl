@@ -75,7 +75,7 @@ where
 
 /// Serialize an option of bytes as an optional hex string.
 pub mod option {
-    use super::*;
+    use super::{decode_hex, encode_hex, Deserialize, Deserializer, Serializer};
 
     pub fn serialize<S>(bytes: &Option<Vec<u8>>, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -107,8 +107,8 @@ pub mod option {
 
 #[cfg(test)]
 mod tests {
-    use serde::{Deserialize, Serialize};
     use crate::{from_str, to_string};
+    use serde::{Deserialize, Serialize};
 
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
     struct TestStruct {

@@ -43,8 +43,12 @@ mod bytes_tests {
 
         let test_bytes = vec![0x12, 0x34, 0x56];
 
-        let with_explicit = WithExplicitHex { data: test_bytes.clone() };
-        let with_default = WithDefaultHex { data: test_bytes.clone() };
+        let with_explicit = WithExplicitHex {
+            data: test_bytes.clone(),
+        };
+        let with_default = WithDefaultHex {
+            data: test_bytes.clone(),
+        };
 
         let explicit_kdl = to_string(&with_explicit).unwrap();
         let default_kdl = to_string(&with_default).unwrap();
@@ -68,9 +72,7 @@ mod bytes_tests {
             data: Vec<u8>,
         }
 
-        let test_data = EmptyBytes {
-            data: vec![],
-        };
+        let test_data = EmptyBytes { data: vec![] };
 
         let kdl_string = to_string(&test_data).unwrap();
         let deserialized: EmptyBytes = from_str(&kdl_string).unwrap();
@@ -94,9 +96,7 @@ mod bytes_tests {
         assert_eq!(with_data, deserialized);
 
         // Test with None
-        let without_data = OptionalBytes {
-            data: None,
-        };
+        let without_data = OptionalBytes { data: None };
 
         let kdl_string = to_string(&without_data).unwrap();
         let deserialized: OptionalBytes = from_str(&kdl_string).unwrap();
@@ -304,19 +304,25 @@ mod bytes_tests {
             let len = rng.gen_range(0..=256);
             let bytes: Vec<u8> = (0..len).map(|_| rng.gen()).collect();
 
-            let byte_data = ByteData { data: bytes.clone() };
+            let byte_data = ByteData {
+                data: bytes.clone(),
+            };
             let kdl_string = to_string(&byte_data).unwrap();
             let deserialized: ByteData = from_str(&kdl_string).unwrap();
 
-            assert_eq!(byte_data, deserialized, "Roundtrip failed for bytes: {:?}", bytes);
+            assert_eq!(
+                byte_data, deserialized,
+                "Roundtrip failed for bytes: {:?}",
+                bytes
+            );
         }
     }
 }
 
 #[cfg(not(feature = "bytes"))]
 mod no_bytes_tests {
-    use serde_kdl::{to_string, Serializer};
     use serde::Serializer as SerializerTrait;
+    use serde_kdl::{to_string, Serializer};
 
     #[test]
     fn test_bytes_serializer_not_supported_without_feature() {

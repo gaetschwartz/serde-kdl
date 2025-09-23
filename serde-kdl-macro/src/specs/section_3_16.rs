@@ -293,7 +293,8 @@ fn test_null_semantic_meaning() {
     assert!(result.is_ok());
 
     // Database connection with optional values
-    let input_str = "database host=\"localhost\" port=5432 username=\"user\" password=#null ssl=#null";
+    let input_str =
+        "database host=\"localhost\" port=5432 username=\"user\" password=#null ssl=#null";
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
     assert!(result.is_ok());

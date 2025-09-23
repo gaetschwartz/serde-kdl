@@ -94,12 +94,10 @@ fn test_roundtrip_nested_structs() {
             port: 5432,
             ssl: false,
         },
-        servers: vec![
-            ServerConfig {
-                name: "server1".to_string(),
-                endpoint: "http://server1.example.com".to_string(),
-            },
-        ],
+        servers: vec![ServerConfig {
+            name: "server1".to_string(),
+            endpoint: "http://server1.example.com".to_string(),
+        }],
     };
 
     let kdl_string = to_string(&original).expect("Failed to serialize");
@@ -120,7 +118,12 @@ fn test_serialize_simple_array() {
 
 #[test]
 fn test_serialize_string_array() {
-    let words = vec!["hello".to_string(), "world".to_string(), "from".to_string(), "kdl".to_string()];
+    let words = vec![
+        "hello".to_string(),
+        "world".to_string(),
+        "from".to_string(),
+        "kdl".to_string(),
+    ];
     let kdl_string = to_string(&words).expect("Failed to serialize");
     println!("Serialized string array: {}", kdl_string);
 

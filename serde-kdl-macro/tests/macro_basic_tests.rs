@@ -1,6 +1,5 @@
 use serde_kdl_macro::kdl;
 
-
 #[test]
 fn test_simple_node() {
     let doc = kdl! {

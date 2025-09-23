@@ -1,8 +1,6 @@
 use crate::error::{Error, Result};
 use kdl::{KdlDocument, KdlEntry, KdlNode, KdlValue};
-use serde::de::{
-    DeserializeSeed, EnumAccess, MapAccess, SeqAccess, VariantAccess, Visitor,
-};
+use serde::de::{DeserializeSeed, EnumAccess, MapAccess, SeqAccess, VariantAccess, Visitor};
 use serde::Deserializer as DeserializerTrait;
 
 /// A deserializer that converts KDL documents directly to Rust values.
@@ -11,9 +9,9 @@ pub struct Deserializer<'de> {
     current_node: Option<&'de KdlNode>,
 }
 
-
 impl<'de> Deserializer<'de> {
     /// Create a new deserializer from a KDL document.
+    #[must_use]
     pub fn new(document: &'de KdlDocument) -> Self {
         Self {
             document,
@@ -29,12 +27,12 @@ impl<'de> Deserializer<'de> {
         if let Some(entry) = node.entries().first() {
             self.deserialize_from_value(entry.value(), visitor)
         } else if let Some(children) = node.children() {
-            if !children.nodes().is_empty() {
+            if children.nodes().is_empty() {
+                visitor.visit_unit()
+            } else {
                 // If the node has children, treat it as a map
                 let map_de = MapDeserializer::new(children.nodes());
                 visitor.visit_map(map_de)
-            } else {
-                visitor.visit_unit()
             }
         } else {
             // Empty node - treat as unit
@@ -159,9 +157,10 @@ impl<'de> DeserializerTrait<'de> for &mut Deserializer<'de> {
         if let Some(node) = self.current_node {
             if let Some(entry) = node.entries().first() {
                 match entry.value() {
-                    KdlValue::Base10(i) | KdlValue::Base16(i) | KdlValue::Base8(i) | KdlValue::Base2(i) => {
-                        visitor.visit_i128(*i as i128)
-                    }
+                    KdlValue::Base10(i)
+                    | KdlValue::Base16(i)
+                    | KdlValue::Base8(i)
+                    | KdlValue::Base2(i) => visitor.visit_i128(i128::from(*i)),
                     _ => self.deserialize_any(visitor),
                 }
             } else {
@@ -173,9 +172,10 @@ impl<'de> DeserializerTrait<'de> for &mut Deserializer<'de> {
             if let Some(root_node) = nodes.first() {
                 if let Some(entry) = root_node.entries().first() {
                     match entry.value() {
-                        KdlValue::Base10(i) | KdlValue::Base16(i) | KdlValue::Base8(i) | KdlValue::Base2(i) => {
-                            visitor.visit_i128(*i as i128)
-                        }
+                        KdlValue::Base10(i)
+                        | KdlValue::Base16(i)
+                        | KdlValue::Base8(i)
+                        | KdlValue::Base2(i) => visitor.visit_i128(i128::from(*i)),
                         _ => self.deserialize_any(visitor),
                     }
                 } else {
@@ -196,14 +196,17 @@ impl<'de> DeserializerTrait<'de> for &mut Deserializer<'de> {
         if let Some(node) = self.current_node {
             if let Some(entry) = node.entries().first() {
                 match entry.value() {
-                    KdlValue::Base10(i) | KdlValue::Base16(i) | KdlValue::Base8(i) | KdlValue::Base2(i) => {
+                    KdlValue::Base10(i)
+                    | KdlValue::Base16(i)
+                    | KdlValue::Base8(i)
+                    | KdlValue::Base2(i) => {
                         if *i >= 0 {
                             visitor.visit_u128(*i as u128)
                         } else {
                             Err(Error::UnexpectedValueType {
                                 field: "u128".to_string(),
                                 expected: "non-negative integer".to_string(),
-                                found: format!("negative integer {}", i),
+                                found: format!("negative integer {i}"),
                             })
                         }
                     }
@@ -218,14 +221,17 @@ impl<'de> DeserializerTrait<'de> for &mut Deserializer<'de> {
             if let Some(root_node) = nodes.first() {
                 if let Some(entry) = root_node.entries().first() {
                     match entry.value() {
-                        KdlValue::Base10(i) | KdlValue::Base16(i) | KdlValue::Base8(i) | KdlValue::Base2(i) => {
+                        KdlValue::Base10(i)
+                        | KdlValue::Base16(i)
+                        | KdlValue::Base8(i)
+                        | KdlValue::Base2(i) => {
                             if *i >= 0 {
                                 visitor.visit_u128(*i as u128)
                             } else {
                                 Err(Error::UnexpectedValueType {
                                     field: "u128".to_string(),
                                     expected: "non-negative integer".to_string(),
-                                    found: format!("negative integer {}", i),
+                                    found: format!("negative integer {i}"),
                                 })
                             }
                         }
@@ -289,10 +295,14 @@ impl<'de> DeserializerTrait<'de> for &mut Deserializer<'de> {
                             let bytes = crate::hex::decode_hex(s)?;
                             visitor.visit_bytes(&bytes)
                         }
-                        _ => Err(Error::UnsupportedType("bytes must be represented as hex strings".to_string())),
+                        _ => Err(Error::UnsupportedType(
+                            "bytes must be represented as hex strings".to_string(),
+                        )),
                     }
                 } else {
-                    Err(Error::UnsupportedType("no value found for bytes".to_string()))
+                    Err(Error::UnsupportedType(
+                        "no value found for bytes".to_string(),
+                    ))
                 }
             } else {
                 // Try root level
@@ -304,13 +314,19 @@ impl<'de> DeserializerTrait<'de> for &mut Deserializer<'de> {
                                 let bytes = crate::hex::decode_hex(s)?;
                                 visitor.visit_bytes(&bytes)
                             }
-                            _ => Err(Error::UnsupportedType("bytes must be represented as hex strings".to_string())),
+                            _ => Err(Error::UnsupportedType(
+                                "bytes must be represented as hex strings".to_string(),
+                            )),
                         }
                     } else {
-                        Err(Error::UnsupportedType("no value found for bytes".to_string()))
+                        Err(Error::UnsupportedType(
+                            "no value found for bytes".to_string(),
+                        ))
                     }
                 } else {
-                    Err(Error::UnsupportedType("no root node found for bytes".to_string()))
+                    Err(Error::UnsupportedType(
+                        "no root node found for bytes".to_string(),
+                    ))
                 }
             }
         }
@@ -335,10 +351,14 @@ impl<'de> DeserializerTrait<'de> for &mut Deserializer<'de> {
                             let bytes = crate::hex::decode_hex(s)?;
                             visitor.visit_byte_buf(bytes)
                         }
-                        _ => Err(Error::UnsupportedType("bytes must be represented as hex strings".to_string())),
+                        _ => Err(Error::UnsupportedType(
+                            "bytes must be represented as hex strings".to_string(),
+                        )),
                     }
                 } else {
-                    Err(Error::UnsupportedType("no value found for bytes".to_string()))
+                    Err(Error::UnsupportedType(
+                        "no value found for bytes".to_string(),
+                    ))
                 }
             } else {
                 // Try root level
@@ -350,13 +370,19 @@ impl<'de> DeserializerTrait<'de> for &mut Deserializer<'de> {
                                 let bytes = crate::hex::decode_hex(s)?;
                                 visitor.visit_byte_buf(bytes)
                             }
-                            _ => Err(Error::UnsupportedType("bytes must be represented as hex strings".to_string())),
+                            _ => Err(Error::UnsupportedType(
+                                "bytes must be represented as hex strings".to_string(),
+                            )),
                         }
                     } else {
-                        Err(Error::UnsupportedType("no value found for bytes".to_string()))
+                        Err(Error::UnsupportedType(
+                            "no value found for bytes".to_string(),
+                        ))
                     }
                 } else {
-                    Err(Error::UnsupportedType("no root node found for bytes".to_string()))
+                    Err(Error::UnsupportedType(
+                        "no root node found for bytes".to_string(),
+                    ))
                 }
             }
         }
@@ -403,11 +429,7 @@ impl<'de> DeserializerTrait<'de> for &mut Deserializer<'de> {
         self.deserialize_unit(visitor)
     }
 
-    fn deserialize_newtype_struct<V>(
-        self,
-        _name: &'static str,
-        visitor: V,
-    ) -> Result<V::Value>
+    fn deserialize_newtype_struct<V>(self, _name: &'static str, visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
@@ -424,7 +446,8 @@ impl<'de> DeserializerTrait<'de> for &mut Deserializer<'de> {
             {
                 if node.entries().len() == 1 {
                     if let Some(entry) = node.entries().first() {
-                        if entry.name().is_none() { // Not a property
+                        if entry.name().is_none() {
+                            // Not a property
                             if let KdlValue::String(s) | KdlValue::RawString(s) = entry.value() {
                                 // Try to decode as hex - if successful, use bytes deserializer
                                 if let Ok(bytes) = crate::hex::decode_hex(s) {
@@ -460,7 +483,8 @@ impl<'de> DeserializerTrait<'de> for &mut Deserializer<'de> {
             {
                 if root_node.entries().len() == 1 {
                     if let Some(entry) = root_node.entries().first() {
-                        if entry.name().is_none() { // Not a property
+                        if entry.name().is_none() {
+                            // Not a property
                             if let KdlValue::String(s) | KdlValue::RawString(s) = entry.value() {
                                 // Try to decode as hex - if successful, use bytes deserializer
                                 if let Ok(bytes) = crate::hex::decode_hex(s) {
@@ -557,7 +581,9 @@ impl<'de> DeserializerTrait<'de> for &mut Deserializer<'de> {
         } else {
             Err(Error::UnexpectedNodeName {
                 expected: name.to_string(),
-                found: nodes.first().map(|n| n.name().value().to_string()).unwrap_or_else(|| "none".to_string()),
+                found: nodes
+                    .first()
+                    .map_or_else(|| "none".to_string(), |n| n.name().value().to_string()),
             })
         }
     }
@@ -710,7 +736,8 @@ impl<'de> MapAccess<'de> for MapDeserializer<'de> {
             self.current_key = Some(child.name().value());
             self.current_node = Some(child);
             use serde::de::value::StrDeserializer;
-            seed.deserialize(StrDeserializer::<Error>::new(child.name().value())).map(Some)
+            seed.deserialize(StrDeserializer::<Error>::new(child.name().value()))
+                .map(Some)
         } else {
             Ok(None)
         }
@@ -773,7 +800,9 @@ impl<'de> MapAccess<'de> for StructDeserializer<'de> {
                 self.current_field = Some(name.value());
                 self.current_value = Some(FieldValue::Property(entry.value()));
                 use serde::de::value::StrDeserializer;
-                return seed.deserialize(StrDeserializer::<Error>::new(name.value())).map(Some);
+                return seed
+                    .deserialize(StrDeserializer::<Error>::new(name.value()))
+                    .map(Some);
             }
             // Skip non-property entries
         }
@@ -787,7 +816,9 @@ impl<'de> MapAccess<'de> for StructDeserializer<'de> {
                 self.current_field = Some(child.name().value());
                 self.current_value = Some(FieldValue::ChildNode(child));
                 use serde::de::value::StrDeserializer;
-                return seed.deserialize(StrDeserializer::<Error>::new(child.name().value())).map(Some);
+                return seed
+                    .deserialize(StrDeserializer::<Error>::new(child.name().value()))
+                    .map(Some);
             }
         }
 
@@ -880,7 +911,11 @@ impl<'de> VariantAccess<'de> for VariantDeserializer<'de> {
             visitor.visit_seq(seq_de)
         } else if let Some(children) = self.node.children() {
             // Look for a "tuple" child node with the values
-            if let Some(tuple_node) = children.nodes().iter().find(|n| n.name().value() == "tuple") {
+            if let Some(tuple_node) = children
+                .nodes()
+                .iter()
+                .find(|n| n.name().value() == "tuple")
+            {
                 let seq_de = SeqDeserializer::from_entries(tuple_node.entries());
                 visitor.visit_seq(seq_de)
             } else {
@@ -900,8 +935,7 @@ impl<'de> VariantAccess<'de> for VariantDeserializer<'de> {
     }
 }
 
-
-/// A deserializer that works directly with a single KdlNode
+/// A deserializer that works directly with a single `KdlNode`
 struct NodeDeserializer<'de> {
     node: &'de KdlNode,
 }
@@ -944,12 +978,12 @@ impl<'de> DeserializerTrait<'de> for NodeDeserializer<'de> {
             // Single entry - deserialize the value
             self.deserialize_from_value(entry.value(), visitor)
         } else if let Some(children) = self.node.children() {
-            if !children.nodes().is_empty() {
+            if children.nodes().is_empty() {
+                visitor.visit_unit()
+            } else {
                 // If the node has children, treat it as a map
                 let map_de = MapDeserializer::new(children.nodes());
                 visitor.visit_map(map_de)
-            } else {
-                visitor.visit_unit()
             }
         } else {
             // Empty node - treat as unit
@@ -965,11 +999,11 @@ impl<'de> DeserializerTrait<'de> for NodeDeserializer<'de> {
             let seq_de = SeqDeserializer::from_entries(self.node.entries());
             visitor.visit_seq(seq_de)
         } else if let Some(children) = self.node.children() {
-            if !children.nodes().is_empty() {
+            if children.nodes().is_empty() {
+                visitor.visit_seq(SeqDeserializer::from_entries(&[]))
+            } else {
                 let seq_de = SeqDeserializer::from_children(children.nodes());
                 visitor.visit_seq(seq_de)
-            } else {
-                visitor.visit_seq(SeqDeserializer::from_entries(&[]))
             }
         } else {
             visitor.visit_seq(SeqDeserializer::from_entries(&[]))
@@ -1002,10 +1036,14 @@ impl<'de> DeserializerTrait<'de> for NodeDeserializer<'de> {
                         let bytes = crate::hex::decode_hex(s)?;
                         visitor.visit_bytes(&bytes)
                     }
-                    _ => Err(Error::UnsupportedType("bytes must be represented as hex strings".to_string())),
+                    _ => Err(Error::UnsupportedType(
+                        "bytes must be represented as hex strings".to_string(),
+                    )),
                 }
             } else {
-                Err(Error::UnsupportedType("no value found for bytes".to_string()))
+                Err(Error::UnsupportedType(
+                    "no value found for bytes".to_string(),
+                ))
             }
         }
         #[cfg(not(feature = "bytes"))]
@@ -1027,10 +1065,14 @@ impl<'de> DeserializerTrait<'de> for NodeDeserializer<'de> {
                         let bytes = crate::hex::decode_hex(s)?;
                         visitor.visit_byte_buf(bytes)
                     }
-                    _ => Err(Error::UnsupportedType("bytes must be represented as hex strings".to_string())),
+                    _ => Err(Error::UnsupportedType(
+                        "bytes must be represented as hex strings".to_string(),
+                    )),
                 }
             } else {
-                Err(Error::UnsupportedType("no value found for bytes".to_string()))
+                Err(Error::UnsupportedType(
+                    "no value found for bytes".to_string(),
+                ))
             }
         }
         #[cfg(not(feature = "bytes"))]
@@ -1061,7 +1103,7 @@ impl<'de> DeserializerTrait<'de> for NodeDeserializer<'de> {
     }
 }
 
-/// A deserializer that works directly with a single KdlEntry
+/// A deserializer that works directly with a single `KdlEntry`
 /// This is useful for deserializing sequence elements that could be enums
 enum EntryDeserializer<'de> {
     Borrowed(&'de kdl::KdlEntry),
@@ -1144,7 +1186,9 @@ impl<'de> DeserializerTrait<'de> for EntryDeserializer<'de> {
                     let bytes = crate::hex::decode_hex(s)?;
                     visitor.visit_bytes(&bytes)
                 }
-                _ => Err(Error::UnsupportedType("bytes must be represented as hex strings".to_string())),
+                _ => Err(Error::UnsupportedType(
+                    "bytes must be represented as hex strings".to_string(),
+                )),
             }
         }
         #[cfg(not(feature = "bytes"))]
@@ -1165,7 +1209,9 @@ impl<'de> DeserializerTrait<'de> for EntryDeserializer<'de> {
                     let bytes = crate::hex::decode_hex(s)?;
                     visitor.visit_byte_buf(bytes)
                 }
-                _ => Err(Error::UnsupportedType("bytes must be represented as hex strings".to_string())),
+                _ => Err(Error::UnsupportedType(
+                    "bytes must be represented as hex strings".to_string(),
+                )),
             }
         }
         #[cfg(not(feature = "bytes"))]
@@ -1238,7 +1284,8 @@ impl<'de> SeqAccess<'de> for BytesSeqDeserializer {
             let byte = self.bytes[self.index];
             self.index += 1;
             use serde::de::value::U8Deserializer;
-            seed.deserialize(U8Deserializer::<Error>::new(byte)).map(Some)
+            seed.deserialize(U8Deserializer::<Error>::new(byte))
+                .map(Some)
         } else {
             Ok(None)
         }

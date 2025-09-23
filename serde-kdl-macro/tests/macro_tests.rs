@@ -1,6 +1,5 @@
 use serde_kdl_macro::kdl;
 
-
 #[cfg(test)]
 mod basic_usage_tests {
     use super::*;
@@ -146,7 +145,10 @@ mod nested_structure_tests {
 
         let name_child = &children.nodes()[0];
         assert_eq!(name_child.name().value(), "name");
-        assert_eq!(name_child.entries()[0].value().as_string().unwrap(), "my-app");
+        assert_eq!(
+            name_child.entries()[0].value().as_string().unwrap(),
+            "my-app"
+        );
 
         let debug_child = &children.nodes()[1];
         assert_eq!(debug_child.name().value(), "debug");
@@ -168,7 +170,10 @@ mod nested_structure_tests {
 
         // Check parent properties
         assert_eq!(server.entries()[0].name().unwrap().value(), "host");
-        assert_eq!(server.entries()[0].value().as_string().unwrap(), "localhost");
+        assert_eq!(
+            server.entries()[0].value().as_string().unwrap(),
+            "localhost"
+        );
         assert_eq!(server.entries()[1].name().unwrap().value(), "port");
         assert_eq!(server.entries()[1].value().as_i64().unwrap(), 8080);
 

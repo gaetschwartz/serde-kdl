@@ -43,16 +43,16 @@ fn test_multiple_arguments() {
 
 #[test]
 fn test_keyword_as_identifier() {
-    // Test that keywords work in the macro with r# prefix
+    // Test that keywords work in the macro when quoted
     let doc = kdl! {
-        r#use "serde"
-        r#type "String"
-        r#async true
+        "use" "serde";
+        "type" "String";
+        "async" true;
     };
     assert_eq!(doc.nodes().len(), 3);
-    assert_eq!(doc.nodes()[0].name().value(), "r#use");
-    assert_eq!(doc.nodes()[1].name().value(), "r#type");
-    assert_eq!(doc.nodes()[2].name().value(), "r#async");
+    assert_eq!(doc.nodes()[0].name().value(), "use");
+    assert_eq!(doc.nodes()[1].name().value(), "type");
+    assert_eq!(doc.nodes()[2].name().value(), "async");
 
     // Test that regular identifiers still work
     let doc2 = kdl! {

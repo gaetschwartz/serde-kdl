@@ -20,27 +20,42 @@ fn test_signed_integer_type_annotations() {
     let input_str = "node (i8)127";
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "i8 type annotation should be valid for integers");
+    assert!(
+        result.is_ok(),
+        "i8 type annotation should be valid for integers"
+    );
 
     let input_str = "node (i16)32767";
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "i16 type annotation should be valid for integers");
+    assert!(
+        result.is_ok(),
+        "i16 type annotation should be valid for integers"
+    );
 
     let input_str = "node (i32)2147483647";
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "i32 type annotation should be valid for integers");
+    assert!(
+        result.is_ok(),
+        "i32 type annotation should be valid for integers"
+    );
 
     let input_str = "node (i64)9223372036854775807";
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "i64 type annotation should be valid for integers");
+    assert!(
+        result.is_ok(),
+        "i64 type annotation should be valid for integers"
+    );
 
     let input_str = "node (i128)123456789012345678901234567890";
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "i128 type annotation should be valid for integers");
+    assert!(
+        result.is_ok(),
+        "i128 type annotation should be valid for integers"
+    );
 }
 
 #[test]
@@ -49,27 +64,42 @@ fn test_unsigned_integer_type_annotations() {
     let input_str = "node (u8)255";
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "u8 type annotation should be valid for integers");
+    assert!(
+        result.is_ok(),
+        "u8 type annotation should be valid for integers"
+    );
 
     let input_str = "node (u16)65535";
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "u16 type annotation should be valid for integers");
+    assert!(
+        result.is_ok(),
+        "u16 type annotation should be valid for integers"
+    );
 
     let input_str = "node (u32)4294967295";
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "u32 type annotation should be valid for integers");
+    assert!(
+        result.is_ok(),
+        "u32 type annotation should be valid for integers"
+    );
 
     let input_str = "node (u64)18446744073709551615";
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "u64 type annotation should be valid for integers");
+    assert!(
+        result.is_ok(),
+        "u64 type annotation should be valid for integers"
+    );
 
     let input_str = "node (u128)123456789012345678901234567890";
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "u128 type annotation should be valid for integers");
+    assert!(
+        result.is_ok(),
+        "u128 type annotation should be valid for integers"
+    );
 }
 
 #[test]
@@ -78,12 +108,18 @@ fn test_platform_dependent_integer_type_annotations() {
     let input_str = "node (isize)123";
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "isize type annotation should be valid for integers");
+    assert!(
+        result.is_ok(),
+        "isize type annotation should be valid for integers"
+    );
 
     let input_str = "node (usize)456";
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "usize type annotation should be valid for integers");
+    assert!(
+        result.is_ok(),
+        "usize type annotation should be valid for integers"
+    );
 }
 
 // Section 3.8.2. Reserved Type Annotations for Numbers With Decimals
@@ -94,12 +130,18 @@ fn test_ieee_754_float_type_annotations() {
     let input_str = "node (f32)3.14";
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "f32 type annotation should be valid for floats");
+    assert!(
+        result.is_ok(),
+        "f32 type annotation should be valid for floats"
+    );
 
     let input_str = "node (f64)2.718281828";
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "f64 type annotation should be valid for floats");
+    assert!(
+        result.is_ok(),
+        "f64 type annotation should be valid for floats"
+    );
 }
 
 #[test]
@@ -108,12 +150,18 @@ fn test_ieee_754_2008_decimal_type_annotations() {
     let input_str = "node (decimal64)123.456";
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "decimal64 type annotation should be valid for floats");
+    assert!(
+        result.is_ok(),
+        "decimal64 type annotation should be valid for floats"
+    );
 
     let input_str = "node (decimal128)789.012345";
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "decimal128 type annotation should be valid for floats");
+    assert!(
+        result.is_ok(),
+        "decimal128 type annotation should be valid for floats"
+    );
 }
 
 // Section 3.8.3. Reserved Type Annotations for Strings
@@ -124,22 +172,34 @@ fn test_time_date_string_type_annotations() {
     let input_str = r#"node (date-time)"2023-01-01T12:00:00Z""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "date-time type annotation should be valid for strings");
+    assert!(
+        result.is_ok(),
+        "date-time type annotation should be valid for strings"
+    );
 
     let input_str = r#"node (time)"12:00:00""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "time type annotation should be valid for strings");
+    assert!(
+        result.is_ok(),
+        "time type annotation should be valid for strings"
+    );
 
     let input_str = r#"node (date)"2023-01-01""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "date type annotation should be valid for strings");
+    assert!(
+        result.is_ok(),
+        "date type annotation should be valid for strings"
+    );
 
     let input_str = r#"node (duration)"P1D""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "duration type annotation should be valid for strings");
+    assert!(
+        result.is_ok(),
+        "duration type annotation should be valid for strings"
+    );
 }
 
 #[test]
@@ -151,17 +211,26 @@ fn test_location_string_type_annotations() {
     if let Err(e) = &result {
         println!("Error with country-2: {}", e);
     }
-    assert!(result.is_ok(), "country-2 type annotation should be valid for strings");
+    assert!(
+        result.is_ok(),
+        "country-2 type annotation should be valid for strings"
+    );
 
     let input_str = r#"node (country-3)"USA""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "country-3 type annotation should be valid for strings");
+    assert!(
+        result.is_ok(),
+        "country-3 type annotation should be valid for strings"
+    );
 
     let input_str = r#"node (country-subdivision)"US-CA""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "country-subdivision type annotation should be valid for strings");
+    assert!(
+        result.is_ok(),
+        "country-subdivision type annotation should be valid for strings"
+    );
 }
 
 #[test]
@@ -170,32 +239,50 @@ fn test_network_string_type_annotations() {
     let input_str = r#"node (email)"test@example.com""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "email type annotation should be valid for strings");
+    assert!(
+        result.is_ok(),
+        "email type annotation should be valid for strings"
+    );
 
     let input_str = r#"node (idn-email)"тест@example.com""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "idn-email type annotation should be valid for strings");
+    assert!(
+        result.is_ok(),
+        "idn-email type annotation should be valid for strings"
+    );
 
     let input_str = r#"node (hostname)"example.com""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "hostname type annotation should be valid for strings");
+    assert!(
+        result.is_ok(),
+        "hostname type annotation should be valid for strings"
+    );
 
     let input_str = r#"node (idn-hostname)"тест.example.com""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "idn-hostname type annotation should be valid for strings");
+    assert!(
+        result.is_ok(),
+        "idn-hostname type annotation should be valid for strings"
+    );
 
     let input_str = r#"node (ipv4)"192.168.1.1""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "ipv4 type annotation should be valid for strings");
+    assert!(
+        result.is_ok(),
+        "ipv4 type annotation should be valid for strings"
+    );
 
     let input_str = r#"node (ipv6)"2001:0db8:85a3:0000:0000:8a2e:0370:7334""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "ipv6 type annotation should be valid for strings");
+    assert!(
+        result.is_ok(),
+        "ipv6 type annotation should be valid for strings"
+    );
 }
 
 #[test]
@@ -204,27 +291,42 @@ fn test_url_string_type_annotations() {
     let input_str = r#"node (url)"https://example.com""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "url type annotation should be valid for strings");
+    assert!(
+        result.is_ok(),
+        "url type annotation should be valid for strings"
+    );
 
     let input_str = "node (url-reference)\"#section\"";
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "url-reference type annotation should be valid for strings");
+    assert!(
+        result.is_ok(),
+        "url-reference type annotation should be valid for strings"
+    );
 
     let input_str = r#"node (irl)"https://тест.example.com""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "irl type annotation should be valid for strings");
+    assert!(
+        result.is_ok(),
+        "irl type annotation should be valid for strings"
+    );
 
     let input_str = "node (irl-reference)\"#тест\"";
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "irl-reference type annotation should be valid for strings");
+    assert!(
+        result.is_ok(),
+        "irl-reference type annotation should be valid for strings"
+    );
 
     let input_str = r#"node (url-template)"/api/{id}""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "url-template type annotation should be valid for strings");
+    assert!(
+        result.is_ok(),
+        "url-template type annotation should be valid for strings"
+    );
 }
 
 #[test]
@@ -233,27 +335,42 @@ fn test_other_string_type_annotations() {
     let input_str = r#"node (decimal)"123.456""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "decimal type annotation should be valid for strings");
+    assert!(
+        result.is_ok(),
+        "decimal type annotation should be valid for strings"
+    );
 
     let input_str = r#"node (currency)"USD""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "currency type annotation should be valid for strings");
+    assert!(
+        result.is_ok(),
+        "currency type annotation should be valid for strings"
+    );
 
     let input_str = r#"node (uuid)"550e8400-e29b-41d4-a716-446655440000""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "uuid type annotation should be valid for strings");
+    assert!(
+        result.is_ok(),
+        "uuid type annotation should be valid for strings"
+    );
 
     let input_str = r#"node (regex)".*""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "regex type annotation should be valid for strings");
+    assert!(
+        result.is_ok(),
+        "regex type annotation should be valid for strings"
+    );
 
     let input_str = r#"node (base64)"SGVsbG8gV29ybGQ=""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "base64 type annotation should be valid for strings");
+    assert!(
+        result.is_ok(),
+        "base64 type annotation should be valid for strings"
+    );
 }
 
 // Section 3.8.4. Examples from specification
@@ -264,7 +381,10 @@ fn test_specification_examples() {
     let input_str = "node (u8)123";
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "Specification example 'node (u8)123' should work");
+    assert!(
+        result.is_ok(),
+        "Specification example 'node (u8)123' should work"
+    );
 
     // Example: node prop=(regex).*
     // Note: .* should be quoted in real KDL, but let's try with quotes
@@ -274,19 +394,28 @@ fn test_specification_examples() {
     if let Err(e) = &result {
         println!("Error with regex example: {}", e);
     }
-    assert!(result.is_ok(), "Specification example 'node prop=(regex).*' should work");
+    assert!(
+        result.is_ok(),
+        "Specification example 'node prop=(regex).*' should work"
+    );
 
     // Example: (published)date "1970-01-01"
     let input_str = r#"(published)date "1970-01-01""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "Specification example '(published)date \"1970-01-01\"' should work");
+    assert!(
+        result.is_ok(),
+        "Specification example '(published)date \"1970-01-01\"' should work"
+    );
 
     // Example: (contributor)person name="Foo McBar"
     let input_str = r#"(contributor)person name="Foo McBar""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "Specification example '(contributor)person name=\"Foo McBar\"' should work");
+    assert!(
+        result.is_ok(),
+        "Specification example '(contributor)person name=\"Foo McBar\"' should work"
+    );
 }
 
 // Whitespace handling tests
@@ -297,25 +426,37 @@ fn test_type_annotation_whitespace_handling() {
     let input_str = "node ( u8 )123";
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "Type annotation with internal whitespace should work");
+    assert!(
+        result.is_ok(),
+        "Type annotation with internal whitespace should work"
+    );
 
     // Test whitespace separation between annotation and value
     let input_str = "node (u8) 123";
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "Type annotation with whitespace separation should work");
+    assert!(
+        result.is_ok(),
+        "Type annotation with whitespace separation should work"
+    );
 
     // Test both internal and external whitespace
     let input_str = "node ( u8 ) 123";
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "Type annotation with both internal and external whitespace should work");
+    assert!(
+        result.is_ok(),
+        "Type annotation with both internal and external whitespace should work"
+    );
 
     // Test whitespace in node name annotations
     let input_str = r#"( published ) date "1970-01-01""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "Node name type annotation with whitespace should work");
+    assert!(
+        result.is_ok(),
+        "Node name type annotation with whitespace should work"
+    );
 }
 
 // Custom type annotation tests
@@ -329,7 +470,10 @@ fn test_custom_type_annotations() {
     if let Err(e) = &result {
         println!("Error with simple custom type: {}", e);
     }
-    assert!(result.is_ok(), "Simple custom type annotations should be allowed");
+    assert!(
+        result.is_ok(),
+        "Simple custom type annotations should be allowed"
+    );
 
     // Test custom (non-reserved) type annotations
     let input_str = r#"node (custom-type)"value""#;
@@ -343,17 +487,26 @@ fn test_custom_type_annotations() {
     let input_str = "node (my-int)42";
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "Custom type annotations on integers should be allowed");
+    assert!(
+        result.is_ok(),
+        "Custom type annotations on integers should be allowed"
+    );
 
     let input_str = "node (my-float)3.14";
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "Custom type annotations on floats should be allowed");
+    assert!(
+        result.is_ok(),
+        "Custom type annotations on floats should be allowed"
+    );
 
     let input_str = "node (my-bool)true";
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "Custom type annotations on booleans should be allowed");
+    assert!(
+        result.is_ok(),
+        "Custom type annotations on booleans should be allowed"
+    );
 
     // Test other cases first
     let input_str = "node (custom)null";
@@ -362,7 +515,10 @@ fn test_custom_type_annotations() {
     if let Err(e) = &result {
         println!("Error parsing (custom)null: {}", e);
     }
-    assert!(result.is_ok(), "Custom type annotations on null should be allowed");
+    assert!(
+        result.is_ok(),
+        "Custom type annotations on null should be allowed"
+    );
 
     let input_str = "node (my-null)null";
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
@@ -370,7 +526,10 @@ fn test_custom_type_annotations() {
     if let Err(e) = &result {
         println!("Error parsing (my-null)null: {}", e);
     }
-    assert!(result.is_ok(), "Custom type annotations on null should be allowed");
+    assert!(
+        result.is_ok(),
+        "Custom type annotations on null should be allowed"
+    );
 }
 
 #[test]
@@ -468,7 +627,10 @@ fn test_multiple_type_annotations() {
         }
     };
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "Multiple type annotations in one document should work");
+    assert!(
+        result.is_ok(),
+        "Multiple type annotations in one document should work"
+    );
 }
 
 // Type annotations with all value types
@@ -495,7 +657,10 @@ fn test_type_annotations_with_all_value_types() {
     if let Err(e) = &result {
         println!("Error with all value types: {}", e);
     }
-    assert!(result.is_ok(), "Type annotations should work with all value types");
+    assert!(
+        result.is_ok(),
+        "Type annotations should work with all value types"
+    );
 }
 
 // Complex whitespace and formatting tests
@@ -540,12 +705,18 @@ fn test_dash_separated_type_names() {
     let input_str = r#"node (country-subdivision)"US-CA""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "Complex dash-separated type names should work");
+    assert!(
+        result.is_ok(),
+        "Complex dash-separated type names should work"
+    );
 
     let input_str = r#"node (custom-multi-word-type)"value""#;
     let input: proc_macro2::TokenStream = input_str.parse().unwrap();
     let result = kdl_impl2(input);
-    assert!(result.is_ok(), "Custom dash-separated type names should work");
+    assert!(
+        result.is_ok(),
+        "Custom dash-separated type names should work"
+    );
 }
 
 // Section 3.8 compliance test
@@ -582,5 +753,8 @@ fn test_section_3_8_compliance() {
     if let Err(e) = &result {
         println!("Error with section 3.8 compliance test: {}", e);
     }
-    assert!(result.is_ok(), "Section 3.8 compliant document should be valid");
+    assert!(
+        result.is_ok(),
+        "Section 3.8 compliant document should be valid"
+    );
 }

@@ -4,7 +4,10 @@
 //! It verifies that all specified disallowed code points are properly rejected and that
 //! validation errors occur when these characters are used in identifiers or other contexts.
 
-use crate::validation::{is_disallowed_code_point, is_valid_identifier_character, validate_identifier_string, is_whitespace, is_newline};
+use crate::validation::{
+    is_disallowed_code_point, is_newline, is_valid_identifier_character, is_whitespace,
+    validate_identifier_string_with_context,
+};
 
 /// Test that all disallowed code points from Section 3.19 are correctly identified
 #[test]
@@ -118,11 +121,9 @@ fn test_disallowed_bom_character() {
 fn test_allowed_characters() {
     let allowed_chars = [
         // ASCII printable characters
-        'a', 'z', 'A', 'Z', '0', '9',
-        '!', '@', '#', '$', '%', '^', '&', '*',
-        '(', ')', '[', ']', '{', '}', '|', '\\',
-        ':', ';', '"', '\'', '<', '>', ',', '?',
-        '/', '~', '`', '=', '+', '-', '_', '.',
+        'a', 'z', 'A', 'Z', '0', '9', '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '[', ']',
+        '{', '}', '|', '\\', ':', ';', '"', '\'', '<', '>', ',', '?', '/', '~', '`', '=', '+', '-',
+        '_', '.',
         // Some control characters that are allowed (newlines and tab)
         '\u{0009}', // Tab (whitespace)
         '\u{000A}', // LF (newline)
@@ -137,9 +138,8 @@ fn test_allowed_characters() {
         '\u{2001}', // Em Quad
         '\u{3000}', // Ideographic Space
         // Unicode characters
-        'α', 'β', 'γ', 'δ', 'ε', 'ζ', 'η', 'θ',
-        '中', '文', '日', '本', '語',
-        '😀', '🌟', '🎉', '💻', '🚀',
+        'α', 'β', 'γ', 'δ', 'ε', 'ζ', 'η', 'θ', '中', '文', '日', '本', '語', '😀', '🌟', '🎉',
+        '💻', '🚀',
         // Characters just outside disallowed ranges
         '\u{0080}', // Just after control character range
         '\u{D7FF}', // Just before surrogate range
@@ -205,10 +205,22 @@ fn test_identifier_validation_with_disallowed_characters() {
         ("hello\u{007F}world", "identifier with delete"),
         ("hello\u{200E}world", "identifier with left-to-right mark"),
         ("hello\u{200F}world", "identifier with right-to-left mark"),
-        ("hello\u{202A}world", "identifier with left-to-right embedding"),
-        ("hello\u{202E}world", "identifier with right-to-left override"),
-        ("hello\u{2066}world", "identifier with left-to-right isolate"),
-        ("hello\u{2069}world", "identifier with pop directional isolate"),
+        (
+            "hello\u{202A}world",
+            "identifier with left-to-right embedding",
+        ),
+        (
+            "hello\u{202E}world",
+            "identifier with right-to-left override",
+        ),
+        (
+            "hello\u{2066}world",
+            "identifier with left-to-right isolate",
+        ),
+        (
+            "hello\u{2069}world",
+            "identifier with pop directional isolate",
+        ),
         ("hello\u{FEFF}world", "identifier with BOM/ZWNBSP"),
         ("\u{0000}hello", "identifier starting with null"),
         ("hello\u{0000}", "identifier ending with null"),
@@ -217,12 +229,20 @@ fn test_identifier_validation_with_disallowed_characters() {
     ];
 
     for (identifier, description) in &test_cases {
-        let result = validate_identifier_string(identifier, proc_macro2::Span::call_site());
+        let result = validate_identifier_string_with_context(
+            identifier,
+            proc_macro2::Span::call_site(),
+            true,
+        );
         assert!(
             result.is_err(),
             "Identifier validation should fail for {}: '{}'",
             description,
-            identifier.chars().map(|c| format!("U+{:04X}", c as u32)).collect::<Vec<_>>().join(" ")
+            identifier
+                .chars()
+                .map(|c| format!("U+{:04X}", c as u32))
+                .collect::<Vec<_>>()
+                .join(" ")
         );
     }
 }
@@ -321,7 +341,10 @@ fn test_disallowed_performance() {
 
     // Verify we found the expected number of disallowed characters
     // 9 (0x0000-0x0008) + 18 (0x000E-0x001F) + 1 (0x007F) + 1 (0x200E) + 1 (0x202A) + 1 (0x2066) + 1 (0x FEFF) = 32
-    assert_eq!(disallowed_count, 32, "Should find exactly 32 disallowed characters");
+    assert_eq!(
+        disallowed_count, 32,
+        "Should find exactly 32 disallowed characters"
+    );
 
     // The test should complete reasonably quickly (within 1 second)
     assert!(
@@ -334,7 +357,6 @@ fn test_disallowed_performance() {
 /// Test interaction between disallowed characters and other character classes
 #[test]
 fn test_disallowed_vs_other_character_classes() {
-
     // Test that some disallowed characters are not whitespace or newlines
     let disallowed_not_whitespace_newline = [
         '\u{0000}', // Null
@@ -348,9 +370,21 @@ fn test_disallowed_vs_other_character_classes() {
     ];
 
     for &ch in &disallowed_not_whitespace_newline {
-        assert!(is_disallowed_code_point(ch), "Character U+{:04X} should be disallowed", ch as u32);
-        assert!(!is_whitespace(ch), "Character U+{:04X} should not be whitespace", ch as u32);
-        assert!(!is_newline(ch), "Character U+{:04X} should not be newline", ch as u32);
+        assert!(
+            is_disallowed_code_point(ch),
+            "Character U+{:04X} should be disallowed",
+            ch as u32
+        );
+        assert!(
+            !is_whitespace(ch),
+            "Character U+{:04X} should not be whitespace",
+            ch as u32
+        );
+        assert!(
+            !is_newline(ch),
+            "Character U+{:04X} should not be newline",
+            ch as u32
+        );
     }
 
     // Test that whitespace characters are not disallowed
@@ -363,9 +397,21 @@ fn test_disallowed_vs_other_character_classes() {
     ];
 
     for &ch in &whitespace_chars {
-        assert!(!is_disallowed_code_point(ch), "Character U+{:04X} should not be disallowed", ch as u32);
-        assert!(is_whitespace(ch), "Character U+{:04X} should be whitespace", ch as u32);
-        assert!(!is_newline(ch), "Character U+{:04X} should not be newline", ch as u32);
+        assert!(
+            !is_disallowed_code_point(ch),
+            "Character U+{:04X} should not be disallowed",
+            ch as u32
+        );
+        assert!(
+            is_whitespace(ch),
+            "Character U+{:04X} should be whitespace",
+            ch as u32
+        );
+        assert!(
+            !is_newline(ch),
+            "Character U+{:04X} should not be newline",
+            ch as u32
+        );
     }
 
     // Test that newline characters are not disallowed
@@ -380,9 +426,21 @@ fn test_disallowed_vs_other_character_classes() {
     ];
 
     for &ch in &newline_chars {
-        assert!(!is_disallowed_code_point(ch), "Character U+{:04X} should not be disallowed", ch as u32);
-        assert!(!is_whitespace(ch), "Character U+{:04X} should not be whitespace", ch as u32);
-        assert!(is_newline(ch), "Character U+{:04X} should be newline", ch as u32);
+        assert!(
+            !is_disallowed_code_point(ch),
+            "Character U+{:04X} should not be disallowed",
+            ch as u32
+        );
+        assert!(
+            !is_whitespace(ch),
+            "Character U+{:04X} should not be whitespace",
+            ch as u32
+        );
+        assert!(
+            is_newline(ch),
+            "Character U+{:04X} should be newline",
+            ch as u32
+        );
     }
 }
 

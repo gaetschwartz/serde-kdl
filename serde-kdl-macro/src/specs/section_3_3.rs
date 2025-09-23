@@ -96,7 +96,10 @@ fn test_process_line_continuation_string_spec_example() {
     // Test the exact example from the KDL specification
     let input = "my-node 1 2 \\  // comments are ok after \\\n                3 4    // This is the actual end of the Node.";
     let result = crate::utils::process_line_continuation_string(input).unwrap();
-    assert_eq!(result, "my-node 1 2 3 4    // This is the actual end of the Node.");
+    assert_eq!(
+        result,
+        "my-node 1 2 3 4    // This is the actual end of the Node."
+    );
 }
 
 // Integration tests using valid Rust token streams

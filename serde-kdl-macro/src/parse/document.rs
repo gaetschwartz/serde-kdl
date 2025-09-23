@@ -2,8 +2,11 @@
 //!
 //! This module handles parsing of complete KDL documents.
 
-use syn::{Result, Token, parse::{Parse, ParseStream}};
 use crate::ast::{KdlDocument, KdlNode};
+use syn::{
+    parse::{Parse, ParseStream},
+    Result, Token,
+};
 
 impl Parse for KdlDocument {
     fn parse(input: ParseStream) -> Result<Self> {

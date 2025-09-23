@@ -18,7 +18,13 @@ fn test_basic_document_structure() {
         node2
         node3
     };
-    println!("Document nodes: {:?}", doc.nodes().iter().map(|n| n.name().value()).collect::<Vec<_>>());
+    println!(
+        "Document nodes: {:?}",
+        doc.nodes()
+            .iter()
+            .map(|n| n.name().value())
+            .collect::<Vec<_>>()
+    );
     assert_eq!(doc.nodes().len(), 3);
 }
 

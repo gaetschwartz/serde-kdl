@@ -116,10 +116,7 @@ fn test_recursive_enum() {
         Value::Number(42.0),
         Value::Text("hello".to_string()),
         Value::Boolean(true),
-        Value::Array(vec![
-            Value::Number(1.0),
-            Value::Number(2.0),
-        ]),
+        Value::Array(vec![Value::Number(1.0), Value::Number(2.0)]),
     ]);
 
     let serialized = to_string(&value).unwrap();

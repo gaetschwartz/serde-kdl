@@ -3,9 +3,13 @@
 //! This module handles parsing of KDL nodes including node names,
 //! properties, arguments, and children.
 
-use syn::{Result, Ident, LitStr, token::{Brace, Eq}, Token, parse::{Parse, ParseStream}};
-use crate::ast::{KdlNode, KdlProperty, KdlValue, KdlString};
+use crate::ast::{KdlNode, KdlProperty, KdlString, KdlValue};
 use crate::parse::type_annotation::parse_type_annotation;
+use syn::{
+    parse::{Parse, ParseStream},
+    token::{Brace, Eq},
+    Ident, LitStr, Result, Token,
+};
 
 impl Parse for KdlNode {
     fn parse(input: ParseStream) -> Result<Self> {
@@ -53,8 +57,13 @@ impl Parse for KdlNode {
                             let ident_str = ident.to_string();
 
                             // Keywords are not valid node names, so this is a type-annotated value, not a new node
-                            if ident_str == "null" || ident_str == "true" || ident_str == "false" ||
-                               ident_str == "inf" || ident_str == "-inf" || ident_str == "nan" {
+                            if ident_str == "null"
+                                || ident_str == "true"
+                                || ident_str == "false"
+                                || ident_str == "inf"
+                                || ident_str == "-inf"
+                                || ident_str == "nan"
+                            {
                                 // This is a type-annotated keyword value, continue parsing as an argument
                             } else {
                                 // This looks like a legitimate new node
@@ -99,7 +108,7 @@ impl Parse for KdlNode {
                             ));
                         }
                         arguments.push(value);
-                    },
+                    }
                     Err(e) => {
                         // If we can't parse as a value and there are more tokens, there's likely a syntax error
                         if !input.is_empty() && !input.peek(Brace) && !input.peek(Token![;]) {
@@ -157,7 +166,8 @@ fn parse_bare_node_name(input: ParseStream) -> Result<String> {
     // Check if it's a string literal first (quoted strings)
     if input.peek(LitStr) {
         let lit_str: LitStr = input.parse()?;
-        let processed_value = crate::parse::string::process_string_escapes(&lit_str.value(), lit_str.span())?;
+        let processed_value =
+            crate::parse::string::process_string_escapes(&lit_str.value(), lit_str.span())?;
 
         // Create a KdlString for validation
         let kdl_string = KdlString::Quoted {
@@ -174,7 +184,10 @@ fn parse_bare_node_name(input: ParseStream) -> Result<String> {
     let mut name_parts = Vec::new();
 
     // Handle leading punctuation characters
-    while input.peek(syn::token::Minus) || input.peek(syn::token::Plus) || input.peek(syn::token::Dot) {
+    while input.peek(syn::token::Minus)
+        || input.peek(syn::token::Plus)
+        || input.peek(syn::token::Dot)
+    {
         if input.peek(syn::token::Minus) {
             let _: syn::token::Minus = input.parse()?;
             name_parts.push("-".to_string());
@@ -220,7 +233,8 @@ fn parse_property_key(input: ParseStream) -> Result<String> {
     // Check if it's a string literal first (quoted strings)
     if input.peek(LitStr) {
         let lit_str: LitStr = input.parse()?;
-        let processed_value = crate::parse::string::process_string_escapes(&lit_str.value(), lit_str.span())?;
+        let processed_value =
+            crate::parse::string::process_string_escapes(&lit_str.value(), lit_str.span())?;
 
         // Create a KdlString for validation
         let kdl_string = KdlString::Quoted {
@@ -237,7 +251,10 @@ fn parse_property_key(input: ParseStream) -> Result<String> {
     let mut name_parts = Vec::new();
 
     // Handle leading punctuation characters
-    while input.peek(syn::token::Minus) || input.peek(syn::token::Plus) || input.peek(syn::token::Dot) {
+    while input.peek(syn::token::Minus)
+        || input.peek(syn::token::Plus)
+        || input.peek(syn::token::Dot)
+    {
         if input.peek(syn::token::Minus) {
             let _: syn::token::Minus = input.parse()?;
             name_parts.push("-".to_string());
@@ -289,13 +306,21 @@ fn is_property_ahead(input: &syn::parse::ParseBuffer) -> bool {
     let checkpoint = input.fork();
 
     // Handle leading punctuation characters
-    while checkpoint.peek(syn::token::Minus) || checkpoint.peek(syn::token::Plus) || checkpoint.peek(syn::token::Dot) {
+    while checkpoint.peek(syn::token::Minus)
+        || checkpoint.peek(syn::token::Plus)
+        || checkpoint.peek(syn::token::Dot)
+    {
         if checkpoint.peek(syn::token::Minus) {
-            if checkpoint.parse::<syn::token::Minus>().is_err() { break; }
+            if checkpoint.parse::<syn::token::Minus>().is_err() {
+                break;
+            }
         } else if checkpoint.peek(syn::token::Plus) {
-            if checkpoint.parse::<syn::token::Plus>().is_err() { break; }
-        } else if checkpoint.peek(syn::token::Dot)
-            && checkpoint.parse::<syn::token::Dot>().is_err() { break;
+            if checkpoint.parse::<syn::token::Plus>().is_err() {
+                break;
+            }
+        } else if checkpoint.peek(syn::token::Dot) && checkpoint.parse::<syn::token::Dot>().is_err()
+        {
+            break;
         }
     }
 

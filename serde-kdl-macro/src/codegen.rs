@@ -2,10 +2,13 @@
 //!
 //! This module handles the generation of Rust code from parsed KDL AST structures.
 
+use crate::ast::{
+    extract_type_annotation, KdlDocument, KdlNode, KdlValue, KDL_ENTRY, KDL_NODE,
+    SERDE_KDL_KDL_EXPORT,
+};
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::Result;
-use crate::ast::{KdlDocument, KdlNode, KdlValue, extract_type_annotation, SERDE_KDL_KDL_EXPORT, KDL_NODE, KDL_ENTRY};
 
 pub(crate) fn generate_kdl_code(document: &KdlDocument) -> Result<TokenStream2> {
     let node_codes: Result<Vec<_>> = document.nodes.iter().map(generate_node_code).collect();
@@ -25,24 +28,28 @@ fn generate_node_code(node: &KdlNode) -> Result<TokenStream2> {
     let type_annotation = &node.type_annotation;
 
     // Generate argument codes with type annotation handling
-    let arg_codes: Result<Vec<_>> = node.arguments.iter().map(|arg| {
-        let value_code = generate_value_code(arg)?;
-        let type_annotation = extract_type_annotation(arg);
+    let arg_codes: Result<Vec<_>> = node
+        .arguments
+        .iter()
+        .map(|arg| {
+            let value_code = generate_value_code(arg)?;
+            let type_annotation = extract_type_annotation(arg);
 
-        if let Some(type_str) = type_annotation {
-            Ok(quote! {
-                {
-                    let mut entry = #SERDE_KDL_KDL_EXPORT::KdlEntry::new(#value_code);
-                    entry.set_ty(#type_str);
-                    entry
-                }
-            })
-        } else {
-            Ok(quote! {
-                #SERDE_KDL_KDL_EXPORT::KdlEntry::new(#value_code)
-            })
-        }
-    }).collect();
+            if let Some(type_str) = type_annotation {
+                Ok(quote! {
+                    {
+                        let mut entry = #SERDE_KDL_KDL_EXPORT::KdlEntry::new(#value_code);
+                        entry.set_ty(#type_str);
+                        entry
+                    }
+                })
+            } else {
+                Ok(quote! {
+                    #SERDE_KDL_KDL_EXPORT::KdlEntry::new(#value_code)
+                })
+            }
+        })
+        .collect();
     let arg_codes = arg_codes?;
 
     // Generate property codes with type annotation handling
@@ -123,24 +130,28 @@ fn generate_child_node_code(node: &KdlNode) -> Result<TokenStream2> {
     let type_annotation = &node.type_annotation;
 
     // Generate argument codes with type annotation handling
-    let arg_codes: Result<Vec<_>> = node.arguments.iter().map(|arg| {
-        let value_code = generate_value_code(arg)?;
-        let type_annotation = extract_type_annotation(arg);
+    let arg_codes: Result<Vec<_>> = node
+        .arguments
+        .iter()
+        .map(|arg| {
+            let value_code = generate_value_code(arg)?;
+            let type_annotation = extract_type_annotation(arg);
 
-        if let Some(type_str) = type_annotation {
-            Ok(quote! {
-                {
-                    let mut entry = #SERDE_KDL_KDL_EXPORT::KdlEntry::new(#value_code);
-                    entry.set_ty(#type_str);
-                    entry
-                }
-            })
-        } else {
-            Ok(quote! {
-                #SERDE_KDL_KDL_EXPORT::KdlEntry::new(#value_code)
-            })
-        }
-    }).collect();
+            if let Some(type_str) = type_annotation {
+                Ok(quote! {
+                    {
+                        let mut entry = #SERDE_KDL_KDL_EXPORT::KdlEntry::new(#value_code);
+                        entry.set_ty(#type_str);
+                        entry
+                    }
+                })
+            } else {
+                Ok(quote! {
+                    #SERDE_KDL_KDL_EXPORT::KdlEntry::new(#value_code)
+                })
+            }
+        })
+        .collect();
     let arg_codes = arg_codes?;
 
     // Generate property codes with type annotation handling
@@ -233,7 +244,7 @@ fn generate_value_code(value: &KdlValue) -> Result<TokenStream2> {
             } else {
                 Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Base10Float(#f) })
             }
-        },
+        }
         KdlValue::Boolean(b) => Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Bool(#b) }),
         KdlValue::Null => Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Null }),
         KdlValue::TypeAnnotated {

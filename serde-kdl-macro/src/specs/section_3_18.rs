@@ -4,7 +4,10 @@
 //! It verifies that all specified newline characters are properly recognized and that
 //! newline handling works correctly in identifier validation.
 
-use crate::validation::{is_newline, is_valid_identifier_character, validate_identifier_string, is_whitespace, is_disallowed_code_point};
+use crate::validation::{
+    is_disallowed_code_point, is_newline, is_valid_identifier_character, is_whitespace,
+    validate_identifier_string_with_context,
+};
 
 /// Test that all newline characters from Table 3 are correctly identified
 #[test]
@@ -36,11 +39,8 @@ fn test_newline_characters() {
 fn test_non_newline_characters() {
     let non_newline_chars = [
         // Regular characters
-        'a', 'Z', '0', '9', '_', '-', '+', '.',
-        '!', '@', '#', '$', '%', '^', '&', '*',
-        '(', ')', '[', ']', '{', '}', '|', '\\',
-        ':', ';', '"', '\'', '<', '>', ',', '?',
-        '/', '~', '`', '=',
+        'a', 'Z', '0', '9', '_', '-', '+', '.', '!', '@', '#', '$', '%', '^', '&', '*', '(', ')',
+        '[', ']', '{', '}', '|', '\\', ':', ';', '"', '\'', '<', '>', ',', '?', '/', '~', '`', '=',
         // Whitespace characters (should not be newlines)
         '\u{0009}', // Character Tabulation
         '\u{0020}', // Space
@@ -128,12 +128,20 @@ fn test_identifier_validation_with_newlines() {
     ];
 
     for (identifier, description) in &test_cases {
-        let result = validate_identifier_string(identifier, proc_macro2::Span::call_site());
+        let result = validate_identifier_string_with_context(
+            identifier,
+            proc_macro2::Span::call_site(),
+            true,
+        );
         assert!(
             result.is_err(),
             "Identifier validation should fail for {}: '{}'",
             description,
-            identifier.chars().map(|c| format!("U+{:04X}", c as u32)).collect::<Vec<_>>().join(" ")
+            identifier
+                .chars()
+                .map(|c| format!("U+{:04X}", c as u32))
+                .collect::<Vec<_>>()
+                .join(" ")
         );
     }
 }
@@ -157,12 +165,16 @@ fn test_valid_identifiers_without_newlines() {
         "emoji_😀🌟",
         "mixed_identifierαβγ123",
         // Characters that might look like newlines but aren't
-        "with\u{0009}tab", // Tab is whitespace, should fail differently
+        "with\u{0009}tab",   // Tab is whitespace, should fail differently
         "with\u{0020}space", // Space is whitespace, should fail differently
     ];
 
     for identifier in &valid_identifiers {
-        let result = validate_identifier_string(identifier, proc_macro2::Span::call_site());
+        let result = validate_identifier_string_with_context(
+            identifier,
+            proc_macro2::Span::call_site(),
+            true,
+        );
         // Note: Some of these will fail due to whitespace, but not due to newlines
         if result.is_err() {
             let error_msg = result.unwrap_err().to_string();
@@ -214,30 +226,45 @@ fn test_crlf_sequence() {
 
     // Test CRLF in identifiers (should fail due to both CR and LF being newlines)
     let crlf_identifier = "hello\r\nworld";
-    let result = validate_identifier_string(crlf_identifier, proc_macro2::Span::call_site());
-    assert!(
-        result.is_err(),
-        "Identifier with CRLF should be invalid"
+    let result = validate_identifier_string_with_context(
+        crlf_identifier,
+        proc_macro2::Span::call_site(),
+        true,
     );
+    assert!(result.is_err(), "Identifier with CRLF should be invalid");
 
     // Test that both CR and LF are detected as invalid characters
     let mut found_cr_error = false;
     let mut found_lf_error = false;
 
     // Test CR separately
-    let cr_result = validate_identifier_string("hello\rworld", proc_macro2::Span::call_site());
+    let cr_result = validate_identifier_string_with_context(
+        "hello\rworld",
+        proc_macro2::Span::call_site(),
+        true,
+    );
     if cr_result.is_err() {
         found_cr_error = true;
     }
 
     // Test LF separately
-    let lf_result = validate_identifier_string("hello\nworld", proc_macro2::Span::call_site());
+    let lf_result = validate_identifier_string_with_context(
+        "hello\nworld",
+        proc_macro2::Span::call_site(),
+        true,
+    );
     if lf_result.is_err() {
         found_lf_error = true;
     }
 
-    assert!(found_cr_error, "CR should cause identifier validation to fail");
-    assert!(found_lf_error, "LF should cause identifier validation to fail");
+    assert!(
+        found_cr_error,
+        "CR should cause identifier validation to fail"
+    );
+    assert!(
+        found_lf_error,
+        "LF should cause identifier validation to fail"
+    );
 }
 
 /// Test performance with a large string containing various newline characters
@@ -246,8 +273,7 @@ fn test_newline_performance() {
     // Create a string with many newline characters for performance testing
     let mut chars_to_test = Vec::new();
     let newline_chars = [
-        '\u{000A}', '\u{000B}', '\u{000C}', '\u{000D}',
-        '\u{0085}', '\u{2028}', '\u{2029}',
+        '\u{000A}', '\u{000B}', '\u{000C}', '\u{000D}', '\u{0085}', '\u{2028}', '\u{2029}',
     ];
 
     // Add newline characters
@@ -275,7 +301,10 @@ fn test_newline_performance() {
     let duration = start.elapsed();
 
     // Verify we found the expected number of newlines
-    assert_eq!(newline_count, 7000, "Should find exactly 7000 newline characters");
+    assert_eq!(
+        newline_count, 7000,
+        "Should find exactly 7000 newline characters"
+    );
 
     // The test should complete reasonably quickly (within 1 second)
     assert!(
@@ -288,7 +317,6 @@ fn test_newline_performance() {
 /// Test interaction between newlines and other character classes
 #[test]
 fn test_newline_vs_other_character_classes() {
-
     // Test that newline characters are not confused with whitespace
     let newline_chars = [
         '\u{000A}', // LF
@@ -301,8 +329,16 @@ fn test_newline_vs_other_character_classes() {
     ];
 
     for &ch in &newline_chars {
-        assert!(is_newline(ch), "Character U+{:04X} should be newline", ch as u32);
-        assert!(!is_whitespace(ch), "Character U+{:04X} should not be whitespace", ch as u32);
+        assert!(
+            is_newline(ch),
+            "Character U+{:04X} should be newline",
+            ch as u32
+        );
+        assert!(
+            !is_whitespace(ch),
+            "Character U+{:04X} should not be whitespace",
+            ch as u32
+        );
 
         // Some newline characters might also be disallowed code points
         // This depends on the specific implementation of disallowed code points
@@ -324,9 +360,21 @@ fn test_newline_vs_other_character_classes() {
     ];
 
     for &ch in &whitespace_chars {
-        assert!(!is_newline(ch), "Character U+{:04X} should not be newline", ch as u32);
-        assert!(is_whitespace(ch), "Character U+{:04X} should be whitespace", ch as u32);
-        assert!(!is_disallowed_code_point(ch), "Character U+{:04X} should not be disallowed", ch as u32);
+        assert!(
+            !is_newline(ch),
+            "Character U+{:04X} should not be newline",
+            ch as u32
+        );
+        assert!(
+            is_whitespace(ch),
+            "Character U+{:04X} should be whitespace",
+            ch as u32
+        );
+        assert!(
+            !is_disallowed_code_point(ch),
+            "Character U+{:04X} should not be disallowed",
+            ch as u32
+        );
     }
 }
 

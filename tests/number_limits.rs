@@ -1,4 +1,4 @@
-use kdl::{KdlValue, KdlDocument};
+use kdl::{KdlDocument, KdlValue};
 
 #[test]
 fn test_kdl_value_base10_range() {
@@ -22,10 +22,10 @@ fn test_kdl_value_base10_range() {
 fn test_kdl_parse_large_numbers() {
     // Test what happens when we parse large numbers with KDL
     let test_cases = [
-        "root 9223372036854775807",  // i64::MAX
-        "root -9223372036854775808", // i64::MIN
-        "root 9223372036854775808",  // i64::MAX + 1
-        "root 18446744073709551615", // u64::MAX
+        "root 9223372036854775807",                     // i64::MAX
+        "root -9223372036854775808",                    // i64::MIN
+        "root 9223372036854775808",                     // i64::MAX + 1
+        "root 18446744073709551615",                    // u64::MAX
         "root 170141183460469231731687303715884105727", // i128::MAX
     ];
 

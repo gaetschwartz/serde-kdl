@@ -15,23 +15,41 @@ fn test_parse_examples(#[files("examples/*.kdl")] path: std::path::PathBuf) {
         Ok(doc) => {
             // Valid KDL - test roundtrip serialization
             let serialized = doc.to_string();
-            assert!(!serialized.is_empty(), "Serialized document should not be empty for {:?}", path);
+            assert!(
+                !serialized.is_empty(),
+                "Serialized document should not be empty for {:?}",
+                path
+            );
 
             // Parse the serialized version to ensure roundtrip works at KDL level
-            let _reparsed: kdl::KdlDocument = serialized.parse()
-                .unwrap_or_else(|e| panic!("Failed to reparse serialized KDL from {:?}: {}", path, e));
+            let _reparsed: kdl::KdlDocument = serialized.parse().unwrap_or_else(|e| {
+                panic!("Failed to reparse serialized KDL from {:?}: {}", path, e)
+            });
 
-            println!("✓ Successfully processed valid KDL example: {:?}", path.file_name().unwrap());
-        },
+            println!(
+                "✓ Successfully processed valid KDL example: {:?}",
+                path.file_name().unwrap()
+            );
+        }
         Err(e) => {
             // Invalid KDL syntax - just log it for now since examples may use older format
-            println!("⚠ Example {:?} uses syntax not supported by current KDL parser: {}",
-                    path.file_name().unwrap(), e);
+            println!(
+                "⚠ Example {:?} uses syntax not supported by current KDL parser: {}",
+                path.file_name().unwrap(),
+                e
+            );
 
             // Verify the file is not empty and contains some KDL-like content
-            assert!(!content.trim().is_empty(), "Example file {:?} should not be empty", path);
-            assert!(content.contains('{') || content.contains('"'),
-                   "Example file {:?} should contain KDL-like syntax", path);
+            assert!(
+                !content.trim().is_empty(),
+                "Example file {:?} should not be empty",
+                path
+            );
+            assert!(
+                content.contains('{') || content.contains('"'),
+                "Example file {:?} should contain KDL-like syntax",
+                path
+            );
         }
     }
 }
@@ -62,28 +80,30 @@ enum PropertyValue {
 #[test]
 fn test_roundtrip_document_structure() {
     let mut properties = std::collections::HashMap::new();
-    properties.insert("version".to_string(), PropertyValue::String("1.0".to_string()));
+    properties.insert(
+        "version".to_string(),
+        PropertyValue::String("1.0".to_string()),
+    );
     properties.insert("port".to_string(), PropertyValue::Integer(8080));
     properties.insert("enabled".to_string(), PropertyValue::Bool(true));
 
     let document = DocumentTest {
-        nodes: vec![
-            NodeTest {
-                name: "config".to_string(),
-                properties: properties.clone(),
-                children: vec![
-                    NodeTest {
-                        name: "server".to_string(),
-                        properties: {
-                            let mut server_props = std::collections::HashMap::new();
-                            server_props.insert("host".to_string(), PropertyValue::String("localhost".to_string()));
-                            server_props
-                        },
-                        children: Vec::new(),
-                    }
-                ],
-            }
-        ],
+        nodes: vec![NodeTest {
+            name: "config".to_string(),
+            properties: properties.clone(),
+            children: vec![NodeTest {
+                name: "server".to_string(),
+                properties: {
+                    let mut server_props = std::collections::HashMap::new();
+                    server_props.insert(
+                        "host".to_string(),
+                        PropertyValue::String("localhost".to_string()),
+                    );
+                    server_props
+                },
+                children: Vec::new(),
+            }],
+        }],
     };
 
     let serialized = to_string(&document).expect("Failed to serialize document");
@@ -146,7 +166,8 @@ fn test_complex_node_structures() {
     let serialized = to_string(&config).expect("Failed to serialize complex config");
     println!("Serialized complex config: {}", serialized);
 
-    let deserialized: ComplexConfig = from_str(&serialized).expect("Failed to deserialize complex config");
+    let deserialized: ComplexConfig =
+        from_str(&serialized).expect("Failed to deserialize complex config");
     assert_eq!(config, deserialized);
 }
 
@@ -176,7 +197,8 @@ fn test_edge_cases() {
     };
 
     let serialized = to_string(&config_empty).expect("Failed to serialize empty config");
-    let deserialized: EdgeCaseConfig = from_str(&serialized).expect("Failed to deserialize empty config");
+    let deserialized: EdgeCaseConfig =
+        from_str(&serialized).expect("Failed to deserialize empty config");
     assert_eq!(config_empty, deserialized);
 
     // Test with populated arrays
@@ -184,13 +206,20 @@ fn test_edge_cases() {
         name: "test-full".to_string(),
         tags: vec!["web".to_string(), "api".to_string()],
         servers: vec![
-            ServerConfig { name: "web".to_string(), port: 80 },
-            ServerConfig { name: "api".to_string(), port: 3000 },
+            ServerConfig {
+                name: "web".to_string(),
+                port: 80,
+            },
+            ServerConfig {
+                name: "api".to_string(),
+                port: 3000,
+            },
         ],
         optional_field: Some("optional value".to_string()),
     };
 
     let serialized = to_string(&config_full).expect("Failed to serialize full config");
-    let deserialized: EdgeCaseConfig = from_str(&serialized).expect("Failed to deserialize full config");
+    let deserialized: EdgeCaseConfig =
+        from_str(&serialized).expect("Failed to deserialize full config");
     assert_eq!(config_full, deserialized);
 }

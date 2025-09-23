@@ -9,7 +9,6 @@ struct SimpleConfig {
     port: u16,
 }
 
-
 #[test]
 fn test_serialize_simple_struct() {
     let config = SimpleConfig {

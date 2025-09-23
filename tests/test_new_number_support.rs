@@ -14,7 +14,9 @@ fn test_improved_u64_serialization() {
         Ok(_) => panic!("Expected error for u64::MAX"),
         Err(e) => {
             println!("u64::MAX error: {}", e);
-            assert!(e.to_string().contains("exceeds KDL's supported integer range"));
+            assert!(e
+                .to_string()
+                .contains("exceeds KDL's supported integer range"));
         }
     }
 }
@@ -38,7 +40,9 @@ fn test_i128_serialization() {
         Ok(_) => panic!("Expected error for i128::MAX"),
         Err(e) => {
             println!("i128::MAX error: {}", e);
-            assert!(e.to_string().contains("exceeds KDL's supported integer range"));
+            assert!(e
+                .to_string()
+                .contains("exceeds KDL's supported integer range"));
         }
     }
 }
@@ -57,7 +61,9 @@ fn test_u128_serialization() {
         Ok(_) => panic!("Expected error for u128::MAX"),
         Err(e) => {
             println!("u128::MAX error: {}", e);
-            assert!(e.to_string().contains("exceeds KDL's supported integer range"));
+            assert!(e
+                .to_string()
+                .contains("exceeds KDL's supported integer range"));
         }
     }
 }

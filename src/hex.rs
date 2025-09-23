@@ -6,7 +6,7 @@ use crate::error::{Error, Result};
 pub fn encode_hex(bytes: &[u8]) -> String {
     let mut result = String::with_capacity(bytes.len() * 2);
     for byte in bytes {
-        result.push_str(&format!("{:02x}", byte));
+        result.push_str(&format!("{byte:02x}"));
     }
     result
 }
@@ -15,7 +15,9 @@ pub fn encode_hex(bytes: &[u8]) -> String {
 /// Returns an error if the string contains invalid hex characters or has odd length.
 pub fn decode_hex(hex_str: &str) -> Result<Vec<u8>> {
     if !hex_str.len().is_multiple_of(2) {
-        return Err(Error::InvalidHexString("hex string must have even length".to_string()));
+        return Err(Error::InvalidHexString(
+            "hex string must have even length".to_string(),
+        ));
     }
 
     let mut bytes = Vec::with_capacity(hex_str.len() / 2);
@@ -36,7 +38,9 @@ fn hex_char_to_value(c: char) -> Result<u8> {
         '0'..='9' => Ok(c as u8 - b'0'),
         'a'..='f' => Ok(c as u8 - b'a' + 10),
         'A'..='F' => Ok(c as u8 - b'A' + 10),
-        _ => Err(Error::InvalidHexString(format!("invalid hex character: '{}'", c))),
+        _ => Err(Error::InvalidHexString(format!(
+            "invalid hex character: '{c}'"
+        ))),
     }
 }
 
@@ -54,9 +58,18 @@ mod tests {
     #[test]
     fn test_decode_hex() {
         assert_eq!(decode_hex("").unwrap(), vec![]);
-        assert_eq!(decode_hex("48656c6c6f").unwrap(), vec![0x48, 0x65, 0x6c, 0x6c, 0x6f]);
-        assert_eq!(decode_hex("00ffaa55").unwrap(), vec![0x00, 0xff, 0xaa, 0x55]);
-        assert_eq!(decode_hex("00FFAA55").unwrap(), vec![0x00, 0xff, 0xaa, 0x55]); // uppercase
+        assert_eq!(
+            decode_hex("48656c6c6f").unwrap(),
+            vec![0x48, 0x65, 0x6c, 0x6c, 0x6f]
+        );
+        assert_eq!(
+            decode_hex("00ffaa55").unwrap(),
+            vec![0x00, 0xff, 0xaa, 0x55]
+        );
+        assert_eq!(
+            decode_hex("00FFAA55").unwrap(),
+            vec![0x00, 0xff, 0xaa, 0x55]
+        ); // uppercase
     }
 
     #[test]

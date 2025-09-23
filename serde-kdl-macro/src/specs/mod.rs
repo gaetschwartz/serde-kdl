@@ -67,12 +67,6 @@ mod section_3_10;
 #[cfg(test)]
 mod section_3_11;
 
-#[cfg(test)]
-mod section_3_12;
-
-#[cfg(test)]
-mod section_3_13;
-
 // #[cfg(test)]
 // mod section_3_14;
 

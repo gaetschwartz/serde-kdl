@@ -21,14 +21,18 @@ pub(crate) fn process_line_continuation_string(input: &str) -> Result<String> {
             let mut j = i + 1;
 
             // Skip whitespace after the backslash (but not newlines)
-            while j < chars.len() && chars[j].is_whitespace() && chars[j] != '\n' && chars[j] != '\r' {
+            while j < chars.len()
+                && chars[j].is_whitespace()
+                && chars[j] != '\n'
+                && chars[j] != '\r'
+            {
                 j += 1;
             }
 
             // Check for optional single-line comment
             if j < chars.len() && chars[j] == '/' && j + 1 < chars.len() && chars[j + 1] == '/' {
                 j += 2; // Skip //
-                // Skip the rest of the single-line comment until newline
+                        // Skip the rest of the single-line comment until newline
                 while j < chars.len() && chars[j] != '\n' && chars[j] != '\r' {
                     j += 1;
                 }

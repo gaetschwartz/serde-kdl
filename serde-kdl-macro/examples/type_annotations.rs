@@ -26,8 +26,11 @@ fn main() {
 
     // Type annotations are preserved in the generated structure
     for node in doc.nodes() {
-        println!("Node '{}' has type annotation: {:?}",
-                 node.name(), node.ty());
+        println!(
+            "Node '{}' has type annotation: {:?}",
+            node.name(),
+            node.ty()
+        );
 
         for entry in node.entries() {
             if let Some(ty) = entry.ty() {

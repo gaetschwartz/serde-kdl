@@ -3,10 +3,13 @@
 //! This module handles parsing of KDL values including strings, numbers,
 //! booleans, null, and type-annotated values.
 
-use syn::{Result, Ident, Lit, LitStr, parse::{Parse, ParseStream}};
-use crate::ast::{KdlValue, KdlString};
-use crate::parse::type_annotation::parse_type_annotation;
+use crate::ast::{KdlString, KdlValue};
 use crate::parse::number::try_parse_number;
+use crate::parse::type_annotation::parse_type_annotation;
+use syn::{
+    parse::{Parse, ParseStream},
+    Ident, Lit, LitStr, Result,
+};
 
 impl Parse for KdlValue {
     fn parse(input: ParseStream) -> Result<Self> {
@@ -60,7 +63,10 @@ impl Parse for KdlValue {
                 Lit::Int(_) | Lit::Float(_) => {
                     // Numbers should have been handled by try_parse_number above
                     // If we reach here, it means our number parser missed something
-                    Err(syn::Error::new(lit.span(), "Number parsing failed - this should not happen"))
+                    Err(syn::Error::new(
+                        lit.span(),
+                        "Number parsing failed - this should not happen",
+                    ))
                 }
                 _ => Err(syn::Error::new(lit.span(), "Unsupported literal type")),
             }
@@ -94,10 +100,7 @@ impl Parse for KdlValue {
                 if ident == "inf" {
                     Ok(KdlValue::Float(f64::NEG_INFINITY))
                 } else {
-                    Err(syn::Error::new(
-                        ident.span(),
-                        "Expected 'inf' after '#-'",
-                    ))
+                    Err(syn::Error::new(ident.span(), "Expected 'inf' after '#-'"))
                 }
             } else if input.peek(syn::LitBool) {
                 // Handle #true and #false when true/false are literals, not identifiers
@@ -136,10 +139,10 @@ impl Parse for KdlValue {
                 let span = input.span();
                 let kdl_string = KdlString::Identifier {
                     value: full_identifier,
-                    span
+                    span,
                 };
                 // When parsing values, allow keywords since they should be treated as actual values
-            kdl_string.validate_with_context(false)?;
+                kdl_string.validate_with_context(false)?;
                 Ok(KdlValue::String(kdl_string))
             }
         } else {
@@ -150,5 +153,3 @@ impl Parse for KdlValue {
         }
     }
 }
-
-
