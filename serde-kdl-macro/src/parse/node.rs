@@ -157,7 +157,7 @@ fn parse_bare_node_name(input: ParseStream) -> Result<String> {
     // Check if it's a string literal first (quoted strings)
     if input.peek(LitStr) {
         let lit_str: LitStr = input.parse()?;
-        let processed_value = crate::parse::string::process_unicode_escapes(&lit_str.value(), lit_str.span())?;
+        let processed_value = crate::parse::string::process_string_escapes(&lit_str.value(), lit_str.span())?;
 
         // Create a KdlString for validation
         let kdl_string = KdlString::Quoted {
@@ -220,7 +220,7 @@ fn parse_property_key(input: ParseStream) -> Result<String> {
     // Check if it's a string literal first (quoted strings)
     if input.peek(LitStr) {
         let lit_str: LitStr = input.parse()?;
-        let processed_value = crate::parse::string::process_unicode_escapes(&lit_str.value(), lit_str.span())?;
+        let processed_value = crate::parse::string::process_string_escapes(&lit_str.value(), lit_str.span())?;
 
         // Create a KdlString for validation
         let kdl_string = KdlString::Quoted {

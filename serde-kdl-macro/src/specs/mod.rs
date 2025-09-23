@@ -64,32 +64,32 @@ mod section_3_9;
 #[cfg(test)]
 mod section_3_10;
 
-// #[cfg(test)]
-// mod section_3_11_test;
+#[cfg(test)]
+mod section_3_11;
+
+#[cfg(test)]
+mod section_3_12;
+
+#[cfg(test)]
+mod section_3_13;
 
 // #[cfg(test)]
-// mod section_3_12_test;
+// mod section_3_14;
 
-// #[cfg(test)]
-// mod section_3_13_test;
+#[cfg(test)]
+mod section_3_15;
 
-// #[cfg(test)]
-// mod section_3_14_test;
+#[cfg(test)]
+mod section_3_16;
 
-// #[cfg(test)]
-// mod section_3_15_test;
+#[cfg(test)]
+mod section_3_17;
 
-// #[cfg(test)]
-// mod section_3_16_test;
+#[cfg(test)]
+mod section_3_18;
 
-// #[cfg(test)]
-// mod section_3_17_test;
-
-// #[cfg(test)]
-// mod section_3_18_test;
-
-// #[cfg(test)]
-// mod section_3_19_test;
+#[cfg(test)]
+mod section_3_19;
 
 // #[cfg(test)]
 // mod section_4_1_test;

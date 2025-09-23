@@ -110,10 +110,19 @@ impl KdlString {
 
     /// Create a quoted string from a LitStr with Unicode escape processing
     pub(crate) fn from_lit_str_as_quoted(lit_str: syn::LitStr) -> Result<Self> {
-        let processed_value = crate::parse::string::process_unicode_escapes(&lit_str.value(), lit_str.span())?;
+        let processed_value = crate::parse::string::process_string_escapes(&lit_str.value(), lit_str.span())?;
         Ok(KdlString::Quoted {
             value: processed_value,
             span: lit_str.span(),
+        })
+    }
+
+    /// Create a multi-line string from raw content with processing
+    pub(crate) fn from_multiline_content(content: String, span: proc_macro2::Span) -> Result<Self> {
+        let processed_value = crate::parse::string::process_multiline_string(&content, span)?;
+        Ok(KdlString::MultiLine {
+            value: processed_value,
+            span,
         })
     }
 
@@ -121,6 +130,44 @@ impl KdlString {
     #[allow(dead_code)]
     pub(crate) fn identifier(value: String, span: proc_macro2::Span) -> Self {
         KdlString::Identifier { value, span }
+    }
+
+    /// Create a raw string from content, hash count, and span
+    pub(crate) fn from_raw_content(value: String, hash_count: usize, span: proc_macro2::Span) -> Self {
+        KdlString::Raw { value, hash_count, span }
+    }
+
+    /// Create a raw string from raw content with processing
+    pub(crate) fn from_raw_string_content(content: String, hash_count: usize, span: proc_macro2::Span) -> Result<Self> {
+        let processed_value = crate::parse::string::process_raw_string(&content, hash_count, span)?;
+        Ok(KdlString::Raw {
+            value: processed_value,
+            hash_count,
+            span,
+        })
+    }
+
+    /// Create a raw multi-line string from raw content with processing
+    pub(crate) fn from_raw_multiline_content(content: String, hash_count: usize, span: proc_macro2::Span) -> Result<Self> {
+        let processed_value = crate::parse::string::process_raw_multiline_string(&content, hash_count, span)?;
+        Ok(KdlString::Raw {
+            value: processed_value,
+            hash_count,
+            span,
+        })
+    }
+
+    /// Get the hash count for raw strings, or None for other string types
+    pub(crate) fn hash_count(&self) -> Option<usize> {
+        match self {
+            KdlString::Raw { hash_count, .. } => Some(*hash_count),
+            _ => None,
+        }
+    }
+
+    /// Check if this is a raw string
+    pub(crate) fn is_raw(&self) -> bool {
+        matches!(self, KdlString::Raw { .. })
     }
 
     /// Validate the string according to Section 3.9 requirements

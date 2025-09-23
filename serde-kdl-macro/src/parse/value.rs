@@ -6,6 +6,7 @@
 use syn::{Result, Ident, Lit, LitStr, parse::{Parse, ParseStream}};
 use crate::ast::{KdlValue, KdlString};
 use crate::parse::type_annotation::parse_type_annotation;
+use crate::parse::number::try_parse_number;
 
 impl Parse for KdlValue {
     fn parse(input: ParseStream) -> Result<Self> {
@@ -28,31 +29,9 @@ impl Parse for KdlValue {
             });
         }
 
-        // Check for negative numbers first
-        if input.peek(syn::token::Minus) {
-            // Look ahead to see if this is a negative number or an identifier with dash
-            let checkpoint = input.fork();
-            let _minus: syn::token::Minus = checkpoint.parse()?;
-
-            if checkpoint.peek(Lit) {
-                // It's a negative number
-                let _minus: syn::token::Minus = input.parse()?;
-                let lit: Lit = input.parse()?;
-                match lit {
-                    Lit::Int(lit_int) => {
-                        let value = -(lit_int.base10_parse::<i64>()?);
-                        Ok(KdlValue::Integer(value))
-                    }
-                    Lit::Float(lit_float) => {
-                        let value = -(lit_float.base10_parse::<f64>()?);
-                        Ok(KdlValue::Float(value))
-                    }
-                    _ => Err(syn::Error::new(lit.span(), "Invalid negative literal")),
-                }
-            } else {
-                // It's likely an identifier starting with minus, parse as a string identifier
-                parse_identifier_sequence(input)
-            }
+        // Try to parse as a number first (handles all formats including negative numbers)
+        if let Some(number_value) = try_parse_number(input)? {
+            return Ok(number_value);
         }
         // Check for string literals
         else if input.peek(LitStr) {
@@ -67,29 +46,26 @@ impl Parse for KdlValue {
             let boolean: syn::LitBool = input.parse()?;
             Ok(KdlValue::Boolean(boolean.value))
         }
-        // Check for other literals (int, float, bool, str)
+        // Check for other literals (bool, str - numbers are handled above)
         else if input.peek(Lit) {
             let lit: Lit = input.parse()?;
             match lit {
-                Lit::Int(lit_int) => {
-                    let value = lit_int.base10_parse::<i64>()?;
-                    Ok(KdlValue::Integer(value))
-                }
-                Lit::Float(lit_float) => {
-                    let value = lit_float.base10_parse::<f64>()?;
-                    Ok(KdlValue::Float(value))
-                }
                 Lit::Bool(lit_bool) => Ok(KdlValue::Boolean(lit_bool.value)),
                 Lit::Str(lit_str) => {
                     let kdl_string = KdlString::from_lit_str_as_quoted(lit_str)?;
                     // When parsing values, allow keywords since they should be treated as actual values
-            kdl_string.validate_with_context(false)?;
+                    kdl_string.validate_with_context(false)?;
                     Ok(KdlValue::String(kdl_string))
+                }
+                Lit::Int(_) | Lit::Float(_) => {
+                    // Numbers should have been handled by try_parse_number above
+                    // If we reach here, it means our number parser missed something
+                    Err(syn::Error::new(lit.span(), "Number parsing failed - this should not happen"))
                 }
                 _ => Err(syn::Error::new(lit.span(), "Unsupported literal type")),
             }
         }
-        // Check for # syntax (like #true, #false)
+        // Check for # syntax (like #true, #false, #inf, #-inf, #nan)
         else if input.peek(syn::token::Pound) {
             let _pound: syn::token::Pound = input.parse()?;
             if input.peek(Ident) {
@@ -101,10 +77,26 @@ impl Parse for KdlValue {
                     Ok(KdlValue::Boolean(false))
                 } else if ident_str == "null" {
                     Ok(KdlValue::Null)
+                } else if ident_str == "inf" {
+                    Ok(KdlValue::Float(f64::INFINITY))
+                } else if ident_str == "nan" {
+                    Ok(KdlValue::Float(f64::NAN))
                 } else {
                     Err(syn::Error::new(
                         input.span(),
-                        format!("Invalid # syntax: #{}. Only #true, #false, and #null are allowed", ident_str),
+                        format!("Invalid # syntax: #{}. Only #true, #false, #null, #inf, #-inf, and #nan are allowed", ident_str),
+                    ))
+                }
+            } else if input.peek(syn::token::Minus) {
+                // Handle #-inf
+                let _minus: syn::token::Minus = input.parse()?;
+                let ident: Ident = input.parse()?;
+                if ident.to_string() == "inf" {
+                    Ok(KdlValue::Float(f64::NEG_INFINITY))
+                } else {
+                    Err(syn::Error::new(
+                        ident.span(),
+                        "Expected 'inf' after '#-'",
                     ))
                 }
             } else if input.peek(syn::LitBool) {
@@ -128,10 +120,6 @@ impl Parse for KdlValue {
                 Ok(KdlValue::Boolean(true))
             } else if identifier == "false" {
                 Ok(KdlValue::Boolean(false))
-            } else if identifier == "inf" {
-                Ok(KdlValue::Float(f64::INFINITY))
-            } else if identifier == "nan" {
-                Ok(KdlValue::Float(f64::NAN))
             } else {
                 // Check if there are more tokens that form a compound identifier
                 let mut identifier_parts = vec![identifier];
@@ -209,3 +197,4 @@ fn parse_identifier_sequence(input: ParseStream) -> Result<KdlValue> {
         Ok(KdlValue::String(kdl_string))
     }
 }
+

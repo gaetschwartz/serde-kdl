@@ -220,7 +220,20 @@ fn generate_value_code(value: &KdlValue) -> Result<TokenStream2> {
             Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::String(#s.to_string()) })
         }
         KdlValue::Integer(i) => Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Base10(#i) }),
-        KdlValue::Float(f) => Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Base10Float(#f) }),
+        KdlValue::Float(f) => {
+            // Handle special float values that can't be directly quoted
+            if f.is_infinite() {
+                if f.is_sign_positive() {
+                    Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Base10Float(f64::INFINITY) })
+                } else {
+                    Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Base10Float(f64::NEG_INFINITY) })
+                }
+            } else if f.is_nan() {
+                Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Base10Float(f64::NAN) })
+            } else {
+                Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Base10Float(#f) })
+            }
+        },
         KdlValue::Boolean(b) => Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Bool(#b) }),
         KdlValue::Null => Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Null }),
         KdlValue::TypeAnnotated {

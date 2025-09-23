@@ -6,9 +6,11 @@
 //! - `value`: Value parsing
 //! - `string`: String parsing and validation
 //! - `type_annotation`: Type annotation parsing
+//! - `number`: Number parsing (Section 3.14)
 
 pub(crate) mod document;
 pub(crate) mod node;
 pub(crate) mod value;
 pub(crate) mod string;
 pub(crate) mod type_annotation;
+pub(crate) mod number;
