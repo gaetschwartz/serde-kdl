@@ -1,0 +1,34 @@
+<section id="section-3.9">
+<h3 id="name-string">
+<a class="section-number selfRef" href="#section-3.9">3.9. </a><a class="section-name selfRef" href="#name-string">String</a>
+</h3>
+<p id="section-3.9-1">Strings in KDL represent textual UTF-8 Values (<a class="auto internal xref" href="#value">Section 3.7</a>). A String is either an
+Identifier String (<a class="auto internal xref" href="#identifier-string">Section 3.10</a>) (like <code>foo</code>), a
+Quoted String (<a class="auto internal xref" href="#quoted-string">Section 3.11</a>) (like <code>"foo"</code>)
+or a Multi-Line String (<a class="auto internal xref" href="#multi-line-string">Section 3.12</a>).
+Both Quoted and Multiline strings come in normal
+and Raw String (<a class="auto internal xref" href="#raw-string">Section 3.13</a>) variants (like <code>#"foo"#</code>):<a class="pilcrow" href="#section-3.9-1">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.9-2.1">
+<p id="section-3.9-2.1.1">Identifier Strings let you write short, "single-word" strings with a
+minimum of syntax<a class="pilcrow" href="#section-3.9-2.1.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.9-2.2">
+<p id="section-3.9-2.2.1">Quoted Strings let you write strings "like normal", with whitespace and escapes.<a class="pilcrow" href="#section-3.9-2.2.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.9-2.3">
+<p id="section-3.9-2.3.1">Multi-Line Strings let you write strings across multiple lines
+  and with indentation that's not part of the string value.<a class="pilcrow" href="#section-3.9-2.3.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.9-2.4">
+<p id="section-3.9-2.4.1">Raw Strings don't allow any escapes,
+allowing you to not worry about the string's content containing anything that
+might look like an escape.<a class="pilcrow" href="#section-3.9-2.4.1">¶</a></p>
+</li>
+</ul>
+<p id="section-3.9-3">Strings <em>MUST</em> be represented as UTF-8 values.<a class="pilcrow" href="#section-3.9-3">¶</a></p>
+<p id="section-3.9-4">Strings <em>MUST NOT</em> include the code points for
+disallowed literal code points (<a class="auto internal xref" href="#disallowed-literal-code-points">Section 3.19</a>) directly.
+Quoted and Multi-Line Strings may include these code points as <em>values</em>
+by representing them with their corresponding <code>\u{...}</code> escape.<a class="pilcrow" href="#section-3.9-4">¶</a></p>
+</section>

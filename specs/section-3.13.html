@@ -1,0 +1,66 @@
+<section id="section-3.13">
+<h3 id="name-raw-string">
+<a class="section-number selfRef" href="#section-3.13">3.13. </a><a class="section-name selfRef" href="#name-raw-string">Raw String</a>
+</h3>
+<p id="section-3.13-1">Both Quoted (<a class="auto internal xref" href="#quoted-string">Section 3.11</a>) and Multi-Line Strings (<a class="auto internal xref" href="#multi-line-string">Section 3.12</a>) have
+Raw String variants, which are identical in syntax except they do not support
+<code>\</code>-escapes. This includes line-continuation escapes (<code>\</code> + <code>ws</code> collapsing to
+nothing). They otherwise share the same properties as far as literal
+Newline (<a class="auto internal xref" href="#newline">Section 3.18</a>) characters go, multi-line rules, and the requirement of
+UTF-8 representation.<a class="pilcrow" href="#section-3.13-1">¶</a></p>
+<p id="section-3.13-2">The Raw String variants are indicated by preceding the strings's opening quotes
+with one or more <code>#</code> characters. The string is then closed by its normal closing
+quotes, followed by a <em>matching</em> number of <code>#</code> characters. This means that the
+string may contain any combination of <code>"</code> and <code>#</code> characters other than its
+closing delimiter (e.g., if a raw string starts with <code>##"</code>, it can contain <code>"</code>
+or <code>"#</code>, but not <code>"##</code> or <code>"###</code>).<a class="pilcrow" href="#section-3.13-2">¶</a></p>
+<p id="section-3.13-3">Like other Strings, Raw Strings <em>MUST NOT</em> include any of the disallowed
+literal code-points (<a class="auto internal xref" href="#disallowed-literal-code-points">Section 3.19</a>) as code points in their
+body. Unlike with Quoted Strings, these cannot simply be escaped, and are thus
+unrepresentable when using Raw Strings.<a class="pilcrow" href="#section-3.13-3">¶</a></p>
+<div id="example-5">
+<section id="section-3.13.1">
+<h4 id="name-example-6">
+<a class="section-number selfRef" href="#section-3.13.1">3.13.1. </a><a class="section-name selfRef" href="#name-example-6">Example</a>
+</h4>
+<div class="lang-kdl sourcecode" id="section-3.13.1-1">
+<pre>
+just-escapes #"\n will be literal"#
+</pre><a class="pilcrow" href="#section-3.13.1-1">¶</a>
+</div>
+<p id="section-3.13.1-2">The string contains the literal characters <code>\n will be literal</code>.<a class="pilcrow" href="#section-3.13.1-2">¶</a></p>
+<div class="lang-kdl sourcecode" id="section-3.13.1-3">
+<pre>
+quotes-and-escapes ##"hello\n\r\asd"#world"##
+</pre><a class="pilcrow" href="#section-3.13.1-3">¶</a>
+</div>
+<p id="section-3.13.1-4">The string contains the literal characters <code>hello\n\r\asd"#world</code><a class="pilcrow" href="#section-3.13.1-4">¶</a></p>
+<div class="lang-kdl sourcecode" id="section-3.13.1-5">
+<pre>
+raw-multi-line #"""
+    Here's a """
+        multiline string
+        """
+    without escapes.
+    """#
+</pre><a class="pilcrow" href="#section-3.13.1-5">¶</a>
+</div>
+<p id="section-3.13.1-6">The string contains the value<a class="pilcrow" href="#section-3.13.1-6">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-3.13.1-7">
+<pre>
+Here's a """
+    multiline string
+    """
+without escapes.
+</pre><a class="pilcrow" href="#section-3.13.1-7">¶</a>
+</div>
+<p id="section-3.13.1-8">or equivalently,<a class="pilcrow" href="#section-3.13.1-8">¶</a></p>
+<div class="lang-kdl sourcecode" id="section-3.13.1-9">
+<pre>
+"Here's a \"\"\"\n    multiline string\n    \"\"\"\nwithout escapes."
+</pre><a class="pilcrow" href="#section-3.13.1-9">¶</a>
+</div>
+<p id="section-3.13.1-10">as a Quoted String.<a class="pilcrow" href="#section-3.13.1-10">¶</a></p>
+</section>
+</div>
+</section>

@@ -1,0 +1,24 @@
+<section id="section-3.5">
+<h3 id="name-argument">
+<a class="section-number selfRef" href="#section-3.5">3.5. </a><a class="section-name selfRef" href="#name-argument">Argument</a>
+</h3>
+<p id="section-3.5-1">An Argument is a bare Value (<a class="auto internal xref" href="#value">Section 3.7</a>) attached to a Node (<a class="auto internal xref" href="#node">Section 3.2</a>), with no
+associated key. It shares the same space as Properties (<a class="auto internal xref" href="#property">Section 3.4</a>), and may be interleaved with them.<a class="pilcrow" href="#section-3.5-1">¶</a></p>
+<p id="section-3.5-2">A Node may have any number of Arguments, which should be evaluated left to
+right. KDL implementations <em>MUST</em> preserve the order of Arguments relative to
+each other (not counting Properties).<a class="pilcrow" href="#section-3.5-2">¶</a></p>
+<p id="section-3.5-3">Arguments <em>MAY</em> be prefixed with <code>/-</code> to "comment out" the entire token and
+make it act as plain whitespace, even if it spreads across multiple lines.<a class="pilcrow" href="#section-3.5-3">¶</a></p>
+<div id="example-3">
+<section id="section-3.5.1">
+<h4 id="name-example-4">
+<a class="section-number selfRef" href="#section-3.5.1">3.5.1. </a><a class="section-name selfRef" href="#name-example-4">Example</a>
+</h4>
+<div class="lang-kdl sourcecode" id="section-3.5.1-1">
+<pre>
+my-node 1 2 3 a b c
+</pre><a class="pilcrow" href="#section-3.5.1-1">¶</a>
+</div>
+</section>
+</div>
+</section>

@@ -1,0 +1,48 @@
+- [ ] 3.1. Document
+  - [ ] 3.1.1. Example
+- [ ] 3.2. Node
+  - [ ] 3.2.1. Example
+- [ ] 3.3. Line Continuation
+  - [ ] 3.3.1. Example
+- [ ] 3.4. Property
+- [ ] 3.5. Argument
+  - [ ] 3.5.1. Example
+- [ ] 3.6. Children Block
+  - [ ] 3.6.1. Example
+- [ ] 3.7. Value
+- [ ] 3.8. Type Annotation
+  - [ ] 3.8.1. Reserved Type Annotations for Numbers Without Decimals
+  - [ ] 3.8.2. Reserved Type Annotations for Numbers With Decimals
+  - [ ] 3.8.3. Reserved Type Annotations for Strings
+  - [ ] 3.8.4. Examples
+- [ ] 3.9. String
+- [ ] 3.10. Identifier String
+  - [ ] 3.10.1. Non-initial characters
+  - [ ] 3.10.2. Non-identifier characters
+- [ ] 3.11. Quoted String
+  - [ ] 3.11.1. Escapes
+    - [ ] 3.11.1.1. Escaped Whitespace
+    - [ ] 3.11.1.2. Invalid escapes
+- [ ] 3.12. Multi-line String
+  - [ ] 3.12.1. Newline Normalization
+  - [ ] 3.12.2. Examples
+    - [ ] 3.12.2.1. Indented multi-line string
+    - [ ] 3.12.2.2. Shorter last-line indent
+    - [ ] 3.12.2.3. Empty lines
+    - [ ] 3.12.2.4. Syntax errors
+  - [ ] 3.12.3. Interaction with Whitespace Escapes
+- [ ] 3.13. Raw String
+  - [ ] 3.13.1. Example
+- [ ] 3.14. Number
+  - [ ] 3.14.1. Keyword Numbers
+- [ ] 3.15. Boolean
+  - [ ] 3.15.1. Example
+- [ ] 3.16. Null
+  - [ ] 3.16.1. Example
+- [ ] 3.17. Whitespace
+  - [ ] 3.17.1. Single-line comments
+  - [ ] 3.17.2. Multi-line comments
+  - [ ] 3.17.3. Slashdash comments
+- [ ] 3.18. Newline
+- [ ] 3.19. Disallowed Literal Code Points
+- [ ] 4.1. Grammar language

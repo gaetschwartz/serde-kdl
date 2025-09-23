@@ -1,0 +1,70 @@
+<section id="section-3.14">
+<h3 id="name-number">
+<a class="section-number selfRef" href="#section-3.14">3.14. </a><a class="section-name selfRef" href="#name-number">Number</a>
+</h3>
+<p id="section-3.14-1">Numbers in KDL represent numerical Values (<a class="auto internal xref" href="#value">Section 3.7</a>). There is no logical distinction in KDL
+between real numbers, integers, and floating point numbers. It's up to
+individual implementations to determine how to represent KDL numbers.<a class="pilcrow" href="#section-3.14-1">¶</a></p>
+<p id="section-3.14-2">There are five syntaxes for Numbers: Keywords, Decimal, Hexadecimal, Octal, and Binary.<a class="pilcrow" href="#section-3.14-2">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.14-3.1">
+<p id="section-3.14-3.1.1">All non-Keyword (<a class="auto internal xref" href="#keyword-numbers">Section 3.14.1</a>) numbers may optionally start with one of <code>-</code> or <code>+</code>, which determine whether they'll be positive or negative.<a class="pilcrow" href="#section-3.14-3.1.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.14-3.2">
+<p id="section-3.14-3.2.1">Binary numbers start with <code>0b</code> and only allow <code>0</code> and <code>1</code> as digits, which may be separated by <code>_</code>. They represent numbers in radix 2.<a class="pilcrow" href="#section-3.14-3.2.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.14-3.3">
+<p id="section-3.14-3.3.1">Octal numbers start with <code>0o</code> and only allow digits between <code>0</code> and <code>7</code>, which may be separated by <code>_</code>. They represent numbers in radix 8.<a class="pilcrow" href="#section-3.14-3.3.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.14-3.4">
+<p id="section-3.14-3.4.1">Hexadecimal numbers start with <code>0x</code> and allow digits between <code>0</code> and <code>9</code>, as well as letters <code>A</code> through <code>F</code>, in either lower or upper case, which may be separated by <code>_</code>. They represent numbers in radix 16.<a class="pilcrow" href="#section-3.14-3.4.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.14-3.5">
+<p id="section-3.14-3.5.1">Decimal numbers are a bit more special:<a class="pilcrow" href="#section-3.14-3.5.1">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.14-3.5.2.1">
+<p id="section-3.14-3.5.2.1.1">They have no radix prefix.<a class="pilcrow" href="#section-3.14-3.5.2.1.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.14-3.5.2.2">
+<p id="section-3.14-3.5.2.2.1">They use digits <code>0</code> through <code>9</code>, which may be separated by <code>_</code>.<a class="pilcrow" href="#section-3.14-3.5.2.2.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.14-3.5.2.3">
+<p id="section-3.14-3.5.2.3.1">They may optionally include a decimal separator <code>.</code>, followed by more digits, which may again be separated by <code>_</code>.<a class="pilcrow" href="#section-3.14-3.5.2.3.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.14-3.5.2.4">
+<p id="section-3.14-3.5.2.4.1">They may optionally be followed by <code>E</code> or <code>e</code>, an optional <code>-</code> or <code>+</code>, and more digits, to represent an exponent value.<a class="pilcrow" href="#section-3.14-3.5.2.4.1">¶</a></p>
+</li>
+</ul>
+</li>
+</ul>
+<p id="section-3.14-4">Note that, similar to JSON and some other languages,
+numbers without an integer digit (such as <code>.1</code>) are illegal.
+They must be written with at least one integer digit, like <code>0.1</code>.
+(These patterns are also disallowed from Identifier Strings (<a class="auto internal xref" href="#identifier-string">Section 3.10</a>), to avoid confusion.)<a class="pilcrow" href="#section-3.14-4">¶</a></p>
+<div id="keyword-numbers">
+<section id="section-3.14.1">
+<h4 id="name-keyword-numbers">
+<a class="section-number selfRef" href="#section-3.14.1">3.14.1. </a><a class="section-name selfRef" href="#name-keyword-numbers">Keyword Numbers</a>
+</h4>
+<p id="section-3.14.1-1">There are three special "keyword" numbers included in KDL to accomodate the
+widespread use of <a href="https://en.wikipedia.org/wiki/IEEE_754">IEEE 754</a> floats:<a class="pilcrow" href="#section-3.14.1-1">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.14.1-2.1">
+<p id="section-3.14.1-2.1.1"><code>#inf</code> - floating point positive infinity.<a class="pilcrow" href="#section-3.14.1-2.1.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.14.1-2.2">
+<p id="section-3.14.1-2.2.1"><code>#-inf</code> - floating point negative infinity.<a class="pilcrow" href="#section-3.14.1-2.2.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.14.1-2.3">
+<p id="section-3.14.1-2.3.1"><code>#nan</code> - floating point NaN/Not a Number.<a class="pilcrow" href="#section-3.14.1-2.3.1">¶</a></p>
+</li>
+</ul>
+<p id="section-3.14.1-3">To go along with this and prevent foot guns, the bare Identifier
+Strings (<a class="auto internal xref" href="#identifier-string">Section 3.10</a>) <code>inf</code>, <code>-inf</code>, and <code>nan</code> are considered illegal
+identifiers and should yield a syntax error.<a class="pilcrow" href="#section-3.14.1-3">¶</a></p>
+<p id="section-3.14.1-4">The existence of these keywords does not imply that any numbers be represented
+as IEEE 754 floats. These are simply for clarity and convenience for any
+implementation that chooses to represent their numbers in this way.<a class="pilcrow" href="#section-3.14.1-4">¶</a></p>
+</section>
+</div>
+</section>

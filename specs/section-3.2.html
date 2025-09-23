@@ -1,0 +1,49 @@
+<section id="section-3.2">
+<h3 id="name-node">
+<a class="section-number selfRef" href="#section-3.2">3.2. </a><a class="section-name selfRef" href="#name-node">Node</a>
+</h3>
+<p id="section-3.2-1">Being a node-oriented language means that the real core component of any KDL
+document is the "node". Every node must have a name, which must be a
+String (<a class="auto internal xref" href="#string">Section 3.9</a>).<a class="pilcrow" href="#section-3.2-1">¶</a></p>
+<p id="section-3.2-2">The name may be preceded by a Type Annotation (<a class="auto internal xref" href="#type-annotation">Section 3.8</a>) to further
+clarify its type, particularly in relation to its parent node. (For example,
+clarifying that a particular <code>date</code> child node is for the <em>publication</em> date,
+rather than the last-modified date, with <code>(published)date</code>.)<a class="pilcrow" href="#section-3.2-2">¶</a></p>
+<p id="section-3.2-3">Following the name are zero or more Arguments (<a class="auto internal xref" href="#argument">Section 3.5</a>) or
+Properties (<a class="auto internal xref" href="#property">Section 3.4</a>), separated by either whitespace (<a class="auto internal xref" href="#whitespace">Section 3.17</a>) or a
+slash-escaped line continuation (<a class="auto internal xref" href="#line-continuation">Section 3.3</a>). Arguments and Properties
+may be interspersed in any order, much like is common with positional arguments
+vs options in command line tools. Collectively, Arguments and Properties may be
+referred to as "Entries".<a class="pilcrow" href="#section-3.2-3">¶</a></p>
+<p id="section-3.2-4">Children (<a class="auto internal xref" href="#children-block">Section 3.6</a>) can be placed after the name and the optional
+Entries, possibly separated by either whitespace or a
+slash-escaped line continuation.<a class="pilcrow" href="#section-3.2-4">¶</a></p>
+<p id="section-3.2-5">Arguments are ordered relative to each other and that order must be preserved in
+order to maintain the semantics. Properties between Arguments do not affect
+Argument ordering.<a class="pilcrow" href="#section-3.2-5">¶</a></p>
+<p id="section-3.2-6">By contrast, Properties <em>SHOULD NOT</em> be assumed to be presented in a given
+order. Children (<a class="auto internal xref" href="#children-block">Section 3.6</a>) should be used if an order-sensitive
+key/value data structure must be represented in KDL. Cf. JSON objects
+preserving key order.<a class="pilcrow" href="#section-3.2-6">¶</a></p>
+<p id="section-3.2-7">Nodes <em>MAY</em> be prefixed with Slashdash (<a class="auto internal xref" href="#slashdash-comments">Section 3.17.3</a>) to "comment out"
+the entire node, including its properties, arguments, and children, and make
+it act as plain whitespace, even if it spreads across multiple lines.<a class="pilcrow" href="#section-3.2-7">¶</a></p>
+<p id="section-3.2-8">Finally, a node is terminated by either a Newline (<a class="auto internal xref" href="#newline">Section 3.18</a>), a semicolon
+(<code>;</code>), the end of a child block (<code>}</code>) or the end of the file/stream (an <code>EOF</code>).<a class="pilcrow" href="#section-3.2-8">¶</a></p>
+<div id="example-1">
+<section id="section-3.2.1">
+<h4 id="name-example-2">
+<a class="section-number selfRef" href="#section-3.2.1">3.2.1. </a><a class="section-name selfRef" href="#name-example-2">Example</a>
+</h4>
+<div class="lang-kdl sourcecode" id="section-3.2.1-1">
+<pre>
+// `foo` will have an Argument value list like `[1, 3]`.
+foo 1 key=val 3 {
+    bar
+    (role)baz 1 2
+}
+</pre><a class="pilcrow" href="#section-3.2.1-1">¶</a>
+</div>
+</section>
+</div>
+</section>

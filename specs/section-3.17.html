@@ -1,0 +1,178 @@
+<section id="section-3.17">
+<h3 id="name-whitespace">
+<a class="section-number selfRef" href="#section-3.17">3.17. </a><a class="section-name selfRef" href="#name-whitespace">Whitespace</a>
+</h3>
+<p id="section-3.17-1">The following characters should be treated as non-Newline (<a class="auto internal xref" href="#newline">Section 3.18</a>) <a href="https://www.unicode.org/Public/UCD/latest/ucd/PropList.txt">white
+space</a>:<a class="pilcrow" href="#section-3.17-1">¶</a></p>
+<table class="center" id="table-2">
+<caption><a class="selfRef" href="#table-2">Table 2</a></caption>
+<thead>
+<tr>
+<th class="text-left" colspan="1" rowspan="1">Name</th>
+<th class="text-left" colspan="1" rowspan="1">Code Pt</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="text-left" colspan="1" rowspan="1">Character Tabulation</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>U+0009</code>
+</td>
+</tr>
+<tr>
+<td class="text-left" colspan="1" rowspan="1">Space</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>U+0020</code>
+</td>
+</tr>
+<tr>
+<td class="text-left" colspan="1" rowspan="1">No-Break Space</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>U+00A0</code>
+</td>
+</tr>
+<tr>
+<td class="text-left" colspan="1" rowspan="1">Ogham Space Mark</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>U+1680</code>
+</td>
+</tr>
+<tr>
+<td class="text-left" colspan="1" rowspan="1">En Quad</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>U+2000</code>
+</td>
+</tr>
+<tr>
+<td class="text-left" colspan="1" rowspan="1">Em Quad</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>U+2001</code>
+</td>
+</tr>
+<tr>
+<td class="text-left" colspan="1" rowspan="1">En Space</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>U+2002</code>
+</td>
+</tr>
+<tr>
+<td class="text-left" colspan="1" rowspan="1">Em Space</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>U+2003</code>
+</td>
+</tr>
+<tr>
+<td class="text-left" colspan="1" rowspan="1">Three-Per-Em Space</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>U+2004</code>
+</td>
+</tr>
+<tr>
+<td class="text-left" colspan="1" rowspan="1">Four-Per-Em Space</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>U+2005</code>
+</td>
+</tr>
+<tr>
+<td class="text-left" colspan="1" rowspan="1">Six-Per-Em Space</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>U+2006</code>
+</td>
+</tr>
+<tr>
+<td class="text-left" colspan="1" rowspan="1">Figure Space</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>U+2007</code>
+</td>
+</tr>
+<tr>
+<td class="text-left" colspan="1" rowspan="1">Punctuation Space</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>U+2008</code>
+</td>
+</tr>
+<tr>
+<td class="text-left" colspan="1" rowspan="1">Thin Space</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>U+2009</code>
+</td>
+</tr>
+<tr>
+<td class="text-left" colspan="1" rowspan="1">Hair Space</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>U+200A</code>
+</td>
+</tr>
+<tr>
+<td class="text-left" colspan="1" rowspan="1">Narrow No-Break Space</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>U+202F</code>
+</td>
+</tr>
+<tr>
+<td class="text-left" colspan="1" rowspan="1">Medium Mathematical Space</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>U+205F</code>
+</td>
+</tr>
+<tr>
+<td class="text-left" colspan="1" rowspan="1">Ideographic Space</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>U+3000</code>
+</td>
+</tr>
+</tbody>
+</table>
+<div id="single-line-comments">
+<section id="section-3.17.1">
+<h4 id="name-single-line-comments">
+<a class="section-number selfRef" href="#section-3.17.1">3.17.1. </a><a class="section-name selfRef" href="#name-single-line-comments">Single-line comments</a>
+</h4>
+<p id="section-3.17.1-1">Any text after <code>//</code>, until the next literal Newline (<a class="auto internal xref" href="#newline">Section 3.18</a>) is "commented
+out", and is considered to be Whitespace (<a class="auto internal xref" href="#whitespace">Section 3.17</a>).<a class="pilcrow" href="#section-3.17.1-1">¶</a></p>
+</section>
+</div>
+<div id="multi-line-comments">
+<section id="section-3.17.2">
+<h4 id="name-multi-line-comments">
+<a class="section-number selfRef" href="#section-3.17.2">3.17.2. </a><a class="section-name selfRef" href="#name-multi-line-comments">Multi-line comments</a>
+</h4>
+<p id="section-3.17.2-1">In addition to single-line comments using <code>//</code>, comments can also be started
+with <code>/*</code> and ended with <code>*/</code>. These comments can span multiple lines. They
+are allowed in all positions where Whitespace (<a class="auto internal xref" href="#whitespace">Section 3.17</a>) is allowed and
+can be nested.<a class="pilcrow" href="#section-3.17.2-1">¶</a></p>
+</section>
+</div>
+<div id="slashdash-comments">
+<section id="section-3.17.3">
+<h4 id="name-slashdash-comments">
+<a class="section-number selfRef" href="#section-3.17.3">3.17.3. </a><a class="section-name selfRef" href="#name-slashdash-comments">Slashdash comments</a>
+</h4>
+<p id="section-3.17.3-1">Finally, a special kind of comment called a "slashdash", denoted by <code>/-</code>, can
+be used to comment out entire <em>components</em> of a KDL document logically, and
+have those elements not be included as part of the parsed document data.<a class="pilcrow" href="#section-3.17.3-1">¶</a></p>
+<p id="section-3.17.3-2">Slashdash comments can be used before the following, including before their type
+annotations, if present:<a class="pilcrow" href="#section-3.17.3-2">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.17.3-3.1">
+<p id="section-3.17.3-3.1.1">A Node (<a class="auto internal xref" href="#node">Section 3.2</a>): the entire Node is treated as Whitespace, including all
+props, args, and children.<a class="pilcrow" href="#section-3.17.3-3.1.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.17.3-3.2">
+<p id="section-3.17.3-3.2.1">An Argument (<a class="auto internal xref" href="#argument">Section 3.5</a>): the Argument value is treated as Whitespace.<a class="pilcrow" href="#section-3.17.3-3.2.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.17.3-3.3">
+<p id="section-3.17.3-3.3.1">A Property (<a class="auto internal xref" href="#property">Section 3.4</a>) key: the entire property, including both key and value,
+is treated as Whitespace. A slashdash of just the property value is not allowed.<a class="pilcrow" href="#section-3.17.3-3.3.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.17.3-3.4">
+<p id="section-3.17.3-3.4.1">A Children Block (<a class="auto internal xref" href="#children-block">Section 3.6</a>): the entire block, including all
+children within, is treated as Whitespace. Only other children blocks, whether
+slashdashed or not, may follow a slashdashed children block.<a class="pilcrow" href="#section-3.17.3-3.4.1">¶</a></p>
+</li>
+</ul>
+<p id="section-3.17.3-4">A slashdash may be be followed by any amount of whitespace, including newlines and
+comments (other than other slashdashes), before the element that it comments out.<a class="pilcrow" href="#section-3.17.3-4">¶</a></p>
+</section>
+</div>
+</section>

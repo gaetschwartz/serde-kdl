@@ -1,0 +1,240 @@
+<section id="section-3.12">
+<h3 id="name-multi-line-string">
+<a class="section-number selfRef" href="#section-3.12">3.12. </a><a class="section-name selfRef" href="#name-multi-line-string">Multi-line String</a>
+</h3>
+<p id="section-3.12-1">Multi-Line Strings support multiple lines with literal, non-escaped
+Newlines. They must use a special multi-line syntax, and they automatically
+"dedent" the string, allowing its value to be indented to a visually matching
+level as desired.<a class="pilcrow" href="#section-3.12-1">¶</a></p>
+<p id="section-3.12-2">A Multi-Line String is opened and closed by <em>three</em> double-quote characters,
+like <code>"""</code>.
+Its first line <em>MUST</em> immediately start with a Newline (<a class="auto internal xref" href="#newline">Section 3.18</a>)
+after its opening <code>"""</code>.
+Its final line <em>MUST</em> contain only whitespace
+before the closing <code>"""</code>.
+All in-between lines that contain non-newline, non-whitespace characters
+<em>MUST</em> start with <em>at least</em> the exact same whitespace as the final line
+(precisely matching codepoints, not merely counting characters or "size");
+they may contain additional whitespace following this prefix. The lines in
+between may contain unescaped <code>"</code> (but no unescaped <code>"""</code> as this would close
+the string).<a class="pilcrow" href="#section-3.12-2">¶</a></p>
+<p id="section-3.12-3">The value of the Multi-Line String omits the first and last Newline, the
+Whitespace of the last line, and the matching Whitespace prefix on all
+intermediate lines. The first and last Newline can be the same character (that
+is, empty multi-line strings are legal).<a class="pilcrow" href="#section-3.12-3">¶</a></p>
+<p id="section-3.12-4">In other words, the final line specifies the whitespace prefix that will be
+removed from all other lines.<a class="pilcrow" href="#section-3.12-4">¶</a></p>
+<p id="section-3.12-5">Multi-line Strings that do not immediately start with a Newline and whose final
+<code>"""</code> is not preceeded by optional whitespace and a Newline are illegal. This
+also means that <code>"""</code> may not be used for a single-line String (e.g.
+<code>"""foo"""</code>).<a class="pilcrow" href="#section-3.12-5">¶</a></p>
+<div id="newline-normalization">
+<section id="section-3.12.1">
+<h4 id="name-newline-normalization">
+<a class="section-number selfRef" href="#section-3.12.1">3.12.1. </a><a class="section-name selfRef" href="#name-newline-normalization">Newline Normalization</a>
+</h4>
+<p id="section-3.12.1-1">Literal Newline sequences in Multi-line Strings must be normalized to a single
+<code>U+000A</code> (<code>LF</code>) during deserialization. This means, for example, that <code>CR LF</code>
+becomes a single <code>LF</code> during parsing.<a class="pilcrow" href="#section-3.12.1-1">¶</a></p>
+<p id="section-3.12.1-2">This normalization does not apply to non-literal Newlines entered using escape
+sequences. That is:<a class="pilcrow" href="#section-3.12.1-2">¶</a></p>
+<div class="lang-kdl sourcecode" id="section-3.12.1-3">
+<pre>
+multi-line """
+    \r\n[CRLF]
+    foo[CRLF]
+    """
+</pre><a class="pilcrow" href="#section-3.12.1-3">¶</a>
+</div>
+<p id="section-3.12.1-4">becomes:<a class="pilcrow" href="#section-3.12.1-4">¶</a></p>
+<div class="lang-kdl sourcecode" id="section-3.12.1-5">
+<pre>
+single-line "\r\n\nfoo"
+</pre><a class="pilcrow" href="#section-3.12.1-5">¶</a>
+</div>
+<p id="section-3.12.1-6">For clarity: this normalization applies to each individual Newline sequence.
+That is, the literal sequence <code>CRLF CRLF</code> becomes <code>LF LF</code>, not <code>LF</code>.<a class="pilcrow" href="#section-3.12.1-6">¶</a></p>
+</section>
+</div>
+<div id="examples-1">
+<section id="section-3.12.2">
+<h4 id="name-examples-2">
+<a class="section-number selfRef" href="#section-3.12.2">3.12.2. </a><a class="section-name selfRef" href="#name-examples-2">Examples</a>
+</h4>
+<div id="indented-multi-line-string">
+<section id="section-3.12.2.1">
+<h5 id="name-indented-multi-line-string">
+<a class="section-number selfRef" href="#section-3.12.2.1">3.12.2.1. </a><a class="section-name selfRef" href="#name-indented-multi-line-string">Indented multi-line string</a>
+</h5>
+<div class="lang-kdl sourcecode" id="section-3.12.2.1-1">
+<pre>
+multi-line """
+        foo
+    This is the base indentation
+            bar
+    """
+</pre><a class="pilcrow" href="#section-3.12.2.1-1">¶</a>
+</div>
+<p id="section-3.12.2.1-2">This example's string value will be:<a class="pilcrow" href="#section-3.12.2.1-2">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-3.12.2.1-3">
+<pre>
+    foo
+This is the base indentation
+        bar
+</pre><a class="pilcrow" href="#section-3.12.2.1-3">¶</a>
+</div>
+<p id="section-3.12.2.1-4">which is equivalent to<a class="pilcrow" href="#section-3.12.2.1-4">¶</a></p>
+<div class="lang-kdl sourcecode" id="section-3.12.2.1-5">
+<pre>
+"    foo\nThis is the base indentation\n        bar"
+</pre><a class="pilcrow" href="#section-3.12.2.1-5">¶</a>
+</div>
+<p id="section-3.12.2.1-6">when written as a single-line string.<a class="pilcrow" href="#section-3.12.2.1-6">¶</a></p>
+</section>
+</div>
+<div id="shorter-last-line-indent">
+<section id="section-3.12.2.2">
+<h5 id="name-shorter-last-line-indent">
+<a class="section-number selfRef" href="#section-3.12.2.2">3.12.2.2. </a><a class="section-name selfRef" href="#name-shorter-last-line-indent">Shorter last-line indent</a>
+</h5>
+<p id="section-3.12.2.2-1">If the last line wasn't indented as far,
+it won't dedent the rest of the lines as much:<a class="pilcrow" href="#section-3.12.2.2-1">¶</a></p>
+<div class="lang-kdl sourcecode" id="section-3.12.2.2-2">
+<pre>
+multi-line """
+        foo
+    This is no longer on the left edge
+            bar
+  """
+</pre><a class="pilcrow" href="#section-3.12.2.2-2">¶</a>
+</div>
+<p id="section-3.12.2.2-3">This example's string value will be:<a class="pilcrow" href="#section-3.12.2.2-3">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-3.12.2.2-4">
+<pre>
+      foo
+  This is no longer on the left edge
+          bar
+</pre><a class="pilcrow" href="#section-3.12.2.2-4">¶</a>
+</div>
+<p id="section-3.12.2.2-5">Equivalent to<a class="pilcrow" href="#section-3.12.2.2-5">¶</a></p>
+<div class="lang-kdl sourcecode" id="section-3.12.2.2-6">
+<pre>
+"      foo\n  This is no longer on the left edge\n          bar"
+</pre><a class="pilcrow" href="#section-3.12.2.2-6">¶</a>
+</div>
+</section>
+</div>
+<div id="empty-lines">
+<section id="section-3.12.2.3">
+<h5 id="name-empty-lines">
+<a class="section-number selfRef" href="#section-3.12.2.3">3.12.2.3. </a><a class="section-name selfRef" href="#name-empty-lines">Empty lines</a>
+</h5>
+<p id="section-3.12.2.3-1">Empty lines can contain any whitespace, or none at all, and will be reflected as empty in the value:<a class="pilcrow" href="#section-3.12.2.3-1">¶</a></p>
+<div class="lang-kdl sourcecode" id="section-3.12.2.3-2">
+<pre>
+multi-line """
+    Indented a bit
+
+    A second indented paragraph.
+    """
+</pre><a class="pilcrow" href="#section-3.12.2.3-2">¶</a>
+</div>
+<p id="section-3.12.2.3-3">This example's string value will be:<a class="pilcrow" href="#section-3.12.2.3-3">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-3.12.2.3-4">
+<pre>
+Indented a bit.
+
+A second indented paragraph.
+</pre><a class="pilcrow" href="#section-3.12.2.3-4">¶</a>
+</div>
+<p id="section-3.12.2.3-5">Equivalent to<a class="pilcrow" href="#section-3.12.2.3-5">¶</a></p>
+<div class="lang-kdl sourcecode" id="section-3.12.2.3-6">
+<pre>
+"Indented a bit.\n\nA second indented paragraph."
+</pre><a class="pilcrow" href="#section-3.12.2.3-6">¶</a>
+</div>
+</section>
+</div>
+<div id="syntax-errors">
+<section id="section-3.12.2.4">
+<h5 id="name-syntax-errors">
+<a class="section-number selfRef" href="#section-3.12.2.4">3.12.2.4. </a><a class="section-name selfRef" href="#name-syntax-errors">Syntax errors</a>
+</h5>
+<p id="section-3.12.2.4-1">The following yield <strong>syntax errors</strong>:<a class="pilcrow" href="#section-3.12.2.4-1">¶</a></p>
+<div class="lang-kdl sourcecode" id="section-3.12.2.4-2">
+<pre>
+multi-line """can't be single line"""
+</pre><a class="pilcrow" href="#section-3.12.2.4-2">¶</a>
+</div>
+<div class="lang-kdl sourcecode" id="section-3.12.2.4-3">
+<pre>
+multi-line """
+  closing quote with non-whitespace prefix"""
+</pre><a class="pilcrow" href="#section-3.12.2.4-3">¶</a>
+</div>
+<div class="lang-kdl sourcecode" id="section-3.12.2.4-4">
+<pre>
+multi-line """stuff
+  """
+</pre><a class="pilcrow" href="#section-3.12.2.4-4">¶</a>
+</div>
+<div class="lang-kdl sourcecode" id="section-3.12.2.4-5">
+<pre>
+// Every line must share the exact same prefix as the closing line.
+multi-line """[\n]
+[tab]a[\n]
+[space][space]b[\n]
+[space][tab][\n]
+[tab]"""
+</pre><a class="pilcrow" href="#section-3.12.2.4-5">¶</a>
+</div>
+</section>
+</div>
+</section>
+</div>
+<div id="interaction-with-whitespace-escapes">
+<section id="section-3.12.3">
+<h4 id="name-interaction-with-whitespace">
+<a class="section-number selfRef" href="#section-3.12.3">3.12.3. </a><a class="section-name selfRef" href="#name-interaction-with-whitespace">Interaction with Whitespace Escapes</a>
+</h4>
+<p id="section-3.12.3-1">Multi-line strings support the same mechanism for escaping whitespace as Quoted
+Strings.<a class="pilcrow" href="#section-3.12.3-1">¶</a></p>
+<p id="section-3.12.3-2">When processing a Multi-line String, implementations MUST dedent the string
+<em>after</em> resolving all whitespace escapes, but <em>before</em> resolving other backslash
+escapes. This means a whitespace escape that attempts to escape the final line's
+newline and/or whitespace prefix can be invalid: if removing escaped whitespace
+places the closing <code>"""</code> on a line with non-whitespace characters, this escape
+is invalid.<a class="pilcrow" href="#section-3.12.3-2">¶</a></p>
+<p id="section-3.12.3-3">For example, the following example is illegal:<a class="pilcrow" href="#section-3.12.3-3">¶</a></p>
+<div class="lang-kdl sourcecode" id="section-3.12.3-4">
+<pre>
+  """
+  foo
+  bar\
+  """
+
+  // equivalent to
+  """
+  foo
+  bar"""
+</pre><a class="pilcrow" href="#section-3.12.3-4">¶</a>
+</div>
+<p id="section-3.12.3-5">while the following example is allowed<a class="pilcrow" href="#section-3.12.3-5">¶</a></p>
+<div class="lang-kdl sourcecode" id="section-3.12.3-6">
+<pre>
+  """
+  foo \
+bar
+  baz
+  \   """
+
+  // equivalent to
+  """
+  foo bar
+  baz
+  """
+</pre><a class="pilcrow" href="#section-3.12.3-6">¶</a>
+</div>
+</section>
+</div>
+</section>

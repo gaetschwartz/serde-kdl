@@ -1,0 +1,30 @@
+<section id="section-3.19">
+<h3 id="name-disallowed-literal-code-poi">
+<a class="section-number selfRef" href="#section-3.19">3.19. </a><a class="section-name selfRef" href="#name-disallowed-literal-code-poi">Disallowed Literal Code Points</a>
+</h3>
+<p id="section-3.19-1">The following code points may not appear literally anywhere in the document.
+They may be represented in Strings (but not Raw Strings) using Unicode Escapes (<a class="auto internal xref" href="#escapes">Section 3.11.1</a>) (<code>\u{...}</code>,
+except for non Unicode Scalar Value, which can't be represented even as escapes).<a class="pilcrow" href="#section-3.19-1">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.19-2.1">
+<p id="section-3.19-2.1.1">The codepoints <code>U+0000-0008</code> or the codepoints <code>U+000E-001F</code>  (various
+control characters).<a class="pilcrow" href="#section-3.19-2.1.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.19-2.2">
+<p id="section-3.19-2.2.1"><code>U+007F</code> (the Delete control character).<a class="pilcrow" href="#section-3.19-2.2.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.19-2.3">
+<p id="section-3.19-2.3.1">Any codepoint that is not a <a href="https://unicode.org/glossary/#unicode_scalar_value">Unicode Scalar
+Value</a> (<code>U+D800-DFFF</code>).<a class="pilcrow" href="#section-3.19-2.3.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.19-2.4">
+<p id="section-3.19-2.4.1"><code>U+200E-200F</code>, <code>U+202A-202E</code>, and <code>U+2066-2069</code>, the <a href="https://www.w3.org/International/questions/qa-bidi-unicode-controls">unicode
+"direction control"
+characters</a><a class="pilcrow" href="#section-3.19-2.4.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.19-2.5">
+<p id="section-3.19-2.5.1"><code>U+FEFF</code>, aka Zero-width Non-breaking Space (ZWNBSP)/Byte Order Mark (BOM),
+except as the first code point in a document.<a class="pilcrow" href="#section-3.19-2.5.1">¶</a></p>
+</li>
+</ul>
+</section>

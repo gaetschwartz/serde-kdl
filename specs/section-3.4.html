@@ -1,0 +1,21 @@
+<section id="section-3.4">
+<h3 id="name-property">
+<a class="section-number selfRef" href="#section-3.4">3.4. </a><a class="section-name selfRef" href="#name-property">Property</a>
+</h3>
+<p id="section-3.4-1">A Property is a key/value pair attached to a Node (<a class="auto internal xref" href="#node">Section 3.2</a>). A Property is
+composed of a String (<a class="auto internal xref" href="#string">Section 3.9</a>), followed immediately by an equals sign (<code>=</code>, <code>U+003D</code>),
+and then a Value (<a class="auto internal xref" href="#value">Section 3.7</a>).<a class="pilcrow" href="#section-3.4-1">¶</a></p>
+<p id="section-3.4-2">Properties should be interpreted left-to-right, with rightmost properties with
+identical names overriding earlier properties. That is:<a class="pilcrow" href="#section-3.4-2">¶</a></p>
+<div class="lang-kdl sourcecode" id="section-3.4-3">
+<pre>
+node a=1 a=2
+</pre><a class="pilcrow" href="#section-3.4-3">¶</a>
+</div>
+<p id="section-3.4-4">In this example, the node's <code>a</code> value must be <code>2</code>, not <code>1</code>.<a class="pilcrow" href="#section-3.4-4">¶</a></p>
+<p id="section-3.4-5">No other guarantees about order should be expected by implementers.
+Deserialized representations may iterate over properties in any order and
+still be spec-compliant.<a class="pilcrow" href="#section-3.4-5">¶</a></p>
+<p id="section-3.4-6">Properties <em>MAY</em> be prefixed with <code>/-</code> to "comment out" the entire token and
+make it act as plain whitespace, even if it spreads across multiple lines.<a class="pilcrow" href="#section-3.4-6">¶</a></p>
+</section>

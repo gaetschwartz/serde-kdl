@@ -1,0 +1,175 @@
+<section id="section-3.11">
+<h3 id="name-quoted-string">
+<a class="section-number selfRef" href="#section-3.11">3.11. </a><a class="section-name selfRef" href="#name-quoted-string">Quoted String</a>
+</h3>
+<p id="section-3.11-1">A Quoted String is delimited by <code>"</code> on either side of any number of literal
+string characters except unescaped <code>"</code> and <code>\</code>.<a class="pilcrow" href="#section-3.11-1">¶</a></p>
+<p id="section-3.11-2">Literal Newline (<a class="auto internal xref" href="#newline">Section 3.18</a>) characters can only be included
+if they are Escaped Whitespace (<a class="auto internal xref" href="#escaped-whitespace">Section 3.11.1.1</a>),
+which discards them from the string value.
+Actually including a newline in the value requires using a newline escape sequence,
+like <code>\n</code>,
+or using a Multi-Line String (<a class="auto internal xref" href="#multi-line-string">Section 3.12</a>)
+which is actually designed for strings stretching across multiple lines.<a class="pilcrow" href="#section-3.11-2">¶</a></p>
+<p id="section-3.11-3">Like Identifier Strings, Quoted Strings <em>MUST NOT</em> include any of the
+disallowed literal code-points (<a class="auto internal xref" href="#disallowed-literal-code-points">Section 3.19</a>) as code
+points in their body.<a class="pilcrow" href="#section-3.11-3">¶</a></p>
+<p id="section-3.11-4">Quoted Strings have a Raw String (<a class="auto internal xref" href="#raw-string">Section 3.13</a>) variant,
+which disallows escapes.<a class="pilcrow" href="#section-3.11-4">¶</a></p>
+<div id="escapes">
+<section id="section-3.11.1">
+<h4 id="name-escapes">
+<a class="section-number selfRef" href="#section-3.11.1">3.11.1. </a><a class="section-name selfRef" href="#name-escapes">Escapes</a>
+</h4>
+<p id="section-3.11.1-1">In addition to literal code points, a number of "escapes" are supported in Quoted Strings.
+"Escapes" are the character <code>\</code> followed by another character, and are
+interpreted as described in the following table:<a class="pilcrow" href="#section-3.11.1-1">¶</a></p>
+<table class="center" id="table-1">
+<caption><a class="selfRef" href="#table-1">Table 1</a></caption>
+<thead>
+<tr>
+<th class="text-left" colspan="1" rowspan="1">Name</th>
+<th class="text-left" colspan="1" rowspan="1">Escape</th>
+<th class="text-left" colspan="1" rowspan="1">Code Pt</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="text-left" colspan="1" rowspan="1">Line Feed</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>\n</code>
+</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>U+000A</code>
+</td>
+</tr>
+<tr>
+<td class="text-left" colspan="1" rowspan="1">Carriage Return</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>\r</code>
+</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>U+000D</code>
+</td>
+</tr>
+<tr>
+<td class="text-left" colspan="1" rowspan="1">Character Tabulation (Tab)</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>\t</code>
+</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>U+0009</code>
+</td>
+</tr>
+<tr>
+<td class="text-left" colspan="1" rowspan="1">Reverse Solidus (Backslash)</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>\\</code>
+</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>U+005C</code>
+</td>
+</tr>
+<tr>
+<td class="text-left" colspan="1" rowspan="1">Quotation Mark (Double Quote)</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>\"</code>
+</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>U+0022</code>
+</td>
+</tr>
+<tr>
+<td class="text-left" colspan="1" rowspan="1">Backspace</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>\b</code>
+</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>U+0008</code>
+</td>
+</tr>
+<tr>
+<td class="text-left" colspan="1" rowspan="1">Form Feed</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>\f</code>
+</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>U+000C</code>
+</td>
+</tr>
+<tr>
+<td class="text-left" colspan="1" rowspan="1">Space</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>\s</code>
+</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>U+0020</code>
+</td>
+</tr>
+<tr>
+<td class="text-left" colspan="1" rowspan="1">Unicode Escape</td>
+<td class="text-left" colspan="1" rowspan="1">
+<code>\u{(1-6 hex chars)}</code>
+</td>
+<td class="text-left" colspan="1" rowspan="1">Code point described by hex characters, as long as it represents a <a href="https://unicode.org/glossary/#unicode_scalar_value">Unicode Scalar Value</a>
+</td>
+</tr>
+<tr>
+<td class="text-left" colspan="1" rowspan="1">Whitespace Escape</td>
+<td class="text-left" colspan="1" rowspan="1">See below</td>
+<td class="text-left" colspan="1" rowspan="1">N/A</td>
+</tr>
+</tbody>
+</table>
+<div id="escaped-whitespace">
+<section id="section-3.11.1.1">
+<h5 id="name-escaped-whitespace">
+<a class="section-number selfRef" href="#section-3.11.1.1">3.11.1.1. </a><a class="section-name selfRef" href="#name-escaped-whitespace">Escaped Whitespace</a>
+</h5>
+<p id="section-3.11.1.1-1">In addition to escaping individual characters, <code>\</code> can also escape whitespace.
+When a <code>\</code> is followed by one or more literal whitespace characters, the <code>\</code>
+and all of that whitespace are discarded. For example,<a class="pilcrow" href="#section-3.11.1.1-1">¶</a></p>
+<div class="lang-kdl sourcecode" id="section-3.11.1.1-2">
+<pre>
+"Hello World"
+</pre><a class="pilcrow" href="#section-3.11.1.1-2">¶</a>
+</div>
+<p id="section-3.11.1.1-3">and<a class="pilcrow" href="#section-3.11.1.1-3">¶</a></p>
+<div class="lang-kdl sourcecode" id="section-3.11.1.1-4">
+<pre>
+"Hello \    World"
+</pre><a class="pilcrow" href="#section-3.11.1.1-4">¶</a>
+</div>
+<p id="section-3.11.1.1-5">are semantically identical. See whitespace (<a class="auto internal xref" href="#whitespace">Section 3.17</a>)
+and newlines (<a class="auto internal xref" href="#newline">Section 3.18</a>) for how whitespace is defined.<a class="pilcrow" href="#section-3.11.1.1-5">¶</a></p>
+<p id="section-3.11.1.1-6">Note that only literal whitespace is escaped; whitespace escapes (<code>\n</code> and
+such) are retained. For example, these strings are all semantically identical:<a class="pilcrow" href="#section-3.11.1.1-6">¶</a></p>
+<div class="lang-kdl sourcecode" id="section-3.11.1.1-7">
+<pre>
+"Hello\       \nWorld"
+
+    "Hello\n\
+    World"
+
+"Hello\nWorld"
+
+"""
+  Hello
+  World
+  """
+</pre><a class="pilcrow" href="#section-3.11.1.1-7">¶</a>
+</div>
+</section>
+</div>
+<div id="invalid-escapes">
+<section id="section-3.11.1.2">
+<h5 id="name-invalid-escapes">
+<a class="section-number selfRef" href="#section-3.11.1.2">3.11.1.2. </a><a class="section-name selfRef" href="#name-invalid-escapes">Invalid escapes</a>
+</h5>
+<p id="section-3.11.1.2-1">Except as described in the escapes table, above, <code>\</code> <em>MUST NOT</em> precede any
+other characters in a string.<a class="pilcrow" href="#section-3.11.1.2-1">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+</section>

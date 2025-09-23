@@ -1,0 +1,78 @@
+<section id="section-3.10">
+<h3 id="name-identifier-string">
+<a class="section-number selfRef" href="#section-3.10">3.10. </a><a class="section-name selfRef" href="#name-identifier-string">Identifier String</a>
+</h3>
+<p id="section-3.10-1">An Identifier String (sometimes referred to as just an "identifier") is
+composed of any <a href="https://unicode.org/glossary/#unicode_scalar_value">Unicode Scalar
+Value</a> other than
+non-initial characters (<a class="auto internal xref" href="#non-initial-characters">Section 3.10.1</a>), followed by any number of
+Unicode Scalar Values other than non-identifier
+characters (<a class="auto internal xref" href="#non-identifier-characters">Section 3.10.2</a>).<a class="pilcrow" href="#section-3.10-1">¶</a></p>
+<p id="section-3.10-2">A handful of patterns are disallowed, to avoid confusion with other values:<a class="pilcrow" href="#section-3.10-2">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.10-3.1">
+<p id="section-3.10-3.1.1">idents that appear to start with a Number (<a class="auto internal xref" href="#number">Section 3.14</a>) (like <code>1.0v2</code> or
+  <code>-1em</code>) or the "almost a number" pattern of a decimal point without a
+  leading digit (like <code>.1</code>).<a class="pilcrow" href="#section-3.10-3.1.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.10-3.2">
+<p id="section-3.10-3.2.1">idents that are the language keywords (<code>inf</code>, <code>-inf</code>, <code>nan</code>, <code>true</code>,
+<code>false</code>, and <code>null</code>) without their leading <code>#</code>.<a class="pilcrow" href="#section-3.10-3.2.1">¶</a></p>
+</li>
+</ul>
+<p id="section-3.10-4">Identifiers that match these patterns <em>MUST</em> be treated as a syntax error; such
+values can only be written as quoted or raw strings. The precise details of the
+identifier syntax is specified in the Full Grammar in <a class="auto internal xref" href="#full-grammar">Section 4</a>.<a class="pilcrow" href="#section-3.10-4">¶</a></p>
+<div id="non-initial-characters">
+<section id="section-3.10.1">
+<h4 id="name-non-initial-characters">
+<a class="section-number selfRef" href="#section-3.10.1">3.10.1. </a><a class="section-name selfRef" href="#name-non-initial-characters">Non-initial characters</a>
+</h4>
+<p id="section-3.10.1-1">The following characters cannot be the first character in an
+Identifier String (<a class="auto internal xref" href="#identifier-string">Section 3.10</a>):<a class="pilcrow" href="#section-3.10.1-1">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.10.1-2.1">
+<p id="section-3.10.1-2.1.1">Any decimal digit (0-9)<a class="pilcrow" href="#section-3.10.1-2.1.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.10.1-2.2">
+<p id="section-3.10.1-2.2.1">Any non-identifier characters (<a class="auto internal xref" href="#non-identifier-characters">Section 3.10.2</a>)<a class="pilcrow" href="#section-3.10.1-2.2.1">¶</a></p>
+</li>
+</ul>
+<p id="section-3.10.1-3">Additionally, the following initial characters impose limitations on subsequent
+characters:<a class="pilcrow" href="#section-3.10.1-3">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.10.1-4.1">
+<p id="section-3.10.1-4.1.1">the <code>+</code> and <code>-</code> characters can only be used as an initial character if
+the second character is <em>not</em> a digit. If the second character is <code>.</code>, then
+the third character must <em>not</em> be a digit.<a class="pilcrow" href="#section-3.10.1-4.1.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.10.1-4.2">
+<p id="section-3.10.1-4.2.1">the <code>.</code> character can only be used as an initial character if
+the second character is <em>not</em> a digit.<a class="pilcrow" href="#section-3.10.1-4.2.1">¶</a></p>
+</li>
+</ul>
+<p id="section-3.10.1-5">This allows identifiers to look like <code>--this</code> or <code>.md</code>, and removes the
+ambiguity of having an identifier look like a number.<a class="pilcrow" href="#section-3.10.1-5">¶</a></p>
+</section>
+</div>
+<div id="non-identifier-characters">
+<section id="section-3.10.2">
+<h4 id="name-non-identifier-characters">
+<a class="section-number selfRef" href="#section-3.10.2">3.10.2. </a><a class="section-name selfRef" href="#name-non-identifier-characters">Non-identifier characters</a>
+</h4>
+<p id="section-3.10.2-1">The following characters cannot be used anywhere in a Identifier String (<a class="auto internal xref" href="#identifier-string">Section 3.10</a>):<a class="pilcrow" href="#section-3.10.2-1">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.10.2-2.1">
+<p id="section-3.10.2-2.1.1">Any of <code>(){}[]/\"#;=</code><a class="pilcrow" href="#section-3.10.2-2.1.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.10.2-2.2">
+<p id="section-3.10.2-2.2.1">Any Whitespace (<a class="auto internal xref" href="#whitespace">Section 3.17</a>) or Newline (<a class="auto internal xref" href="#newline">Section 3.18</a>).<a class="pilcrow" href="#section-3.10.2-2.2.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.10.2-2.3">
+<p id="section-3.10.2-2.3.1">Any disallowed literal code points (<a class="auto internal xref" href="#disallowed-literal-code-points">Section 3.19</a>) in KDL
+documents.<a class="pilcrow" href="#section-3.10.2-2.3.1">¶</a></p>
+</li>
+</ul>
+</section>
+</div>
+</section>

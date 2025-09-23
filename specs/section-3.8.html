@@ -1,0 +1,188 @@
+<section id="section-3.8">
+<h3 id="name-type-annotation">
+<a class="section-number selfRef" href="#section-3.8">3.8. </a><a class="section-name selfRef" href="#name-type-annotation">Type Annotation</a>
+</h3>
+<p id="section-3.8-1">A type annotation is a prefix to any Node Name (<a class="auto internal xref" href="#node">Section 3.2</a>) or Value (<a class="auto internal xref" href="#value">Section 3.7</a>) that
+includes a <em>suggestion</em> of what type the value is <em>intended</em> to be treated as,
+or as a <em>context-specific elaboration</em> of the more generic type the node name
+indicates.<a class="pilcrow" href="#section-3.8-1">¶</a></p>
+<p id="section-3.8-2">Type annotations are written as a set of <code>(</code> and <code>)</code> with a single
+String (<a class="auto internal xref" href="#string">Section 3.9</a>) in it. It may contain Whitespace after the <code>(</code> and before
+the <code>)</code>, and may be separated from its target by Whitespace.<a class="pilcrow" href="#section-3.8-2">¶</a></p>
+<p id="section-3.8-3">KDL does not specify any restrictions on what implementations might do with
+these annotations. They are free to ignore them, or use them to make decisions
+about how to interpret a value.<a class="pilcrow" href="#section-3.8-3">¶</a></p>
+<p id="section-3.8-4">Additionally, the following type annotations MAY be recognized by KDL parsers
+and, if used, SHOULD interpret these types as follows:<a class="pilcrow" href="#section-3.8-4">¶</a></p>
+<div id="reserved-type-annotations-for-numbers-without-decimals">
+<section id="section-3.8.1">
+<h4 id="name-reserved-type-annotations-f">
+<a class="section-number selfRef" href="#section-3.8.1">3.8.1. </a><a class="section-name selfRef" href="#name-reserved-type-annotations-f">Reserved Type Annotations for Numbers Without Decimals:</a>
+</h4>
+<p id="section-3.8.1-1">Signed integers of various sizes (the number is the bit size):<a class="pilcrow" href="#section-3.8.1-1">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.8.1-2.1">
+<p id="section-3.8.1-2.1.1"><code>i8</code><a class="pilcrow" href="#section-3.8.1-2.1.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.8.1-2.2">
+<p id="section-3.8.1-2.2.1"><code>i16</code><a class="pilcrow" href="#section-3.8.1-2.2.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.8.1-2.3">
+<p id="section-3.8.1-2.3.1"><code>i32</code><a class="pilcrow" href="#section-3.8.1-2.3.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.8.1-2.4">
+<p id="section-3.8.1-2.4.1"><code>i64</code><a class="pilcrow" href="#section-3.8.1-2.4.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.8.1-2.5">
+<p id="section-3.8.1-2.5.1"><code>i128</code><a class="pilcrow" href="#section-3.8.1-2.5.1">¶</a></p>
+</li>
+</ul>
+<p id="section-3.8.1-3">Unsigned integers of various sizes (the number is the bit size):<a class="pilcrow" href="#section-3.8.1-3">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.8.1-4.1">
+<p id="section-3.8.1-4.1.1"><code>u8</code><a class="pilcrow" href="#section-3.8.1-4.1.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.8.1-4.2">
+<p id="section-3.8.1-4.2.1"><code>u16</code><a class="pilcrow" href="#section-3.8.1-4.2.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.8.1-4.3">
+<p id="section-3.8.1-4.3.1"><code>u32</code><a class="pilcrow" href="#section-3.8.1-4.3.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.8.1-4.4">
+<p id="section-3.8.1-4.4.1"><code>u64</code><a class="pilcrow" href="#section-3.8.1-4.4.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.8.1-4.5">
+<p id="section-3.8.1-4.5.1"><code>u128</code><a class="pilcrow" href="#section-3.8.1-4.5.1">¶</a></p>
+</li>
+</ul>
+<p id="section-3.8.1-5">Platform-dependent integer types, both signed and unsigned:<a class="pilcrow" href="#section-3.8.1-5">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.8.1-6.1">
+<p id="section-3.8.1-6.1.1"><code>isize</code><a class="pilcrow" href="#section-3.8.1-6.1.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.8.1-6.2">
+<p id="section-3.8.1-6.2.1"><code>usize</code><a class="pilcrow" href="#section-3.8.1-6.2.1">¶</a></p>
+</li>
+</ul>
+</section>
+</div>
+<div id="reserved-type-annotations-for-numbers-with-decimals">
+<section id="section-3.8.2">
+<h4 id="name-reserved-type-annotations-fo">
+<a class="section-number selfRef" href="#section-3.8.2">3.8.2. </a><a class="section-name selfRef" href="#name-reserved-type-annotations-fo">Reserved Type Annotations for Numbers With Decimals:</a>
+</h4>
+<p id="section-3.8.2-1">IEEE 754 floating point numbers, both single (32) and double (64) precision:<a class="pilcrow" href="#section-3.8.2-1">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.8.2-2.1">
+<p id="section-3.8.2-2.1.1"><code>f32</code><a class="pilcrow" href="#section-3.8.2-2.1.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.8.2-2.2">
+<p id="section-3.8.2-2.2.1"><code>f64</code><a class="pilcrow" href="#section-3.8.2-2.2.1">¶</a></p>
+</li>
+</ul>
+<p id="section-3.8.2-3">IEEE 754-2008 decimal floating point numbers<a class="pilcrow" href="#section-3.8.2-3">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.8.2-4.1">
+<p id="section-3.8.2-4.1.1"><code>decimal64</code><a class="pilcrow" href="#section-3.8.2-4.1.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.8.2-4.2">
+<p id="section-3.8.2-4.2.1"><code>decimal128</code><a class="pilcrow" href="#section-3.8.2-4.2.1">¶</a></p>
+</li>
+</ul>
+</section>
+</div>
+<div id="reserved-type-annotations-for-strings">
+<section id="section-3.8.3">
+<h4 id="name-reserved-type-annotations-for">
+<a class="section-number selfRef" href="#section-3.8.3">3.8.3. </a><a class="section-name selfRef" href="#name-reserved-type-annotations-for">Reserved Type Annotations for Strings:</a>
+</h4>
+<ul class="normal">
+<li class="normal" id="section-3.8.3-1.1">
+<p id="section-3.8.3-1.1.1"><code>date-time</code>: ISO8601 date/time format.<a class="pilcrow" href="#section-3.8.3-1.1.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.8.3-1.2">
+<p id="section-3.8.3-1.2.1"><code>time</code>: "Time" section of ISO8601.<a class="pilcrow" href="#section-3.8.3-1.2.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.8.3-1.3">
+<p id="section-3.8.3-1.3.1"><code>date</code>: "Date" section of ISO8601.<a class="pilcrow" href="#section-3.8.3-1.3.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.8.3-1.4">
+<p id="section-3.8.3-1.4.1"><code>duration</code>: ISO8601 duration format.<a class="pilcrow" href="#section-3.8.3-1.4.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.8.3-1.5">
+<p id="section-3.8.3-1.5.1"><code>decimal</code>: IEEE 754-2008 decimal string format.<a class="pilcrow" href="#section-3.8.3-1.5.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.8.3-1.6">
+<p id="section-3.8.3-1.6.1"><code>currency</code>: ISO 4217 currency code.<a class="pilcrow" href="#section-3.8.3-1.6.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.8.3-1.7">
+<p id="section-3.8.3-1.7.1"><code>country-2</code>: ISO 3166-1 alpha-2 country code.<a class="pilcrow" href="#section-3.8.3-1.7.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.8.3-1.8">
+<p id="section-3.8.3-1.8.1"><code>country-3</code>: ISO 3166-1 alpha-3 country code.<a class="pilcrow" href="#section-3.8.3-1.8.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.8.3-1.9">
+<p id="section-3.8.3-1.9.1"><code>country-subdivision</code>: ISO 3166-2 country subdivision code.<a class="pilcrow" href="#section-3.8.3-1.9.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.8.3-1.10">
+<p id="section-3.8.3-1.10.1"><code>email</code>: RFC5322 email address.<a class="pilcrow" href="#section-3.8.3-1.10.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.8.3-1.11">
+<p id="section-3.8.3-1.11.1"><code>idn-email</code>: RFC6531 internationalized email address.<a class="pilcrow" href="#section-3.8.3-1.11.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.8.3-1.12">
+<p id="section-3.8.3-1.12.1"><code>hostname</code>: RFC1123 internet hostname (only ASCII segments)<a class="pilcrow" href="#section-3.8.3-1.12.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.8.3-1.13">
+<p id="section-3.8.3-1.13.1"><code>idn-hostname</code>: RFC5890 internationalized internet hostname
+(only <code>xn--</code>-prefixed ASCII "punycode" segments, or non-ASCII segments)<a class="pilcrow" href="#section-3.8.3-1.13.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.8.3-1.14">
+<p id="section-3.8.3-1.14.1"><code>ipv4</code>: RFC2673 dotted-quad IPv4 address.<a class="pilcrow" href="#section-3.8.3-1.14.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.8.3-1.15">
+<p id="section-3.8.3-1.15.1"><code>ipv6</code>: RFC2373 IPv6 address.<a class="pilcrow" href="#section-3.8.3-1.15.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.8.3-1.16">
+<p id="section-3.8.3-1.16.1"><code>url</code>: RFC3986 URI.<a class="pilcrow" href="#section-3.8.3-1.16.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.8.3-1.17">
+<p id="section-3.8.3-1.17.1"><code>url-reference</code>: RFC3986 URI Reference.<a class="pilcrow" href="#section-3.8.3-1.17.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.8.3-1.18">
+<p id="section-3.8.3-1.18.1"><code>irl</code>: RFC3987 Internationalized Resource Identifier.<a class="pilcrow" href="#section-3.8.3-1.18.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.8.3-1.19">
+<p id="section-3.8.3-1.19.1"><code>irl-reference</code>: RFC3987 Internationalized Resource Identifier Reference.<a class="pilcrow" href="#section-3.8.3-1.19.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.8.3-1.20">
+<p id="section-3.8.3-1.20.1"><code>url-template</code>: RFC6570 URI Template.<a class="pilcrow" href="#section-3.8.3-1.20.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.8.3-1.21">
+<p id="section-3.8.3-1.21.1"><code>uuid</code>: RFC4122 UUID.<a class="pilcrow" href="#section-3.8.3-1.21.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.8.3-1.22">
+<p id="section-3.8.3-1.22.1"><code>regex</code>: Regular expression. Specific patterns may be implementation-dependent.<a class="pilcrow" href="#section-3.8.3-1.22.1">¶</a></p>
+</li>
+<li class="normal" id="section-3.8.3-1.23">
+<p id="section-3.8.3-1.23.1"><code>base64</code>: A Base64-encoded string, denoting arbitrary binary data.<a class="pilcrow" href="#section-3.8.3-1.23.1">¶</a></p>
+</li>
+</ul>
+</section>
+</div>
+<div id="examples">
+<section id="section-3.8.4">
+<h4 id="name-examples">
+<a class="section-number selfRef" href="#section-3.8.4">3.8.4. </a><a class="section-name selfRef" href="#name-examples">Examples</a>
+</h4>
+<div class="lang-kdl sourcecode" id="section-3.8.4-1">
+<pre>
+node (u8)123
+node prop=(regex).*
+(published)date "1970-01-01"
+(contributor)person name="Foo McBar"
+</pre><a class="pilcrow" href="#section-3.8.4-1">¶</a>
+</div>
+</section>
+</div>
+</section>
