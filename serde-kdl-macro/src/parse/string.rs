@@ -1,11 +1,13 @@
 //! String parsing and escape sequence processing
 //!
-//! This module handles parsing of KDL strings, including all escape sequences
-//! and validation according to Section 3.11 of the KDL specification.
+//! This module handles parsing of KDL strings, including standard escape sequences
+//! and Unicode escapes. Line continuation (escaped whitespace) is not supported.
 
 use syn::Result;
 
-/// Processes all escape sequences in quoted strings according to Section 3.11
+/// Processes escape sequences in quoted strings
+/// Supports standard escapes (\n, \r, \t, \\, \", \b, \f, \s) and Unicode escapes (\u{...})
+/// Line continuation (backslash followed by whitespace) is not supported
 pub(crate) fn process_string_escapes(value: &str, span: proc_macro2::Span) -> Result<String> {
     let mut result = String::new();
     let mut chars = value.chars().peekable();
@@ -14,7 +16,7 @@ pub(crate) fn process_string_escapes(value: &str, span: proc_macro2::Span) -> Re
         if ch == '\\' {
             if let Some(&next_ch) = chars.peek() {
                 match next_ch {
-                    // Standard escape sequences (Section 3.11.1)
+                    // Standard escape sequences
                     'n' => {
                         chars.next(); // consume 'n'
                         result.push('\u{000A}'); // Line Feed
@@ -121,20 +123,7 @@ pub(crate) fn process_string_escapes(value: &str, span: proc_macro2::Span) -> Re
                             }
                         }
                     }
-                    // Escaped whitespace (Section 3.11.1.1)
-                    // When \ is followed by whitespace, both \ and all whitespace are discarded
-                    c if c.is_whitespace() => {
-                        // Consume all following whitespace characters
-                        while let Some(&ws_ch) = chars.peek() {
-                            if ws_ch.is_whitespace() {
-                                chars.next();
-                            } else {
-                                break;
-                            }
-                        }
-                        // Don't add anything to result - both \ and whitespace are discarded
-                    }
-                    // Invalid escape sequences (Section 3.11.1.2)
+                    // Invalid escape sequences
                     _ => {
                         return Err(syn::Error::new(
                             span,
