@@ -5,7 +5,7 @@
 //! items and an optional single-line comment, terminated by a newline.
 
 use crate::assert_eq_tk;
-use crate::specs::kdl_impl2;
+use crate::tests::specs::kdl_impl2;
 use quote::quote;
 
 #[test]

@@ -9,7 +9,7 @@
 //! - Quoted and Multi-Line Strings may include disallowed code points as values
 //!   by representing them with their corresponding \u{...} escape
 
-use crate::specs::kdl_impl2;
+use crate::tests::specs::kdl_impl2;
 use quote::quote;
 
 // Section 3.9.1. String Type Classification Tests

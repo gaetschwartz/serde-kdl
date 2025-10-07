@@ -7,7 +7,7 @@
 //! - Octal: 0o17, 0O77, +0o123, -0o456, 0o12_34
 //! - Binary: 0b101, 0B111, +0b101, -0b110, 0b10_11
 
-use crate::specs::kdl_impl2;
+use crate::tests::specs::kdl_impl2;
 use crate::assert_eq_tk;
 
 #[test]

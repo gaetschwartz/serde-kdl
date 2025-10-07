@@ -9,7 +9,7 @@
 //! - Distinction between bare "null" (identifier) and "#null" (null value)
 //! - Error cases for invalid null syntax
 
-use crate::specs::kdl_impl2;
+use crate::tests::specs::kdl_impl2;
 
 #[test]
 fn test_basic_null_syntax() {

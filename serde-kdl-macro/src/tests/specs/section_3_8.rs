@@ -9,7 +9,7 @@
 //! - Reserved type annotations for numbers with decimals (Section 3.8.2)
 //! - Reserved type annotations for strings (Section 3.8.3)
 
-use crate::specs::kdl_impl2;
+use crate::tests::specs::kdl_impl2;
 use quote::quote;
 
 // Section 3.8.1. Reserved Type Annotations for Numbers Without Decimals
@@ -534,7 +534,7 @@ fn test_custom_type_annotations() {
 
 #[test]
 fn debug_node_parsing() {
-    use crate::specs::kdl_impl2;
+    use crate::tests::specs::kdl_impl2;
 
     // Test different node parsing scenarios
     let test_cases = vec![

@@ -3,7 +3,7 @@
 //! Tests for identifier string validation according to the KDL specification.
 //! This covers both Section 3.10.1 (Non-initial characters) and Section 3.10.2 (Non-identifier characters).
 
-use crate::specs::kdl_impl2;
+use crate::tests::specs::kdl_impl2;
 use quote::quote;
 
 /// Tests for Section 3.10.1 - Non-initial characters

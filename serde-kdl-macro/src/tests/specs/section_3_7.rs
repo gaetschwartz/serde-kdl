@@ -6,7 +6,7 @@
 //! - Only String values may be used as Node names or Property keys
 //! - Values (both as arguments and in properties) MAY be prefixed by a single Type Annotation (Section 3.8)
 
-use crate::specs::kdl_impl2;
+use crate::tests::specs::kdl_impl2;
 use quote::quote;
 
 #[test]

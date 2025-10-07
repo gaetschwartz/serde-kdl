@@ -8,7 +8,7 @@
 //! - Integration with other value types
 //! - Error cases for invalid boolean syntax
 
-use crate::specs::kdl_impl2;
+use crate::tests::specs::kdl_impl2;
 
 #[test]
 fn test_basic_boolean_syntax() {

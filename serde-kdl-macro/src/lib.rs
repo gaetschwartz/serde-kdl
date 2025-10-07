@@ -15,7 +15,7 @@ mod utils;
 mod validation;
 
 #[cfg(test)]
-mod specs;
+mod tests;
 
 /// A KDL macro that allows writing KDL syntax directly in Rust code.
 ///
