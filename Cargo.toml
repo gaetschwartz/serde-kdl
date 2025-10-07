@@ -16,12 +16,13 @@ authors = ["Gaëtan Schwartz"]
 [features]
 default = ["bytes"]
 bytes = []
+macros = ["dep:serde-kdl-macro"]
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 kdl = "4.7"
 thiserror = "1.0"
-serde-kdl-macro = { path = "serde-kdl-macro" }
+serde-kdl-macro = { path = "serde-kdl-macro", optional = true }
 rstest = "0.18"
 
 [dev-dependencies]

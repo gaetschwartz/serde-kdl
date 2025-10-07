@@ -1,3 +1,4 @@
+#![cfg(feature = "macros")]
 use serde_kdl_macro::kdl;
 
 /// Test basic document structure (section 3.1)
