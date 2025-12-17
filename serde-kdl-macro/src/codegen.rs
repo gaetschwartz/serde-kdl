@@ -274,11 +274,7 @@ fn generate_lsp_hints(document: &KdlDocument) -> TokenStream2 {
     let mut hints = Vec::new();
     collect_hints_from_nodes(&document.nodes, &mut hints);
 
-    if hints.is_empty() {
-        quote! {}
-    } else {
-        quote! { #(#hints)* }
-    }
+    quote! { #(#hints)* }
 }
 
 fn collect_hints_from_nodes(nodes: &[KdlNode], hints: &mut Vec<TokenStream2>) {
@@ -287,7 +283,7 @@ fn collect_hints_from_nodes(nodes: &[KdlNode], hints: &mut Vec<TokenStream2>) {
         if let Some(ident) = node.name.as_ident() {
             hints.push(quote! {
                 #[doc(hidden)]
-                #[allow(non_camel_case_types, dead_code, unused)]
+                #[allow(non_snake_case, non_camel_case_types, dead_code, unused)]
                 const _: () = { let #ident: () = (); };
             });
         }
@@ -297,7 +293,7 @@ fn collect_hints_from_nodes(nodes: &[KdlNode], hints: &mut Vec<TokenStream2>) {
             if let Some(ident) = prop.key.as_ident() {
                 hints.push(quote! {
                     #[doc(hidden)]
-                    #[allow(non_upper_case_globals, dead_code, unused)]
+                    #[allow(non_snake_case, non_upper_case_globals, dead_code, unused)]
                     const _: () = { let #ident: () = (); };
                 });
             }
