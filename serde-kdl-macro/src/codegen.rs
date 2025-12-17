@@ -3,7 +3,7 @@
 //! This module handles the generation of Rust code from parsed KDL AST structures.
 
 use crate::ast::{
-    extract_type_annotation, KdlDocument, KdlNode, KdlValue, KDL_ENTRY, KDL_NODE,
+    extract_type_annotation, KdlDocument, KdlNode, KdlString, KdlValue, KDL_ENTRY, KDL_NODE,
     SERDE_KDL_KDL_EXPORT,
 };
 use proc_macro2::TokenStream as TokenStream2;
@@ -14,8 +14,12 @@ pub(crate) fn generate_kdl_code(document: &KdlDocument) -> Result<TokenStream2> 
     let node_codes: Result<Vec<_>> = document.nodes.iter().map(generate_node_code).collect();
     let node_codes = node_codes?;
 
+    // Generate LSP hints for IDE support
+    let lsp_hints = generate_lsp_hints(document);
+
     Ok(quote! {
         {
+            #lsp_hints
             let mut document = #SERDE_KDL_KDL_EXPORT::KdlDocument::new();
             #(#node_codes)*
             document
@@ -24,7 +28,7 @@ pub(crate) fn generate_kdl_code(document: &KdlDocument) -> Result<TokenStream2> 
 }
 
 fn generate_node_code(node: &KdlNode) -> Result<TokenStream2> {
-    let name = &node.name;
+    let name = node.name.value();
     let type_annotation = &node.type_annotation;
 
     // Generate argument codes with type annotation handling
@@ -57,7 +61,7 @@ fn generate_node_code(node: &KdlNode) -> Result<TokenStream2> {
         .properties
         .iter()
         .map(|prop| {
-            let key = &prop.key;
+            let key = prop.key.value();
             let value_code = generate_value_code(&prop.value)?;
             let type_annotation = extract_type_annotation(&prop.value);
 
@@ -126,7 +130,7 @@ fn generate_node_code(node: &KdlNode) -> Result<TokenStream2> {
 }
 
 fn generate_child_node_code(node: &KdlNode) -> Result<TokenStream2> {
-    let name = &node.name;
+    let name = node.name.value();
     let type_annotation = &node.type_annotation;
 
     // Generate argument codes with type annotation handling
@@ -159,7 +163,7 @@ fn generate_child_node_code(node: &KdlNode) -> Result<TokenStream2> {
         .properties
         .iter()
         .map(|prop| {
-            let key = &prop.key;
+            let key = prop.key.value();
             let value_code = generate_value_code(&prop.value)?;
             let type_annotation = extract_type_annotation(&prop.value);
 
@@ -260,5 +264,47 @@ fn generate_value_code(value: &KdlValue) -> Result<TokenStream2> {
             // kdl::KdlValue implements From for: i128, f64, &str, String, bool, Option<T>
             Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::from(#ident) })
         }
+    }
+}
+
+/// Generate phantom const bindings for LSP/IDE support.
+/// This creates bindings that use the same identifiers as the KDL input,
+/// allowing IDEs to provide syntax highlighting and other features.
+fn generate_lsp_hints(document: &KdlDocument) -> TokenStream2 {
+    let mut hints = Vec::new();
+    collect_hints_from_nodes(&document.nodes, &mut hints);
+    quote! { #(#hints)* }
+}
+
+fn collect_hints_from_nodes(nodes: &[KdlNode], hints: &mut Vec<TokenStream2>) {
+    for node in nodes {
+        // Generate struct hint for node names that are identifiers
+        // Each hint is isolated in its own const block to avoid naming conflicts
+        if let KdlString::Identifier { value, span } = &node.name {
+            if let Ok(ident) = syn::parse_str::<syn::Ident>(value) {
+                let ident = syn::Ident::new(&ident.to_string(), *span);
+                hints.push(quote! {
+                    #[allow(non_camel_case_types, dead_code)]
+                    const _: () = { struct #ident; };
+                });
+            }
+        }
+
+        // Generate const hint for property keys that are identifiers
+        // We use a unit type to avoid UB from zeroed complex types
+        for prop in &node.properties {
+            if let KdlString::Identifier { value, span } = &prop.key {
+                if let Ok(ident) = syn::parse_str::<syn::Ident>(value) {
+                    let ident = syn::Ident::new(&ident.to_string(), *span);
+                    hints.push(quote! {
+                        #[allow(non_upper_case_globals, dead_code)]
+                        const _: () = { const #ident: () = (); };
+                    });
+                }
+            }
+        }
+
+        // Recurse into children
+        collect_hints_from_nodes(&node.children, hints);
     }
 }

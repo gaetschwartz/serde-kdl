@@ -124,7 +124,7 @@ impl Parse for KdlNode {
 
 // Helper function to parse node names with optional type annotations
 // Supports: (type)name or name
-fn parse_node_name_with_type_annotation(input: ParseStream) -> Result<(Option<String>, String)> {
+fn parse_node_name_with_type_annotation(input: ParseStream) -> Result<(Option<String>, KdlString)> {
     // Check for type annotation: (type)name
     if input.peek(syn::token::Paren) {
         let type_annotation = parse_type_annotation(input)?;
@@ -142,69 +142,52 @@ fn parse_node_name_with_type_annotation(input: ParseStream) -> Result<(Option<St
 
 // Helper function to parse node names that might have dashes or be string literals
 // According to Section 3.7, node names must be String values
-fn parse_bare_node_name(input: ParseStream) -> Result<String> {
+fn parse_bare_node_name(input: ParseStream) -> Result<KdlString> {
     // Check if it's a string literal first (quoted strings)
     // Note: Rust's LitStr::value() already processes escape sequences
     if input.peek(LitStr) {
         let lit_str: LitStr = input.parse()?;
-        let value = lit_str.value();
-
-        // Create a KdlString for validation
         let kdl_string = KdlString::Quoted {
-            value: value.clone(),
+            value: lit_str.value(),
             span: lit_str.span(),
         };
         kdl_string.validate()?;
-
-        return Ok(value);
+        return Ok(kdl_string);
     }
 
     // Otherwise parse as identifier sequence (bare strings)
-    // Handle identifiers that might start with punctuation like -, +, .
-    let mut name = String::new();
-
     // Parse the main identifier part
     if input.peek(Ident) {
-        let first_part: Ident = input.parse()?;
-        name.push_str(&first_part.to_string());
-    } else if name.is_empty() {
-        return Err(syn::Error::new(input.span(), "Expected identifier"));
+        let ident: Ident = input.parse()?;
+        let kdl_string = KdlString::Identifier {
+            value: ident.to_string(),
+            span: ident.span(),
+        };
+        kdl_string.validate()?;
+        return Ok(kdl_string);
     }
 
-    // Create a KdlString for validation
-    let kdl_string = KdlString::Identifier {
-        value: name,
-        span: input.span(),
-    };
-    kdl_string.validate()?;
-
-    Ok(match kdl_string {
-        KdlString::Identifier { value, .. } => value,
-        _ => unreachable!(),
-    })
+    Err(syn::Error::new(input.span(), "Expected identifier"))
 }
 
 // Helper function to parse property keys (must be String values according to Section 3.7)
-fn parse_property_key(input: ParseStream) -> Result<String> {
+fn parse_property_key(input: ParseStream) -> Result<KdlString> {
     // Check if it's a string literal first (quoted strings)
     // Note: Rust's LitStr::value() already processes escape sequences
     if input.peek(LitStr) {
         let lit_str: LitStr = input.parse()?;
-        let value = lit_str.value();
-
-        // Create a KdlString for validation
         let kdl_string = KdlString::Quoted {
-            value: value.clone(),
+            value: lit_str.value(),
             span: lit_str.span(),
         };
         kdl_string.validate()?;
-
-        return Ok(value);
+        return Ok(kdl_string);
     }
 
     // Otherwise parse as identifier sequence (bare strings)
     // Handle identifiers that might start with punctuation like -, +, .
     let mut name_parts = Vec::new();
+    let start_span = input.span();
 
     // Handle leading punctuation characters
     while input.peek(syn::token::Minus)
@@ -224,23 +207,27 @@ fn parse_property_key(input: ParseStream) -> Result<String> {
     }
 
     // Parse the main identifier part
-    if input.peek(Ident) {
-        let first_part: Ident = input.parse()?;
-        name_parts.push(first_part.to_string());
+    let ident_span = if input.peek(Ident) {
+        let ident: Ident = input.parse()?;
+        let span = ident.span();
+        name_parts.push(ident.to_string());
+        span
     } else if name_parts.is_empty() {
         return Err(syn::Error::new(input.span(), "Expected identifier"));
-    }
+    } else {
+        start_span
+    };
 
     let full_key = name_parts.join("");
 
     // Create a KdlString for validation
     let kdl_string = KdlString::Identifier {
-        value: full_key.clone(),
-        span: input.span(),
+        value: full_key,
+        span: ident_span,
     };
     kdl_string.validate()?;
 
-    Ok(full_key)
+    Ok(kdl_string)
 }
 
 // Helper function to determine if the input stream starts with a property

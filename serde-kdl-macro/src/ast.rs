@@ -59,7 +59,7 @@ pub(crate) struct KdlDocument {
 /// Represents a single KDL node with optional properties, arguments, and children
 #[derive(Debug, Clone)]
 pub(crate) struct KdlNode {
-    pub(crate) name: String,
+    pub(crate) name: KdlString,
     pub(crate) type_annotation: Option<String>, // Type annotation for node name
     pub(crate) properties: Vec<KdlProperty>,
     pub(crate) arguments: Vec<KdlValue>,
@@ -70,7 +70,7 @@ pub(crate) struct KdlNode {
 /// Represents a KDL property (key="value" pair)
 #[derive(Debug, Clone)]
 pub(crate) struct KdlProperty {
-    pub(crate) key: String, // According to Section 3.7, property keys must be String values
+    pub(crate) key: KdlString, // According to Section 3.7, property keys must be String values
     pub(crate) value: KdlValue,
 }
 
