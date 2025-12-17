@@ -11,11 +11,8 @@ mod ast;
 mod codegen;
 mod parse;
 mod parser;
-mod utils;
 mod validation;
 
-#[cfg(test)]
-mod tests;
 
 /// A KDL macro that allows writing KDL syntax directly in Rust code.
 ///
@@ -37,15 +34,6 @@ mod tests;
 ///     }
 /// };
 /// ```
-///
-/// # Line Continuation Support
-///
-/// This macro supports KDL line continuations (Section 3.3 of the KDL specification).
-/// Line continuations allow nodes to be spread across multiple lines using a backslash
-/// followed by optional whitespace/comments and a newline.
-///
-/// Note: Due to Rust's lexer limitations, line continuations in the macro syntax
-/// are processed through string preprocessing before parsing.
 #[proc_macro]
 pub fn kdl(input: TokenStream) -> TokenStream {
     match parser::kdl_impl(input) {

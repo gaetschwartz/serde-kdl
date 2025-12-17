@@ -1,0 +1,5 @@
+error: Expected identifier
+  --> tests/specs/compile_fail/section_3_10_identifiers/starts_with_digit_9.rs:10:9
+   |
+10 |         9xyz "value"
+   |         ^^^^

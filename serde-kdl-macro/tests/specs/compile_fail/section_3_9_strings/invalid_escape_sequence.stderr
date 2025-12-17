@@ -1,0 +1,5 @@
+error: invalid character in numeric character escape: ` `
+ --> tests/specs/compile_fail/section_3_9_strings/invalid_escape_sequence.rs:9:25
+  |
+9 |         node "invalid \x escape"
+  |                         ^ invalid character in numeric character escape

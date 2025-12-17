@@ -1,0 +1,8 @@
+error[E0765]: unterminated double quote string
+  --> tests/specs/compile_fail/section_3_9_strings/unclosed_string.rs:9:14
+   |
+ 9 |           node "unclosed
+   |  ______________^
+10 | |     };
+11 | | }
+   | |__^

@@ -1,0 +1,7 @@
+error: invalid unicode character escape
+ --> tests/specs/compile_fail/section_3_11_escapes/invalid_unicode_too_large.rs:5:26
+  |
+5 |     let _ = kdl! { node "\u{110000}" }; // Beyond maximum Unicode code point
+  |                          ^^^^^^^^^^ invalid escape
+  |
+  = help: unicode escape must be at most 10FFFF

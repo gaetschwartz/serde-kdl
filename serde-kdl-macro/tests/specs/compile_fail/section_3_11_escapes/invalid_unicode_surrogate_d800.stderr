@@ -1,0 +1,7 @@
+error: invalid unicode character escape
+ --> tests/specs/compile_fail/section_3_11_escapes/invalid_unicode_surrogate_d800.rs:5:26
+  |
+5 |     let _ = kdl! { node "\u{D800}" }; // Surrogate code point (not a valid Unicode scalar)
+  |                          ^^^^^^^^ invalid escape
+  |
+  = help: unicode escape must not be a surrogate

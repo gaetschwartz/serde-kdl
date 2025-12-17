@@ -14,3 +14,5 @@ pub(crate) mod number;
 pub(crate) mod string;
 pub(crate) mod type_annotation;
 pub(crate) mod value;
+#[allow(unused)]
+pub(crate) mod whitespace;

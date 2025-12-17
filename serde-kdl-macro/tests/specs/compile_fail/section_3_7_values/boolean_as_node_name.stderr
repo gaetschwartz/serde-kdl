@@ -1,0 +1,5 @@
+error: Expected identifier
+ --> tests/specs/compile_fail/section_3_7_values/boolean_as_node_name.rs:8:20
+  |
+8 |     let _ = kdl! { #true "arg" };
+  |                    ^

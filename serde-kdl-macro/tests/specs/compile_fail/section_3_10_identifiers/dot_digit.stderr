@@ -1,0 +1,5 @@
+error: Expected identifier
+  --> tests/specs/compile_fail/section_3_10_identifiers/dot_digit.rs:11:9
+   |
+11 |         .5 "value"
+   |         ^

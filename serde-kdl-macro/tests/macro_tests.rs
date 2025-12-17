@@ -1,6 +1,113 @@
+use insta::assert_snapshot;
+use kdl::KdlDocument;
 use serde_kdl_macro::kdl;
 
-#[cfg(test)]
+#[path = "specs/mod.rs"]
+mod specs;
+
+mod complex {
+    use super::*;
+
+    #[test]
+    fn test_complex_cargo_macro() {
+        // Test using a variable in the macro
+        const CRATE_NAME: &str = "my_crate";
+        const VERSION: &str = "0.1.0";
+        const OPTIONAL_FEATURE: bool = true;
+
+        let doc = kdl! {
+          package name=CRATE_NAME version=VERSION
+          dependencies {
+            nom "8.0.0"
+            thiserror version="1.0.0" {
+              features "feature1" "feature2"
+            }
+            serde_kdl path="./" optional=OPTIONAL_FEATURE
+          }
+          features "feature3" "feature4"
+          package {
+            metadata {
+              "my-package" float1=#nan float2=#inf float3=#-inf null_value=#null
+            }
+          }
+        };
+
+        assert_snapshot!(doc_to_pretty_string(doc), @r#"
+        package name=my_crate version="0.1.0"
+        dependencies {
+            nom "8.0.0"
+            thiserror version="1.0.0" {
+                features feature1 feature2
+            }
+            serde_kdl path="./" optional=#true
+        }
+        features feature3 feature4
+        package {
+            metadata {
+                my-package float1=#nan float2=#inf float3=#-inf null_value=#null
+            }
+        }
+        "#);
+    }
+
+    #[test]
+    fn test_identifier_with_only_disallowed_characters() {
+        let doc = kdl! {
+          "node" "property"="value"
+        };
+        assert_snapshot!(doc_to_pretty_string(doc), @"node property=value");
+    }
+}
+
+mod variable_tests {
+    use super::*;
+
+    #[test]
+    fn test_variable_as_property_value() {
+        let my_string = "hello";
+        let doc = kdl! {
+            node prop=my_string
+        };
+        assert_snapshot!(doc, @"node prop=hello");
+    }
+
+    #[test]
+    fn test_variable_as_argument() {
+        let my_value: i128 = 42;
+        let doc = kdl! {
+            node my_value
+        };
+        assert_snapshot!(doc, @"node 42");
+    }
+
+    #[test]
+    fn test_multiple_variables() {
+        let name = "test";
+        let count: i128 = 5;
+        let enabled = true;
+        let doc = kdl! {
+            config name=name count=count enabled=enabled
+        };
+        assert_snapshot!(doc, @"config name=test count=5 enabled=#true");
+    }
+
+    #[test]
+    fn test_variable_in_nested_node() {
+        let inner_val = "nested";
+        let doc = kdl! {
+            parent {
+                child value=inner_val
+            }
+        };
+        assert_snapshot!(doc_to_pretty_string(doc), @r#"
+        parent {
+            child value=nested
+        }
+        "#);
+    }
+
+}
+
 mod basic_usage_tests {
     use super::*;
 
@@ -10,11 +117,7 @@ mod basic_usage_tests {
             simple_node 42
         };
 
-        assert_eq!(doc.nodes().len(), 1);
-        let node = &doc.nodes()[0];
-        assert_eq!(node.name().value(), "simple_node");
-        assert_eq!(node.entries().len(), 1);
-        assert_eq!(node.entries()[0].value().as_i64().unwrap(), 42);
+        assert_snapshot!(doc, @"simple_node 42")
     }
 
     #[test]
@@ -23,11 +126,7 @@ mod basic_usage_tests {
             config "my-app"
         };
 
-        assert_eq!(doc.nodes().len(), 1);
-        let node = &doc.nodes()[0];
-        assert_eq!(node.name().value(), "config");
-        assert_eq!(node.entries().len(), 1);
-        assert_eq!(node.entries()[0].value().as_string().unwrap(), "my-app");
+        assert_snapshot!(doc, @"config my-app")
     }
 
     #[test]
@@ -36,9 +135,7 @@ mod basic_usage_tests {
             debug true
         };
 
-        let node = &doc.nodes()[0];
-        assert_eq!(node.name().value(), "debug");
-        assert_eq!(node.entries()[0].value().as_bool().unwrap(), true);
+        assert_snapshot!(doc, @"debug #true")
     }
 
     #[test]
@@ -47,9 +144,7 @@ mod basic_usage_tests {
             version 1.5
         };
 
-        let node = &doc.nodes()[0];
-        assert_eq!(node.name().value(), "version");
-        assert_eq!(node.entries()[0].value().as_f64().unwrap(), 1.5);
+        assert_snapshot!(doc, @"version 1.5")
     }
 
     #[test]
@@ -58,12 +153,7 @@ mod basic_usage_tests {
             connect "localhost" 5432 true
         };
 
-        let node = &doc.nodes()[0];
-        assert_eq!(node.name().value(), "connect");
-        assert_eq!(node.entries().len(), 3);
-        assert_eq!(node.entries()[0].value().as_string().unwrap(), "localhost");
-        assert_eq!(node.entries()[1].value().as_i64().unwrap(), 5432);
-        assert_eq!(node.entries()[2].value().as_bool().unwrap(), true);
+        assert_snapshot!(doc, @"connect localhost 5432 #true")
     }
 
     #[test]
@@ -72,18 +162,7 @@ mod basic_usage_tests {
             server host="localhost" port=8080
         };
 
-        let node = &doc.nodes()[0];
-        assert_eq!(node.name().value(), "server");
-        assert_eq!(node.entries().len(), 2);
-
-        // Properties should have names
-        let host_entry = &node.entries()[0];
-        assert_eq!(host_entry.name().unwrap().value(), "host");
-        assert_eq!(host_entry.value().as_string().unwrap(), "localhost");
-
-        let port_entry = &node.entries()[1];
-        assert_eq!(port_entry.name().unwrap().value(), "port");
-        assert_eq!(port_entry.value().as_i64().unwrap(), 8080);
+        assert_snapshot!(doc, @"server host=localhost port=8080")
     }
 
     #[test]
@@ -92,27 +171,10 @@ mod basic_usage_tests {
             database "postgres" version=13 ssl=true
         };
 
-        let node = &doc.nodes()[0];
-        assert_eq!(node.name().value(), "database");
-        assert_eq!(node.entries().len(), 3);
-
-        // First should be argument
-        let arg_entry = &node.entries()[0];
-        assert!(arg_entry.name().is_none());
-        assert_eq!(arg_entry.value().as_string().unwrap(), "postgres");
-
-        // Rest should be properties
-        let version_entry = &node.entries()[1];
-        assert_eq!(version_entry.name().unwrap().value(), "version");
-        assert_eq!(version_entry.value().as_i64().unwrap(), 13);
-
-        let ssl_entry = &node.entries()[2];
-        assert_eq!(ssl_entry.name().unwrap().value(), "ssl");
-        assert_eq!(ssl_entry.value().as_bool().unwrap(), true);
+        assert_snapshot!(doc, @"database postgres version=13 ssl=#true")
     }
 }
 
-#[cfg(test)]
 mod nested_structure_tests {
     use super::*;
 
@@ -122,10 +184,10 @@ mod nested_structure_tests {
             parent {}
         };
 
-        let node = &doc.nodes()[0];
-        assert_eq!(node.name().value(), "parent");
-        assert!(node.children().is_some());
-        assert_eq!(node.children().unwrap().nodes().len(), 0);
+        assert_snapshot!(doc, @r"
+        parent{
+        }
+        ")
     }
 
     #[test]
@@ -137,22 +199,12 @@ mod nested_structure_tests {
             }
         };
 
-        let parent = &doc.nodes()[0];
-        assert_eq!(parent.name().value(), "config");
-
-        let children = parent.children().unwrap();
-        assert_eq!(children.nodes().len(), 2);
-
-        let name_child = &children.nodes()[0];
-        assert_eq!(name_child.name().value(), "name");
-        assert_eq!(
-            name_child.entries()[0].value().as_string().unwrap(),
-            "my-app"
-        );
-
-        let debug_child = &children.nodes()[1];
-        assert_eq!(debug_child.name().value(), "debug");
-        assert_eq!(debug_child.entries()[0].value().as_bool().unwrap(), true);
+        assert_snapshot!(doc, @r"
+        config{
+        name my-app
+        debug #true
+        }
+        ")
     }
 
     #[test]
@@ -164,34 +216,15 @@ mod nested_structure_tests {
             }
         };
 
-        let server = &doc.nodes()[0];
-        assert_eq!(server.name().value(), "server");
-        assert_eq!(server.entries().len(), 2);
-
-        // Check parent properties
-        assert_eq!(server.entries()[0].name().unwrap().value(), "host");
-        assert_eq!(
-            server.entries()[0].value().as_string().unwrap(),
-            "localhost"
-        );
-        assert_eq!(server.entries()[1].name().unwrap().value(), "port");
-        assert_eq!(server.entries()[1].value().as_i64().unwrap(), 8080);
-
-        // Check children
-        let children = server.children().unwrap();
-        assert_eq!(children.nodes().len(), 2);
-
-        let ssl_child = &children.nodes()[0];
-        assert_eq!(ssl_child.name().value(), "ssl");
-        assert_eq!(ssl_child.entries()[0].value().as_bool().unwrap(), true);
-
-        let timeout_child = &children.nodes()[1];
-        assert_eq!(timeout_child.name().value(), "timeout");
-        assert_eq!(timeout_child.entries()[0].value().as_i64().unwrap(), 30);
+        assert_snapshot!(doc, @r"
+        server host=localhost port=8080{
+        ssl #true
+        timeout 30
+        }
+        ")
     }
 }
 
-#[cfg(test)]
 mod edge_case_tests {
     use super::*;
 
@@ -202,8 +235,10 @@ mod edge_case_tests {
             negative_float -3.14
         };
 
-        assert_eq!(doc.nodes()[0].entries()[0].value().as_i64().unwrap(), -42);
-        assert_eq!(doc.nodes()[1].entries()[0].value().as_f64().unwrap(), -3.14);
+        assert_snapshot!(doc, @r"
+        negative -42
+        negative_float -3.14
+        ")
     }
 
     #[test]
@@ -212,7 +247,7 @@ mod edge_case_tests {
             empty_string ""
         };
 
-        assert_eq!(doc.nodes()[0].entries()[0].value().as_string().unwrap(), "");
+        assert_snapshot!(doc, @r#"empty_string """#)
     }
 
     #[test]
@@ -222,7 +257,14 @@ mod edge_case_tests {
             zero_float 0.0
         };
 
-        assert_eq!(doc.nodes()[0].entries()[0].value().as_i64().unwrap(), 0);
-        assert_eq!(doc.nodes()[1].entries()[0].value().as_f64().unwrap(), 0.0);
+        assert_snapshot!(doc, @r"
+        zero 0
+        zero_float 0.0
+        ")
     }
+}
+
+fn doc_to_pretty_string(mut doc: KdlDocument) -> String {
+    doc.autoformat();
+    doc.to_string()
 }

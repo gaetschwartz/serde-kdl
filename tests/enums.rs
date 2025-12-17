@@ -1,3 +1,4 @@
+use rstest::rstest;
 use serde::{Deserialize, Serialize};
 use serde_kdl::{from_str, to_string};
 
@@ -30,18 +31,13 @@ enum Value {
     Array(Vec<Value>),
 }
 
-#[test]
-fn test_unit_enum_variants() {
-    // Test unit variants
-    let colors = vec![Color::Red, Color::Green, Color::Blue];
+#[rstest]
+fn test_unit_enum_variants(#[values(Color::Red, Color::Green, Color::Blue)] color: Color) {
+    let serialized = to_string(&color).unwrap();
+    println!("Serialized color: {}", serialized);
 
-    for color in colors {
-        let serialized = to_string(&color).unwrap();
-        println!("Serialized color: {}", serialized);
-
-        let deserialized: Color = from_str(&serialized).unwrap();
-        assert_eq!(color, deserialized);
-    }
+    let deserialized: Color = from_str(&serialized).unwrap();
+    assert_eq!(color, deserialized);
 }
 
 #[test]

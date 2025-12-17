@@ -1,0 +1,11 @@
+error: invalid digit for a base 8 literal
+ --> tests/specs/compile_fail/section_3_14_numbers/invalid_octal_bad_digits.rs:5:27
+  |
+5 |     let _ = kdl! { node 0o89 };
+  |                           ^
+
+error: invalid digit for a base 8 literal
+ --> tests/specs/compile_fail/section_3_14_numbers/invalid_octal_bad_digits.rs:5:28
+  |
+5 |     let _ = kdl! { node 0o89 };
+  |                            ^

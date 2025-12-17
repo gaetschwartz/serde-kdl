@@ -12,6 +12,9 @@ pub use de::Deserializer;
 pub use error::{Error, Result};
 pub use ser::Serializer;
 
+/// Default node name used when serializing primitive values.
+pub const DEFAULT_NODE_NAME: &str = "-";
+
 // Re-export kdl types for macro usage
 #[doc(hidden)]
 pub mod private {
@@ -35,7 +38,7 @@ pub use serde_kdl_macro::kdl;
 ///
 /// let value = 42;
 /// let kdl_string = to_string(&value).unwrap();
-/// assert_eq!(kdl_string, "root 42\n");
+/// assert_eq!(kdl_string, "- 42\n");
 /// ```
 ///
 /// Struct serialization:
@@ -57,26 +60,11 @@ pub use serde_kdl_macro::kdl;
 /// };
 ///
 /// let kdl_string = to_string(&config).unwrap();
-/// // Output: Config name="my-service" port=8080 enabled=true
-/// ```
-///
-/// Compare with the [`kdl!`] macro for compile-time construction:
-/// ```
-/// use serde_kdl::{to_string, kdl};
-/// use serde::Serialize;
-///
-/// // Runtime serialization
-/// #[derive(Serialize)]
-/// struct Server { name: String, port: u16 }
-/// let server = Server { name: "web".to_string(), port: 80 };
-/// let runtime_kdl = to_string(&server).unwrap();
-///
-/// // Compile-time construction
-/// let compile_time_kdl = kdl! {
-///     Server name="web" port=80
-/// };
-///
-/// // Both produce equivalent KDL documents
+/// assert_eq!(kdl_string, "\
+/// name my-service
+/// port 8080
+/// enabled #true
+/// ");
 /// ```
 pub fn to_string<T>(value: &T) -> Result<String>
 where
@@ -85,6 +73,57 @@ where
     let mut serializer = Serializer::new();
     value.serialize(&mut serializer)?;
     Ok(serializer.into_document().to_string())
+}
+
+/// Serialize a value to a pretty-printed KDL string.
+///
+/// This function serializes the given value to a KDL document, applies automatic
+/// formatting for readability, and returns it as a string. The output includes
+/// proper indentation for nested structures.
+///
+/// # Examples
+///
+/// ```
+/// use serde::Serialize;
+/// use serde_kdl::to_pretty_string;
+///
+/// #[derive(Serialize)]
+/// struct Server {
+///     host: String,
+///     port: u16,
+/// }
+///
+/// #[derive(Serialize)]
+/// struct Config {
+///     server: Server,
+///     debug: bool,
+/// }
+///
+/// let config = Config {
+///     server: Server {
+///         host: "localhost".to_string(),
+///         port: 8080,
+///     },
+///     debug: true,
+/// };
+///
+/// let pretty = to_pretty_string(&config).unwrap();
+/// assert_eq!(pretty, "\
+/// server host=localhost port=8080
+/// debug #true
+/// ");
+/// ```
+///
+/// Compare with [`to_string`] which produces compact output without formatting.
+pub fn to_pretty_string<T>(value: &T) -> Result<String>
+where
+    T: serde::Serialize,
+{
+    let mut serializer = Serializer::new();
+    value.serialize(&mut serializer)?;
+    let mut document = serializer.into_document();
+    document.autoformat();
+    Ok(document.to_string())
 }
 
 /// Serialize a value to a KDL document.
@@ -156,7 +195,7 @@ where
 /// ```
 /// use serde_kdl::from_str;
 ///
-/// let kdl_string = "root 42";
+/// let kdl_string = "- 42";
 /// let value: i32 = from_str(kdl_string).unwrap();
 /// assert_eq!(value, 42);
 /// ```
@@ -173,36 +212,12 @@ where
 ///     enabled: bool,
 /// }
 ///
-/// let kdl_string = r#"Config name="web-server" port=8080 enabled=true"#;
+/// let kdl_string = r#"Config name="web-server" port=8080 enabled=#true"#;
 /// let config: Config = from_str(kdl_string).unwrap();
 ///
 /// assert_eq!(config.name, "web-server");
 /// assert_eq!(config.port, 8080);
 /// assert_eq!(config.enabled, true);
-/// ```
-///
-/// Working with macro-generated KDL:
-/// ```
-/// use serde_kdl::{kdl, from_str};
-/// use serde::Deserialize;
-///
-/// // Create KDL with macro
-/// let doc = kdl! {
-///     server name="api" port=3000 ssl=true
-/// };
-///
-/// // Convert to string and deserialize
-/// let kdl_string = doc.to_string();
-///
-/// #[derive(Deserialize)]
-/// struct Server {
-///     name: String,
-///     port: u16,
-///     ssl: bool,
-/// }
-///
-/// let server: Server = from_str(&kdl_string).unwrap();
-/// assert_eq!(server.name, "api");
 /// ```
 pub fn from_str<T>(s: &str) -> Result<T>
 where
@@ -225,7 +240,7 @@ where
 /// use serde_kdl::from_document;
 /// use kdl::KdlDocument;
 ///
-/// let document: KdlDocument = "root 42".parse().unwrap();
+/// let document: KdlDocument = "- 42".parse().unwrap();
 /// let value: i32 = from_document(&document).unwrap();
 /// assert_eq!(value, 42);
 /// ```

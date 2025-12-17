@@ -1,0 +1,8 @@
+error: mismatched closing delimiter: `}`
+ --> tests/specs/compile_fail/section_3_8_types/unclosed_type_annotation.rs:5:25
+  |
+5 |     let _ = kdl! { node (u8 42 };
+  |                  -      ^      ^ mismatched closing delimiter
+  |                  |      |
+  |                  |      unclosed delimiter
+  |                  closing delimiter possibly meant for this

@@ -1,0 +1,5 @@
+error: overlong unicode escape
+ --> tests/specs/compile_fail/section_3_11_escapes/invalid_unicode_too_many_digits.rs:5:26
+  |
+5 |     let _ = kdl! { node "\u{1234567}" }; // Too many hex digits (7, max is 6)
+  |                          ^^^^^^^^^^^ must have at most 6 hex digits

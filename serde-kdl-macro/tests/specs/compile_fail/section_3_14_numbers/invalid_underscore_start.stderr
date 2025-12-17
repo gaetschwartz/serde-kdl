@@ -1,0 +1,5 @@
+error[E0425]: cannot find value `_123` in this scope
+ --> tests/specs/compile_fail/section_3_14_numbers/invalid_underscore_start.rs:5:25
+  |
+5 |     let _ = kdl! { node _123 };
+  |                         ^^^^ not found in this scope

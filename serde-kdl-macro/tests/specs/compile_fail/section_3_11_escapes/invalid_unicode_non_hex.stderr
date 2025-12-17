@@ -1,0 +1,5 @@
+error: invalid character in unicode escape: `G`
+ --> tests/specs/compile_fail/section_3_11_escapes/invalid_unicode_non_hex.rs:5:29
+  |
+5 |     let _ = kdl! { node "\u{GGGG}" }; // Invalid hex character 'G'
+  |                             ^ invalid character in unicode escape

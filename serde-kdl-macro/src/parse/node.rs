@@ -13,6 +13,10 @@ use syn::{
 
 impl Parse for KdlNode {
     fn parse(input: ParseStream) -> Result<Self> {
+        // Get the line number where this node starts BEFORE parsing the name
+        // (used to distinguish variables from new nodes)
+        let node_line = input.span().start().line;
+
         // Parse optional type annotation for node name
         let (type_annotation, name) = parse_node_name_with_type_annotation(input)?;
         let mut properties = Vec::new();
@@ -53,48 +57,24 @@ impl Parse for KdlNode {
                     if let Ok(_type_annotation) = parse_type_annotation(&checkpoint) {
                         // If the type annotation is followed by an identifier, check if it's a keyword
                         if checkpoint.peek(Ident) {
-                            let ident: Ident = checkpoint.parse().unwrap();
-                            let ident_str = ident.to_string();
-
-                            // Keywords are not valid node names, so this is a type-annotated value, not a new node
-                            if ident_str == "null"
-                                || ident_str == "true"
-                                || ident_str == "false"
-                                || ident_str == "inf"
-                                || ident_str == "-inf"
-                                || ident_str == "nan"
-                            {
-                                // This is a type-annotated keyword value, continue parsing as an argument
-                            } else {
-                                // This looks like a legitimate new node
-                                break;
-                            }
+                            // This looks like a legitimate new node
+                            break;
                         }
-                        // If it's followed by a literal, it's an argument type annotation
                         // Continue parsing as normal
                     }
                 } else if input.peek(Ident) {
-                    // Look ahead to see if this identifier is followed by something that would
-                    // make it clearly an argument vs a new node
+                    // Use line numbers to distinguish variables from new nodes:
+                    // - Same line as node: variable reference
+                    // - Different line: new node
                     let checkpoint = input.fork();
                     let ident: Ident = checkpoint.parse().unwrap();
-                    let ident_str = ident.to_string();
+                    let ident_line = ident.span().start().line;
 
-                    // Don't treat KDL keywords as new nodes - they're values
-                    if ident_str == "null" || ident_str == "true" || ident_str == "false" {
-                        // This is a keyword value, continue parsing as an argument
-                    } else {
-                        // Be more aggressive: most identifiers at top level are new nodes
-                        // Only continue if it's clearly NOT a new node (e.g., a single identifier at the end)
-                        if checkpoint.is_empty() {
-                            // Single identifier with nothing after it might be an argument
-                            // But let's be conservative and treat it as a new node
-                            break;
-                        } else {
-                            // If there's anything after the identifier, it's probably a new node
-                            break;
-                        }
+                    if ident_line != node_line {
+                        // Different line = new node
+                        break;
                     }
+                    // Same line = variable reference, continue to parse as value
                 }
 
                 // Try to parse as argument (literal value or identifier)
@@ -164,86 +144,62 @@ fn parse_node_name_with_type_annotation(input: ParseStream) -> Result<(Option<St
 // According to Section 3.7, node names must be String values
 fn parse_bare_node_name(input: ParseStream) -> Result<String> {
     // Check if it's a string literal first (quoted strings)
+    // Note: Rust's LitStr::value() already processes escape sequences
     if input.peek(LitStr) {
         let lit_str: LitStr = input.parse()?;
-        let processed_value =
-            crate::parse::string::process_string_escapes(&lit_str.value(), lit_str.span())?;
+        let value = lit_str.value();
 
         // Create a KdlString for validation
         let kdl_string = KdlString::Quoted {
-            value: processed_value.clone(),
+            value: value.clone(),
             span: lit_str.span(),
         };
         kdl_string.validate()?;
 
-        return Ok(processed_value);
+        return Ok(value);
     }
 
     // Otherwise parse as identifier sequence (bare strings)
     // Handle identifiers that might start with punctuation like -, +, .
-    let mut name_parts = Vec::new();
-
-    // Handle leading punctuation characters
-    while input.peek(syn::token::Minus)
-        || input.peek(syn::token::Plus)
-        || input.peek(syn::token::Dot)
-    {
-        if input.peek(syn::token::Minus) {
-            let _: syn::token::Minus = input.parse()?;
-            name_parts.push("-".to_string());
-        } else if input.peek(syn::token::Plus) {
-            let _: syn::token::Plus = input.parse()?;
-            name_parts.push("+".to_string());
-        } else if input.peek(syn::token::Dot) {
-            let _: syn::token::Dot = input.parse()?;
-            name_parts.push(".".to_string());
-        }
-    }
+    let mut name = String::new();
 
     // Parse the main identifier part
     if input.peek(Ident) {
         let first_part: Ident = input.parse()?;
-        name_parts.push(first_part.to_string());
-
-        // Check for dash-separated parts like "runs-on"
-        while input.peek(syn::token::Minus) && input.peek2(Ident) {
-            let _minus: syn::token::Minus = input.parse()?;
-            let next_part: Ident = input.parse()?;
-            name_parts.push("-".to_string());
-            name_parts.push(next_part.to_string());
-        }
-    } else if name_parts.is_empty() {
+        name.push_str(&first_part.to_string());
+    } else if name.is_empty() {
         return Err(syn::Error::new(input.span(), "Expected identifier"));
     }
 
-    let full_name = name_parts.join("");
-
     // Create a KdlString for validation
     let kdl_string = KdlString::Identifier {
-        value: full_name.clone(),
+        value: name,
         span: input.span(),
     };
     kdl_string.validate()?;
 
-    Ok(full_name)
+    Ok(match kdl_string {
+        KdlString::Identifier { value, .. } => value,
+        _ => unreachable!(),
+    })
 }
 
 // Helper function to parse property keys (must be String values according to Section 3.7)
 fn parse_property_key(input: ParseStream) -> Result<String> {
     // Check if it's a string literal first (quoted strings)
+    // Note: Rust's LitStr::value() already processes escape sequences
     if input.peek(LitStr) {
         let lit_str: LitStr = input.parse()?;
-        let processed_value =
-            crate::parse::string::process_string_escapes(&lit_str.value(), lit_str.span())?;
+        let value = lit_str.value();
 
         // Create a KdlString for validation
         let kdl_string = KdlString::Quoted {
-            value: processed_value.clone(),
+            value: value.clone(),
             span: lit_str.span(),
         };
         kdl_string.validate()?;
 
-        return Ok(processed_value);
+        return Ok(value);
     }
 
     // Otherwise parse as identifier sequence (bare strings)
@@ -271,14 +227,6 @@ fn parse_property_key(input: ParseStream) -> Result<String> {
     if input.peek(Ident) {
         let first_part: Ident = input.parse()?;
         name_parts.push(first_part.to_string());
-
-        // Check for dash-separated parts like "runs-on"
-        while input.peek(syn::token::Minus) && input.peek2(Ident) {
-            let _minus: syn::token::Minus = input.parse()?;
-            let next_part: Ident = input.parse()?;
-            name_parts.push("-".to_string());
-            name_parts.push(next_part.to_string());
-        }
     } else if name_parts.is_empty() {
         return Err(syn::Error::new(input.span(), "Expected identifier"));
     }
@@ -327,16 +275,6 @@ fn is_property_ahead(input: &syn::parse::ParseBuffer) -> bool {
     // Try to parse the main identifier part
     if checkpoint.peek(Ident) {
         if checkpoint.parse::<Ident>().is_ok() {
-            // Parse potential dash-separated parts
-            while checkpoint.peek(syn::token::Minus) && checkpoint.peek2(Ident) {
-                if checkpoint.parse::<syn::token::Minus>().is_err() {
-                    break;
-                }
-                if checkpoint.parse::<Ident>().is_err() {
-                    break;
-                }
-            }
-
             // Check if followed by =
             return checkpoint.peek(Eq);
         }

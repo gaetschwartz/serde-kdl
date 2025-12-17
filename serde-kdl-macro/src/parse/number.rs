@@ -54,7 +54,7 @@ pub(crate) fn parse_number(input: ParseStream) -> Result<KdlValue> {
                     parse_binary(&lit_str, is_negative, lit_int.span())
                 } else {
                     // Regular decimal integer
-                    match lit_int.base10_parse::<i64>() {
+                    match lit_int.base10_parse::<i128>() {
                         Ok(mut value) => {
                             if is_negative {
                                 value = -value;
@@ -129,20 +129,11 @@ fn parse_keyword_number(input: ParseStream) -> Result<KdlValue> {
 
 /// Parse hexadecimal numbers (0x/0X prefix)
 fn parse_hexadecimal(number_str: &str, is_negative: bool, span: Span) -> Result<KdlValue> {
-    if number_str.len() <= 2 {
-        return Err(Error::new(
-            span,
-            "Hexadecimal number missing digits after '0x'",
-        ));
-    }
-
     let hex_part = &number_str[2..]; // Remove 0x/0X prefix
     let clean_hex = hex_part.replace('_', "");
 
-    // Validate hex digits
-    validate_hex_digits(&clean_hex, span)?;
-
-    match i64::from_str_radix(&clean_hex, 16) {
+    // Note: Rust's literal parsing already validates hex digits
+    match i128::from_str_radix(&clean_hex, 16) {
         Ok(mut value) => {
             if is_negative {
                 value = -value;
@@ -150,8 +141,8 @@ fn parse_hexadecimal(number_str: &str, is_negative: bool, span: Span) -> Result<
             Ok(KdlValue::Integer(value))
         }
         Err(_) => {
-            // Try as float if too large for i64
-            match u64::from_str_radix(&clean_hex, 16) {
+            // Try as float if too large for i128
+            match u128::from_str_radix(&clean_hex, 16) {
                 Ok(value) => {
                     let mut float_value = value as f64;
                     if is_negative {
@@ -159,9 +150,9 @@ fn parse_hexadecimal(number_str: &str, is_negative: bool, span: Span) -> Result<
                     }
                     Ok(KdlValue::Float(float_value))
                 }
-                Err(_) => Err(Error::new(
+                Err(e) => Err(Error::new(
                     span,
-                    format!("Invalid hexadecimal number: {}", number_str),
+                    format!("Invalid hexadecimal number: {}", e),
                 )),
             }
         }
@@ -170,17 +161,11 @@ fn parse_hexadecimal(number_str: &str, is_negative: bool, span: Span) -> Result<
 
 /// Parse octal numbers (0o/0O prefix)
 fn parse_octal(number_str: &str, is_negative: bool, span: Span) -> Result<KdlValue> {
-    if number_str.len() <= 2 {
-        return Err(Error::new(span, "Octal number missing digits after '0o'"));
-    }
-
     let octal_part = &number_str[2..]; // Remove 0o/0O prefix
     let clean_octal = octal_part.replace('_', "");
 
-    // Validate octal digits
-    validate_octal_digits(&clean_octal, span)?;
-
-    match i64::from_str_radix(&clean_octal, 8) {
+    // Note: Rust's literal parsing already validates octal digits
+    match i128::from_str_radix(&clean_octal, 8) {
         Ok(mut value) => {
             if is_negative {
                 value = -value;
@@ -188,8 +173,8 @@ fn parse_octal(number_str: &str, is_negative: bool, span: Span) -> Result<KdlVal
             Ok(KdlValue::Integer(value))
         }
         Err(_) => {
-            // Try as float if too large for i64
-            match u64::from_str_radix(&clean_octal, 8) {
+            // Try as float if too large for i128
+            match u128::from_str_radix(&clean_octal, 8) {
                 Ok(value) => {
                     let mut float_value = value as f64;
                     if is_negative {
@@ -197,9 +182,9 @@ fn parse_octal(number_str: &str, is_negative: bool, span: Span) -> Result<KdlVal
                     }
                     Ok(KdlValue::Float(float_value))
                 }
-                Err(_) => Err(Error::new(
+                Err(e) => Err(Error::new(
                     span,
-                    format!("Invalid octal number: {}", number_str),
+                    format!("Invalid octal number: {}", e),
                 )),
             }
         }
@@ -208,17 +193,11 @@ fn parse_octal(number_str: &str, is_negative: bool, span: Span) -> Result<KdlVal
 
 /// Parse binary numbers (0b/0B prefix)
 fn parse_binary(number_str: &str, is_negative: bool, span: Span) -> Result<KdlValue> {
-    if number_str.len() <= 2 {
-        return Err(Error::new(span, "Binary number missing digits after '0b'"));
-    }
-
     let binary_part = &number_str[2..]; // Remove 0b/0B prefix
     let clean_binary = binary_part.replace('_', "");
 
-    // Validate binary digits
-    validate_binary_digits(&clean_binary, span)?;
-
-    match i64::from_str_radix(&clean_binary, 2) {
+    // Note: Rust's literal parsing already validates binary digits
+    match i128::from_str_radix(&clean_binary, 2) {
         Ok(mut value) => {
             if is_negative {
                 value = -value;
@@ -226,8 +205,8 @@ fn parse_binary(number_str: &str, is_negative: bool, span: Span) -> Result<KdlVa
             Ok(KdlValue::Integer(value))
         }
         Err(_) => {
-            // Try as float if too large for i64
-            match u64::from_str_radix(&clean_binary, 2) {
+            // Try as float if too large for i128
+            match u128::from_str_radix(&clean_binary, 2) {
                 Ok(value) => {
                     let mut float_value = value as f64;
                     if is_negative {
@@ -235,67 +214,13 @@ fn parse_binary(number_str: &str, is_negative: bool, span: Span) -> Result<KdlVa
                     }
                     Ok(KdlValue::Float(float_value))
                 }
-                Err(_) => Err(Error::new(
+                Err(e) => Err(Error::new(
                     span,
-                    format!("Invalid binary number: {}", number_str),
+                    format!("Invalid binary number: {}", e),
                 )),
             }
         }
     }
-}
-
-/// Validate hexadecimal digits
-fn validate_hex_digits(hex_str: &str, span: Span) -> Result<()> {
-    if hex_str.is_empty() {
-        return Err(Error::new(span, "Hexadecimal number cannot be empty"));
-    }
-
-    for ch in hex_str.chars() {
-        if !ch.is_ascii_hexdigit() {
-            return Err(Error::new(
-                span,
-                format!(
-                    "Invalid hexadecimal digit: '{}'. Only 0-9, a-f, A-F are allowed",
-                    ch
-                ),
-            ));
-        }
-    }
-    Ok(())
-}
-
-/// Validate octal digits
-fn validate_octal_digits(octal_str: &str, span: Span) -> Result<()> {
-    if octal_str.is_empty() {
-        return Err(Error::new(span, "Octal number cannot be empty"));
-    }
-
-    for ch in octal_str.chars() {
-        if !('0'..='7').contains(&ch) {
-            return Err(Error::new(
-                span,
-                format!("Invalid octal digit: '{}'. Only 0-7 are allowed", ch),
-            ));
-        }
-    }
-    Ok(())
-}
-
-/// Validate binary digits
-fn validate_binary_digits(binary_str: &str, span: Span) -> Result<()> {
-    if binary_str.is_empty() {
-        return Err(Error::new(span, "Binary number cannot be empty"));
-    }
-
-    for ch in binary_str.chars() {
-        if ch != '0' && ch != '1' {
-            return Err(Error::new(
-                span,
-                format!("Invalid binary digit: '{}'. Only 0 and 1 are allowed", ch),
-            ));
-        }
-    }
-    Ok(())
 }
 
 /// Try to parse a number-like token from the input

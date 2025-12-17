@@ -14,19 +14,21 @@ categories = ["encoding", "parser-implementations", "config"]
 authors = ["Gaëtan Schwartz"]
 
 [features]
-default = ["bytes"]
+default = ["bytes", "macros"]
 bytes = []
 macros = ["dep:serde-kdl-macro"]
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
-kdl = "4.7"
-thiserror = "1.0"
+kdl = "6.5"
+thiserror = "2.0"
 serde-kdl-macro = { path = "serde-kdl-macro", optional = true }
-rstest = "0.18"
+rstest = "0.26"
 
 [dev-dependencies]
 serde_derive = "1.0"
 serde_json = "1.0"
-rstest = "0.18"
-rand = "0.8"
+rstest = "0.26"
+rand = "0.9"
+insta = "1.44.3"
+pretty_assertions = "1.4.1"

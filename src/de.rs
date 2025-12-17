@@ -1,7 +1,7 @@
 use crate::error::{Error, Result};
 use kdl::{KdlDocument, KdlEntry, KdlNode, KdlValue};
 use serde::de::{DeserializeSeed, EnumAccess, MapAccess, SeqAccess, VariantAccess, Visitor};
-use serde::Deserializer as DeserializerTrait;
+use serde::{forward_to_deserialize_any, Deserializer as DeserializerTrait};
 
 /// A deserializer that converts KDL documents directly to Rust values.
 pub struct Deserializer<'de> {
@@ -16,6 +16,19 @@ impl<'de> Deserializer<'de> {
         Self {
             document,
             current_node: None,
+        }
+    }
+
+    /// Get the current node or the first document node.
+    fn get_node(&self) -> Result<&'de KdlNode> {
+        if let Some(node) = self.current_node {
+            Ok(node)
+        } else {
+            let nodes = self.document.nodes();
+            if nodes.is_empty() {
+                return Err(Error::MissingRootNode);
+            }
+            Ok(&nodes[0])
         }
     }
 
@@ -46,12 +59,15 @@ impl<'de> Deserializer<'de> {
     {
         match value {
             KdlValue::String(s) => visitor.visit_str(s),
-            KdlValue::RawString(s) => visitor.visit_str(s),
-            KdlValue::Base10(i) => visitor.visit_i64(*i),
-            KdlValue::Base16(i) => visitor.visit_i64(*i),
-            KdlValue::Base8(i) => visitor.visit_i64(*i),
-            KdlValue::Base2(i) => visitor.visit_i64(*i),
-            KdlValue::Base10Float(f) => visitor.visit_f64(*f),
+            KdlValue::Integer(i) => {
+                // serde visitors for most numeric types only accept i64, not i128
+                if let Ok(v) = i64::try_from(*i) {
+                    visitor.visit_i64(v)
+                } else {
+                    visitor.visit_i128(*i)
+                }
+            }
+            KdlValue::Float(f) => visitor.visit_f64(*f),
             KdlValue::Bool(b) => visitor.visit_bool(*b),
             KdlValue::Null => visitor.visit_unit(),
         }
@@ -85,254 +101,32 @@ impl<'de> DeserializerTrait<'de> for &mut Deserializer<'de> {
         self.deserialize_from_node(root_node, visitor)
     }
 
-    fn deserialize_bool<V>(self, visitor: V) -> Result<V::Value>
-    where
-        V: Visitor<'de>,
-    {
-        self.deserialize_any(visitor)
-    }
-
-    fn deserialize_i8<V>(self, visitor: V) -> Result<V::Value>
-    where
-        V: Visitor<'de>,
-    {
-        self.deserialize_any(visitor)
-    }
-
-    fn deserialize_i16<V>(self, visitor: V) -> Result<V::Value>
-    where
-        V: Visitor<'de>,
-    {
-        self.deserialize_any(visitor)
-    }
-
-    fn deserialize_i32<V>(self, visitor: V) -> Result<V::Value>
-    where
-        V: Visitor<'de>,
-    {
-        self.deserialize_any(visitor)
-    }
-
-    fn deserialize_i64<V>(self, visitor: V) -> Result<V::Value>
-    where
-        V: Visitor<'de>,
-    {
-        self.deserialize_any(visitor)
-    }
-
-    fn deserialize_u8<V>(self, visitor: V) -> Result<V::Value>
-    where
-        V: Visitor<'de>,
-    {
-        self.deserialize_any(visitor)
-    }
-
-    fn deserialize_u16<V>(self, visitor: V) -> Result<V::Value>
-    where
-        V: Visitor<'de>,
-    {
-        self.deserialize_any(visitor)
-    }
-
-    fn deserialize_u32<V>(self, visitor: V) -> Result<V::Value>
-    where
-        V: Visitor<'de>,
-    {
-        self.deserialize_any(visitor)
-    }
-
-    fn deserialize_u64<V>(self, visitor: V) -> Result<V::Value>
-    where
-        V: Visitor<'de>,
-    {
-        self.deserialize_any(visitor)
-    }
-
-    fn deserialize_i128<V>(self, visitor: V) -> Result<V::Value>
-    where
-        V: Visitor<'de>,
-    {
-        // i128 support: KDL spec supports i128, but kdl crate 4.7 stores integers as i64
-        // We can deserialize any i64 value as i128 since i64 range is subset of i128
-        if let Some(node) = self.current_node {
-            if let Some(entry) = node.entries().first() {
-                match entry.value() {
-                    KdlValue::Base10(i)
-                    | KdlValue::Base16(i)
-                    | KdlValue::Base8(i)
-                    | KdlValue::Base2(i) => visitor.visit_i128(i128::from(*i)),
-                    _ => self.deserialize_any(visitor),
-                }
-            } else {
-                self.deserialize_any(visitor)
-            }
-        } else {
-            // Try root level
-            let nodes = self.document.nodes();
-            if let Some(root_node) = nodes.first() {
-                if let Some(entry) = root_node.entries().first() {
-                    match entry.value() {
-                        KdlValue::Base10(i)
-                        | KdlValue::Base16(i)
-                        | KdlValue::Base8(i)
-                        | KdlValue::Base2(i) => visitor.visit_i128(i128::from(*i)),
-                        _ => self.deserialize_any(visitor),
-                    }
-                } else {
-                    self.deserialize_any(visitor)
-                }
-            } else {
-                self.deserialize_any(visitor)
-            }
-        }
-    }
-
-    fn deserialize_u128<V>(self, visitor: V) -> Result<V::Value>
-    where
-        V: Visitor<'de>,
-    {
-        // u128 support: KDL spec supports wide integers, but kdl crate 4.7 stores integers as i64
-        // We can deserialize non-negative i64 values as u128
-        if let Some(node) = self.current_node {
-            if let Some(entry) = node.entries().first() {
-                match entry.value() {
-                    KdlValue::Base10(i)
-                    | KdlValue::Base16(i)
-                    | KdlValue::Base8(i)
-                    | KdlValue::Base2(i) => {
-                        if *i >= 0 {
-                            visitor.visit_u128(*i as u128)
-                        } else {
-                            Err(Error::UnexpectedValueType {
-                                field: "u128".to_string(),
-                                expected: "non-negative integer".to_string(),
-                                found: format!("negative integer {i}"),
-                            })
-                        }
-                    }
-                    _ => self.deserialize_any(visitor),
-                }
-            } else {
-                self.deserialize_any(visitor)
-            }
-        } else {
-            // Try root level
-            let nodes = self.document.nodes();
-            if let Some(root_node) = nodes.first() {
-                if let Some(entry) = root_node.entries().first() {
-                    match entry.value() {
-                        KdlValue::Base10(i)
-                        | KdlValue::Base16(i)
-                        | KdlValue::Base8(i)
-                        | KdlValue::Base2(i) => {
-                            if *i >= 0 {
-                                visitor.visit_u128(*i as u128)
-                            } else {
-                                Err(Error::UnexpectedValueType {
-                                    field: "u128".to_string(),
-                                    expected: "non-negative integer".to_string(),
-                                    found: format!("negative integer {i}"),
-                                })
-                            }
-                        }
-                        _ => self.deserialize_any(visitor),
-                    }
-                } else {
-                    self.deserialize_any(visitor)
-                }
-            } else {
-                self.deserialize_any(visitor)
-            }
-        }
-    }
-
-    fn deserialize_f32<V>(self, visitor: V) -> Result<V::Value>
-    where
-        V: Visitor<'de>,
-    {
-        self.deserialize_any(visitor)
-    }
-
-    fn deserialize_f64<V>(self, visitor: V) -> Result<V::Value>
-    where
-        V: Visitor<'de>,
-    {
-        self.deserialize_any(visitor)
-    }
-
-    fn deserialize_char<V>(self, visitor: V) -> Result<V::Value>
-    where
-        V: Visitor<'de>,
-    {
-        self.deserialize_str(visitor)
-    }
-
-    fn deserialize_str<V>(self, visitor: V) -> Result<V::Value>
-    where
-        V: Visitor<'de>,
-    {
-        self.deserialize_any(visitor)
-    }
-
-    fn deserialize_string<V>(self, visitor: V) -> Result<V::Value>
-    where
-        V: Visitor<'de>,
-    {
-        self.deserialize_str(visitor)
-    }
-
     fn deserialize_bytes<V>(self, visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
         #[cfg(feature = "bytes")]
         {
-            // For bytes, we expect a hex string
-            if let Some(node) = self.current_node {
-                if let Some(entry) = node.entries().first() {
-                    match entry.value() {
-                        KdlValue::String(s) | KdlValue::RawString(s) => {
-                            let bytes = crate::hex::decode_hex(s)?;
-                            visitor.visit_bytes(&bytes)
-                        }
-                        _ => Err(Error::UnsupportedType(
-                            "bytes must be represented as hex strings".to_string(),
-                        )),
+            let node = self.get_node()?;
+            if let Some(entry) = node.entries().first() {
+                match entry.value() {
+                    KdlValue::String(s) => {
+                        let bytes = crate::hex::decode_hex(s)?;
+                        visitor.visit_bytes(&bytes)
                     }
-                } else {
-                    Err(Error::UnsupportedType(
-                        "no value found for bytes".to_string(),
-                    ))
+                    _ => Err(Error::UnsupportedType(
+                        "bytes must be represented as hex strings".to_string(),
+                    )),
                 }
             } else {
-                // Try root level
-                let nodes = self.document.nodes();
-                if let Some(root_node) = nodes.first() {
-                    if let Some(entry) = root_node.entries().first() {
-                        match entry.value() {
-                            KdlValue::String(s) | KdlValue::RawString(s) => {
-                                let bytes = crate::hex::decode_hex(s)?;
-                                visitor.visit_bytes(&bytes)
-                            }
-                            _ => Err(Error::UnsupportedType(
-                                "bytes must be represented as hex strings".to_string(),
-                            )),
-                        }
-                    } else {
-                        Err(Error::UnsupportedType(
-                            "no value found for bytes".to_string(),
-                        ))
-                    }
-                } else {
-                    Err(Error::UnsupportedType(
-                        "no root node found for bytes".to_string(),
-                    ))
-                }
+                Err(Error::UnsupportedType(
+                    "no value found for bytes".to_string(),
+                ))
             }
         }
         #[cfg(not(feature = "bytes"))]
         {
-            let _ = visitor; // Silence unused parameter warning
+            let _ = visitor;
             Err(Error::UnsupportedType("byte arrays".to_string()))
         }
     }
@@ -343,52 +137,26 @@ impl<'de> DeserializerTrait<'de> for &mut Deserializer<'de> {
     {
         #[cfg(feature = "bytes")]
         {
-            // For byte_buf, we expect a hex string and return owned bytes
-            if let Some(node) = self.current_node {
-                if let Some(entry) = node.entries().first() {
-                    match entry.value() {
-                        KdlValue::String(s) | KdlValue::RawString(s) => {
-                            let bytes = crate::hex::decode_hex(s)?;
-                            visitor.visit_byte_buf(bytes)
-                        }
-                        _ => Err(Error::UnsupportedType(
-                            "bytes must be represented as hex strings".to_string(),
-                        )),
+            let node = self.get_node()?;
+            if let Some(entry) = node.entries().first() {
+                match entry.value() {
+                    KdlValue::String(s) => {
+                        let bytes = crate::hex::decode_hex(s)?;
+                        visitor.visit_byte_buf(bytes)
                     }
-                } else {
-                    Err(Error::UnsupportedType(
-                        "no value found for bytes".to_string(),
-                    ))
+                    _ => Err(Error::UnsupportedType(
+                        "bytes must be represented as hex strings".to_string(),
+                    )),
                 }
             } else {
-                // Try root level
-                let nodes = self.document.nodes();
-                if let Some(root_node) = nodes.first() {
-                    if let Some(entry) = root_node.entries().first() {
-                        match entry.value() {
-                            KdlValue::String(s) | KdlValue::RawString(s) => {
-                                let bytes = crate::hex::decode_hex(s)?;
-                                visitor.visit_byte_buf(bytes)
-                            }
-                            _ => Err(Error::UnsupportedType(
-                                "bytes must be represented as hex strings".to_string(),
-                            )),
-                        }
-                    } else {
-                        Err(Error::UnsupportedType(
-                            "no value found for bytes".to_string(),
-                        ))
-                    }
-                } else {
-                    Err(Error::UnsupportedType(
-                        "no root node found for bytes".to_string(),
-                    ))
-                }
+                Err(Error::UnsupportedType(
+                    "no value found for bytes".to_string(),
+                ))
             }
         }
         #[cfg(not(feature = "bytes"))]
         {
-            let _ = visitor; // Silence unused parameter warning
+            let _ = visitor;
             Err(Error::UnsupportedType("byte arrays".to_string()))
         }
     }
@@ -415,27 +183,6 @@ impl<'de> DeserializerTrait<'de> for &mut Deserializer<'de> {
         }
     }
 
-    fn deserialize_unit<V>(self, visitor: V) -> Result<V::Value>
-    where
-        V: Visitor<'de>,
-    {
-        visitor.visit_unit()
-    }
-
-    fn deserialize_unit_struct<V>(self, _name: &'static str, visitor: V) -> Result<V::Value>
-    where
-        V: Visitor<'de>,
-    {
-        self.deserialize_unit(visitor)
-    }
-
-    fn deserialize_newtype_struct<V>(self, _name: &'static str, visitor: V) -> Result<V::Value>
-    where
-        V: Visitor<'de>,
-    {
-        visitor.visit_newtype_struct(self)
-    }
-
     fn deserialize_seq<V>(self, visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
@@ -448,7 +195,7 @@ impl<'de> DeserializerTrait<'de> for &mut Deserializer<'de> {
                     if let Some(entry) = node.entries().first() {
                         if entry.name().is_none() {
                             // Not a property
-                            if let KdlValue::String(s) | KdlValue::RawString(s) = entry.value() {
+                            if let KdlValue::String(s) = entry.value() {
                                 // Try to decode as hex - if successful, use bytes deserializer
                                 if let Ok(bytes) = crate::hex::decode_hex(s) {
                                     return visitor.visit_seq(BytesSeqDeserializer::new(bytes));
@@ -485,7 +232,7 @@ impl<'de> DeserializerTrait<'de> for &mut Deserializer<'de> {
                     if let Some(entry) = root_node.entries().first() {
                         if entry.name().is_none() {
                             // Not a property
-                            if let KdlValue::String(s) | KdlValue::RawString(s) = entry.value() {
+                            if let KdlValue::String(s) = entry.value() {
                                 // Try to decode as hex - if successful, use bytes deserializer
                                 if let Ok(bytes) = crate::hex::decode_hex(s) {
                                     return visitor.visit_seq(BytesSeqDeserializer::new(bytes));
@@ -504,25 +251,6 @@ impl<'de> DeserializerTrait<'de> for &mut Deserializer<'de> {
 
         // Fallback to empty sequence
         visitor.visit_seq(SeqDeserializer::from_entries(&[]))
-    }
-
-    fn deserialize_tuple<V>(self, _len: usize, visitor: V) -> Result<V::Value>
-    where
-        V: Visitor<'de>,
-    {
-        self.deserialize_seq(visitor)
-    }
-
-    fn deserialize_tuple_struct<V>(
-        self,
-        _name: &'static str,
-        _len: usize,
-        visitor: V,
-    ) -> Result<V::Value>
-    where
-        V: Visitor<'de>,
-    {
-        self.deserialize_seq(visitor)
     }
 
     fn deserialize_map<V>(self, visitor: V) -> Result<V::Value>
@@ -562,30 +290,32 @@ impl<'de> DeserializerTrait<'de> for &mut Deserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        // Look for a node with the expected struct name
+        if let Some(node) = self.current_node {
+            // Nested - use current node's properties and children
+            let struct_de = StructDeserializer::new(node);
+            return visitor.visit_map(struct_de);
+        }
+
+        // Root level - check if we should use old or new format
         let nodes = self.document.nodes();
 
+        // Check for old format: single node with struct name that has properties/children
         if let Some(struct_node) = nodes.iter().find(|n| n.name().value() == name) {
-            self.current_node = Some(struct_node);
+            let has_properties = struct_node.entries().iter().any(|e| e.name().is_some());
+            let has_children = struct_node
+                .children()
+                .is_some_and(|c| !c.nodes().is_empty());
 
-            // Create a struct deserializer from the node's children and properties
-            let struct_de = StructDeserializer::new(struct_node);
-            visitor.visit_map(struct_de)
-        } else if nodes.len() == 1 {
-            // If there's only one root node and it doesn't match the name,
-            // still try to deserialize it as the struct
-            let root_node = &nodes[0];
-            self.current_node = Some(root_node);
-            let struct_de = StructDeserializer::new(root_node);
-            visitor.visit_map(struct_de)
-        } else {
-            Err(Error::UnexpectedNodeName {
-                expected: name.to_string(),
-                found: nodes
-                    .first()
-                    .map_or_else(|| "none".to_string(), |n| n.name().value().to_string()),
-            })
+            if has_properties || has_children {
+                // Old format - use StructDeserializer
+                let struct_de = StructDeserializer::new(struct_node);
+                return visitor.visit_map(struct_de);
+            }
         }
+
+        // New format - treat document nodes as struct fields
+        let root_de = RootStructDeserializer::new(nodes);
+        visitor.visit_map(root_de)
     }
 
     fn deserialize_enum<V>(
@@ -597,56 +327,31 @@ impl<'de> DeserializerTrait<'de> for &mut Deserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        // For enums, we expect either a simple string value or a node with variant name
-        if let Some(node) = self.current_node {
-            // Check if this is a simple string enum variant (node name is "root" and has string entry)
-            if node.name().value() == "root" && node.entries().len() == 1 {
-                if let Some(entry) = node.entries().first() {
-                    if let KdlValue::String(s) = entry.value() {
-                        use serde::de::value::StrDeserializer;
-                        return visitor.visit_enum(StrDeserializer::<Error>::new(s.as_str()));
-                    }
+        let node = self.get_node()?;
+
+        // Check if this is a simple string enum variant (default node name with string entry)
+        if node.name().value() == crate::DEFAULT_NODE_NAME && node.entries().len() == 1 {
+            if let Some(entry) = node.entries().first() {
+                if let KdlValue::String(s) = entry.value() {
+                    use serde::de::value::StrDeserializer;
+                    return visitor.visit_enum(StrDeserializer::<Error>::new(s.as_str()));
                 }
             }
-
-            // Complex enum variant - use node name as variant
-            let variant_name = node.name().value();
-            visitor.visit_enum(EnumDeserializer::new(variant_name, node))
-        } else {
-            let nodes = self.document.nodes();
-            if nodes.is_empty() {
-                return Err(Error::MissingRootNode);
-            }
-
-            let root_node = &nodes[0];
-            // Check if this is a simple string enum variant (node name is "root" and has string entry)
-            if root_node.name().value() == "root" && root_node.entries().len() == 1 {
-                if let Some(entry) = root_node.entries().first() {
-                    if let KdlValue::String(s) = entry.value() {
-                        use serde::de::value::StrDeserializer;
-                        return visitor.visit_enum(StrDeserializer::<Error>::new(s.as_str()));
-                    }
-                }
-            }
-
-            let variant_name = root_node.name().value();
-            visitor.visit_enum(EnumDeserializer::new(variant_name, root_node))
         }
+
+        // Complex enum variant - use node name as variant
+        let variant_name = node.name().value();
+        visitor.visit_enum(EnumDeserializer::new(variant_name, node))
     }
 
-    fn deserialize_identifier<V>(self, visitor: V) -> Result<V::Value>
-    where
-        V: Visitor<'de>,
-    {
-        self.deserialize_str(visitor)
-    }
-
-    fn deserialize_ignored_any<V>(self, visitor: V) -> Result<V::Value>
-    where
-        V: Visitor<'de>,
-    {
-        visitor.visit_unit()
-    }
+    forward_to_deserialize_any!(
+        bool
+        u8 u16 u32 u64 u128
+        i8 i16 i32 i64 i128
+        f32 f64
+        char str string
+        identifier ignored_any newtype_struct  tuple tuple_struct unit unit_struct
+    );
 }
 
 // Sequence deserializer
@@ -848,6 +553,51 @@ impl<'de> MapAccess<'de> for StructDeserializer<'de> {
     }
 }
 
+// Root struct deserializer - treats document nodes as struct fields
+struct RootStructDeserializer<'de> {
+    nodes: std::slice::Iter<'de, KdlNode>,
+    current_node: Option<&'de KdlNode>,
+}
+
+impl<'de> RootStructDeserializer<'de> {
+    fn new(nodes: &'de [KdlNode]) -> Self {
+        Self {
+            nodes: nodes.iter(),
+            current_node: None,
+        }
+    }
+}
+
+impl<'de> MapAccess<'de> for RootStructDeserializer<'de> {
+    type Error = Error;
+
+    fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>>
+    where
+        K: DeserializeSeed<'de>,
+    {
+        if let Some(node) = self.nodes.next() {
+            self.current_node = Some(node);
+            use serde::de::value::StrDeserializer;
+            seed.deserialize(StrDeserializer::<Error>::new(node.name().value()))
+                .map(Some)
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn next_value_seed<V>(&mut self, seed: V) -> Result<V::Value>
+    where
+        V: DeserializeSeed<'de>,
+    {
+        if let Some(node) = self.current_node.take() {
+            let de = NodeDeserializer::new(node);
+            seed.deserialize(de)
+        } else {
+            Err(Error::Serde("no current node for value".to_string()))
+        }
+    }
+}
+
 // Enum deserializer
 struct EnumDeserializer<'de> {
     variant: &'de str,
@@ -951,12 +701,15 @@ impl<'de> NodeDeserializer<'de> {
     {
         match value {
             KdlValue::String(s) => visitor.visit_str(s),
-            KdlValue::RawString(s) => visitor.visit_str(s),
-            KdlValue::Base10(i) => visitor.visit_i64(*i),
-            KdlValue::Base16(i) => visitor.visit_i64(*i),
-            KdlValue::Base8(i) => visitor.visit_i64(*i),
-            KdlValue::Base2(i) => visitor.visit_i64(*i),
-            KdlValue::Base10Float(f) => visitor.visit_f64(*f),
+            KdlValue::Integer(i) => {
+                // serde visitors for most numeric types only accept i64, not i128
+                if let Ok(v) = i64::try_from(*i) {
+                    visitor.visit_i64(v)
+                } else {
+                    visitor.visit_i128(*i)
+                }
+            }
+            KdlValue::Float(f) => visitor.visit_f64(*f),
             KdlValue::Bool(b) => visitor.visit_bool(*b),
             KdlValue::Null => visitor.visit_unit(),
         }
@@ -995,6 +748,24 @@ impl<'de> DeserializerTrait<'de> for NodeDeserializer<'de> {
     where
         V: Visitor<'de>,
     {
+        // Check for single string entry that might be hex bytes
+        #[cfg(feature = "bytes")]
+        {
+            if self.node.entries().len() == 1 {
+                if let Some(entry) = self.node.entries().first() {
+                    if entry.name().is_none() {
+                        // Not a property
+                        if let KdlValue::String(s) = entry.value() {
+                            // Try to decode as hex - if successful, use bytes deserializer
+                            if let Ok(bytes) = crate::hex::decode_hex(s) {
+                                return visitor.visit_seq(BytesSeqDeserializer::new(bytes));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         if !self.node.entries().is_empty() {
             let seq_de = SeqDeserializer::from_entries(self.node.entries());
             visitor.visit_seq(seq_de)
@@ -1032,7 +803,7 @@ impl<'de> DeserializerTrait<'de> for NodeDeserializer<'de> {
         {
             if let Some(entry) = self.node.entries().first() {
                 match entry.value() {
-                    KdlValue::String(s) | KdlValue::RawString(s) => {
+                    KdlValue::String(s) => {
                         let bytes = crate::hex::decode_hex(s)?;
                         visitor.visit_bytes(&bytes)
                     }
@@ -1061,7 +832,7 @@ impl<'de> DeserializerTrait<'de> for NodeDeserializer<'de> {
         {
             if let Some(entry) = self.node.entries().first() {
                 match entry.value() {
-                    KdlValue::String(s) | KdlValue::RawString(s) => {
+                    KdlValue::String(s) => {
                         let bytes = crate::hex::decode_hex(s)?;
                         visitor.visit_byte_buf(bytes)
                     }
@@ -1085,20 +856,61 @@ impl<'de> DeserializerTrait<'de> for NodeDeserializer<'de> {
     fn deserialize_enum<V>(
         self,
         _name: &'static str,
-        _variants: &'static [&'static str],
+        variants: &'static [&'static str],
         visitor: V,
     ) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        // Use the node name as the variant and the node content as the variant data
-        let variant_name = self.node.name().value();
-        visitor.visit_enum(EnumDeserializer::new(variant_name, self.node))
+        let node_name = self.node.name().value();
+
+        // If node name is a known variant, use it
+        if variants.contains(&node_name) {
+            return visitor.visit_enum(EnumDeserializer::new(node_name, self.node));
+        }
+
+        // Otherwise check if the node has a single string value - use it as variant name
+        // This handles the transparent format: `field_name VariantName`
+        if self.node.entries().len() == 1 {
+            if let Some(entry) = self.node.entries().first() {
+                if entry.name().is_none() {
+                    if let KdlValue::String(s) = entry.value() {
+                        use serde::de::value::StrDeserializer;
+                        return visitor.visit_enum(StrDeserializer::<Error>::new(s.as_str()));
+                    }
+                }
+            }
+        }
+
+        // Fallback to node name as variant
+        visitor.visit_enum(EnumDeserializer::new(node_name, self.node))
+    }
+
+    fn deserialize_option<V>(self, visitor: V) -> Result<V::Value>
+    where
+        V: Visitor<'de>,
+    {
+        // Check if the first entry is Null - that means None
+        if let Some(entry) = self.node.entries().first() {
+            if matches!(entry.value(), KdlValue::Null) {
+                return visitor.visit_none();
+            }
+        }
+
+        // If node has entries or children, treat as Some
+        let has_content = !self.node.entries().is_empty()
+            || self.node.children().is_some_and(|c| !c.nodes().is_empty());
+
+        if has_content {
+            visitor.visit_some(self)
+        } else {
+            visitor.visit_none()
+        }
     }
 
     serde::forward_to_deserialize_any! {
-        bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str string
-        option unit unit_struct newtype_struct tuple
+        bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
+        unit unit_struct newtype_struct tuple
         tuple_struct map identifier ignored_any
     }
 }
@@ -1134,12 +946,15 @@ impl<'de> EntryDeserializer<'de> {
     {
         match value {
             KdlValue::String(s) => visitor.visit_str(s),
-            KdlValue::RawString(s) => visitor.visit_str(s),
-            KdlValue::Base10(i) => visitor.visit_i64(*i),
-            KdlValue::Base16(i) => visitor.visit_i64(*i),
-            KdlValue::Base8(i) => visitor.visit_i64(*i),
-            KdlValue::Base2(i) => visitor.visit_i64(*i),
-            KdlValue::Base10Float(f) => visitor.visit_f64(*f),
+            KdlValue::Integer(i) => {
+                // serde visitors for most numeric types only accept i64, not i128
+                if let Ok(v) = i64::try_from(*i) {
+                    visitor.visit_i64(v)
+                } else {
+                    visitor.visit_i128(*i)
+                }
+            }
+            KdlValue::Float(f) => visitor.visit_f64(*f),
             KdlValue::Bool(b) => visitor.visit_bool(*b),
             KdlValue::Null => visitor.visit_unit(),
         }
@@ -1182,7 +997,7 @@ impl<'de> DeserializerTrait<'de> for EntryDeserializer<'de> {
         #[cfg(feature = "bytes")]
         {
             match self.entry().value() {
-                KdlValue::String(s) | KdlValue::RawString(s) => {
+                KdlValue::String(s) => {
                     let bytes = crate::hex::decode_hex(s)?;
                     visitor.visit_bytes(&bytes)
                 }
@@ -1205,7 +1020,7 @@ impl<'de> DeserializerTrait<'de> for EntryDeserializer<'de> {
         #[cfg(feature = "bytes")]
         {
             match self.entry().value() {
-                KdlValue::String(s) | KdlValue::RawString(s) => {
+                KdlValue::String(s) => {
                     let bytes = crate::hex::decode_hex(s)?;
                     visitor.visit_byte_buf(bytes)
                 }
@@ -1229,7 +1044,7 @@ impl<'de> DeserializerTrait<'de> for EntryDeserializer<'de> {
         {
             // Check if this is a hex string that should be deserialized as bytes
             match self.entry().value() {
-                KdlValue::String(s) | KdlValue::RawString(s) => {
+                KdlValue::String(s) => {
                     // Try to decode as hex - if successful, use bytes deserializer
                     if let Ok(bytes) = crate::hex::decode_hex(s) {
                         return visitor.visit_seq(BytesSeqDeserializer::new(bytes));
@@ -1247,12 +1062,14 @@ impl<'de> DeserializerTrait<'de> for EntryDeserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        // If we have a value, it means Some(value)
-        visitor.visit_some(self)
+        match self.entry().value() {
+            KdlValue::Null => visitor.visit_none(),
+            _ => visitor.visit_some(self),
+        }
     }
 
-    serde::forward_to_deserialize_any! {
-        bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str string
+    forward_to_deserialize_any! {
+        bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 char str string
         unit unit_struct newtype_struct tuple
         tuple_struct map struct identifier ignored_any
     }

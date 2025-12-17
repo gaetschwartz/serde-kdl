@@ -1,0 +1,5 @@
+error: Expected one of `inf`, `-inf`, `nan`, `null`, `true`, or `false` after `#`
+ --> tests/specs/compile_fail/section_3_15_booleans/uppercase_false.rs:6:15
+  |
+6 |         node #FALSE
+  |               ^^^^^

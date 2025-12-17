@@ -1,107 +1,137 @@
-use serde::{Deserialize, Serialize};
+use insta::assert_snapshot;
+use rstest::rstest;
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_kdl::{from_str, to_string};
+use std::{collections::HashMap, fmt::Debug};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct SimpleConfig {
+struct Opts {
+    o1: Option<u8>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    o2: Option<u8>,
+}
+
+impl Opts {
+    fn some(o1: u8, o2: u8) -> Self {
+        Opts {
+            o1: Some(o1),
+            o2: Some(o2),
+        }
+    }
+    fn none() -> Self {
+        Opts { o1: None, o2: None }
+    }
+}
+
+#[rstest]
+#[case(42_i32, "- 42")]
+#[case(i128::MAX, "- 170141183460469231731687303715884105727")]
+#[case(true, "- #true")]
+#[case(format!("hello"), "- hello")]
+#[case(2.5_f64, "- 2.5")]
+#[case(Opts::some(42, 255), "o1 42\no2 255")]
+#[case(Opts::none(), "o1 #null")]
+fn test_serde<S: Serialize + DeserializeOwned + PartialEq + Debug>(
+    #[case] value: S,
+    #[case] expected: &str,
+) {
+    let res = to_string(&value).unwrap();
+    let expected_str = format!("{expected}\n");
+    assert_eq!(
+        res, expected_str,
+        "Expected {expected_str:?} but got {res:?}"
+    );
+
+    let deserialized: S = from_str(&res).expect("Failed to deserialize");
+    assert_eq!(
+        deserialized, value,
+        "Expected {value:?} but got {deserialized:?}"
+    );
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+struct Cargo {
+    package: Package,
+    dependencies: HashMap<String, DependencyValue>,
+    features: Vec<String>,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+enum DependencyValue {
+    Version(String),
+    Object {
+        #[serde(flatten)]
+        r#ref: DependencyRef,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        features: Option<Vec<String>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        optional: Option<bool>,
+    },
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum DependencyRef {
+    Git(String),
+    Path(String),
+    Version(String),
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+struct Package {
     name: String,
     version: String,
-    debug: bool,
-    port: u16,
 }
 
 #[test]
-fn test_serialize_simple_struct() {
-    let config = SimpleConfig {
-        name: "my-app".to_string(),
-        version: "1.0.0".to_string(),
-        debug: true,
-        port: 8080,
+fn test_serde_cargo() {
+    let cargo = Cargo {
+        package: Package {
+            name: "my_crate".to_string(),
+            version: "0.1.0".to_string(),
+        },
+        dependencies: HashMap::from([
+            (
+                "nom".to_string(),
+                DependencyValue::Version("8.0.0".to_string()),
+            ),
+            (
+                "thiserror".to_string(),
+                DependencyValue::Object {
+                    r#ref: DependencyRef::Version("1.0.0".to_string()),
+                    features: Some(vec!["feature1".to_string(), "feature2".to_string()]),
+                    optional: None,
+                },
+            ),
+            (
+                "serde_kdl".to_string(),
+                DependencyValue::Object {
+                    r#ref: DependencyRef::Path("./".to_string()),
+                    features: None,
+                    optional: Some(true),
+                },
+            ),
+        ]),
+        features: vec!["feature3".to_string(), "feature4".to_string()],
     };
-
-    let kdl_string = to_string(&config).expect("Failed to serialize");
-    println!("Serialized: {}", kdl_string);
-
-    // Basic validation - should contain the struct name and fields
-    assert!(kdl_string.contains("SimpleConfig"));
-    assert!(kdl_string.contains("my-app"));
-    assert!(kdl_string.contains("1.0.0"));
-    assert!(kdl_string.contains("true"));
-    assert!(kdl_string.contains("8080"));
-}
-
-#[test]
-fn test_deserialize_simple_struct() {
-    let kdl_string = r#"SimpleConfig name="my-app" version="1.0.0" debug=true port=8080"#;
-
-    let config: SimpleConfig = from_str(kdl_string).expect("Failed to deserialize");
-
-    assert_eq!(config.name, "my-app");
-    assert_eq!(config.version, "1.0.0");
-    assert!(config.debug);
-    assert_eq!(config.port, 8080);
-}
-
-#[test]
-fn test_roundtrip_simple_struct() {
-    let original = SimpleConfig {
-        name: "test-app".to_string(),
-        version: "2.1.3".to_string(),
-        debug: false,
-        port: 3000,
-    };
-
-    let kdl_string = to_string(&original).expect("Failed to serialize");
-    let deserialized: SimpleConfig = from_str(&kdl_string).expect("Failed to deserialize");
-
-    assert_eq!(original, deserialized);
-}
-
-#[test]
-fn test_serialize_primitive_types() {
-    // Test various primitive types
-    assert_eq!(to_string(&42i32).unwrap(), "root 42\n");
-    assert_eq!(to_string(&true).unwrap(), "root true\n");
-    assert_eq!(to_string(&"hello").unwrap(), "root \"hello\"\n");
-    assert_eq!(to_string(&2.5f64).unwrap(), "root 2.5\n");
-}
-
-#[test]
-fn test_deserialize_primitive_types() {
-    assert_eq!(from_str::<i32>("root 42").unwrap(), 42);
-    assert!(from_str::<bool>("root true").unwrap());
-    assert_eq!(from_str::<String>("root \"hello\"").unwrap(), "hello");
-    assert_eq!(from_str::<f64>("root 2.5").unwrap(), 2.5);
-}
-
-#[test]
-fn test_option_types() {
-    #[derive(Debug, PartialEq, Serialize, Deserialize)]
-    struct OptionalFields {
-        required: String,
-        optional: Option<String>,
+    let pretty = serde_kdl::to_pretty_string(&cargo).unwrap();
+    assert_snapshot!(pretty, @r#"
+    package name=my_crate version="0.1.0"
+    dependencies {
+        nom "8.0.0"
+        serde_kdl {
+            optional #true
+            path "./"
+        }
+        thiserror {
+            features feature1 feature2
+            version "1.0.0"
+        }
     }
+    features feature3 feature4
+    "#);
 
-    let with_optional = OptionalFields {
-        required: "must have".to_string(),
-        optional: Some("maybe have".to_string()),
-    };
-
-    let without_optional = OptionalFields {
-        required: "must have".to_string(),
-        optional: None,
-    };
-
-    // Test serialization
-    let kdl_with = to_string(&with_optional).unwrap();
-    let kdl_without = to_string(&without_optional).unwrap();
-
-    println!("With optional: {}", kdl_with);
-    println!("Without optional: {}", kdl_without);
-
-    // Test roundtrip
-    let roundtrip_with: OptionalFields = from_str(&kdl_with).unwrap();
-    let roundtrip_without: OptionalFields = from_str(&kdl_without).unwrap();
-
-    assert_eq!(with_optional, roundtrip_with);
-    assert_eq!(without_optional, roundtrip_without);
+    let parsed: Cargo = serde_kdl::from_str(&pretty).unwrap();
+    assert_eq!(parsed, cargo);
 }

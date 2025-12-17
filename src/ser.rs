@@ -15,6 +15,8 @@ pub struct Serializer {
     document: KdlDocument,
     current_node: Option<KdlNode>,
     node_stack: Vec<NodeContext>,
+    /// Whether this is the main/root serializer (vs a temp serializer for field values)
+    is_root_serializer: bool,
 }
 
 impl Serializer {
@@ -25,6 +27,17 @@ impl Serializer {
             document: KdlDocument::new(),
             current_node: None,
             node_stack: Vec::new(),
+            is_root_serializer: true,
+        }
+    }
+
+    /// Create a new temp serializer for serializing field values.
+    fn new_for_field() -> Self {
+        Self {
+            document: KdlDocument::new(),
+            current_node: None,
+            node_stack: Vec::new(),
+            is_root_serializer: false,
         }
     }
 
@@ -133,104 +146,84 @@ impl<'a> SerializerTrait for &'a mut Serializer {
     type SerializeStructVariant = SerializeStructVariantImpl<'a>;
 
     fn serialize_bool(self, v: bool) -> Result<Self::Ok> {
-        self.create_value_node("root", KdlValue::Bool(v))
+        self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::Bool(v))
     }
 
     fn serialize_i8(self, v: i8) -> Result<Self::Ok> {
-        self.create_value_node("root", KdlValue::Base10(i64::from(v)))
+        self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::Integer(i128::from(v)))
     }
 
     fn serialize_i16(self, v: i16) -> Result<Self::Ok> {
-        self.create_value_node("root", KdlValue::Base10(i64::from(v)))
+        self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::Integer(i128::from(v)))
     }
 
     fn serialize_i32(self, v: i32) -> Result<Self::Ok> {
-        self.create_value_node("root", KdlValue::Base10(i64::from(v)))
+        self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::Integer(i128::from(v)))
     }
 
     fn serialize_i64(self, v: i64) -> Result<Self::Ok> {
-        self.create_value_node("root", KdlValue::Base10(v))
+        self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::Integer(i128::from(v)))
     }
 
     fn serialize_u8(self, v: u8) -> Result<Self::Ok> {
-        self.create_value_node("root", KdlValue::Base10(i64::from(v)))
+        self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::Integer(i128::from(v)))
     }
 
     fn serialize_u16(self, v: u16) -> Result<Self::Ok> {
-        self.create_value_node("root", KdlValue::Base10(i64::from(v)))
+        self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::Integer(i128::from(v)))
     }
 
     fn serialize_u32(self, v: u32) -> Result<Self::Ok> {
-        self.create_value_node("root", KdlValue::Base10(i64::from(v)))
+        self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::Integer(i128::from(v)))
     }
 
     fn serialize_u64(self, v: u64) -> Result<Self::Ok> {
-        // The KDL specification mentions i128 support, but kdl crate 4.7
-        // only supports i64 range in practice. Numbers > i64::MAX fail to parse.
-        if i64::try_from(v).is_ok() {
-            self.create_value_node("root", KdlValue::Base10(v as i64))
-        } else {
-            Err(Error::UnsupportedType(format!(
-                "u64 value {} exceeds KDL's supported integer range (i64::MAX = {})",
-                v,
-                i64::MAX
-            )))
-        }
+        // KDL 6.5 now supports i128 natively
+        self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::Integer(i128::from(v)))
     }
 
     fn serialize_i128(self, v: i128) -> Result<Self::Ok> {
-        // The KDL specification mentions i128 support, but kdl crate 4.7
-        // only supports i64 range in practice.
-        if v >= i128::from(i64::MIN) && v <= i128::from(i64::MAX) {
-            self.create_value_node("root", KdlValue::Base10(v as i64))
-        } else {
-            Err(Error::UnsupportedType(format!(
-                "i128 value {} exceeds KDL's supported integer range ({}..={})",
-                v,
-                i64::MIN,
-                i64::MAX
-            )))
-        }
+        // KDL 6.5 now supports i128 natively
+        self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::Integer(v))
     }
 
     fn serialize_u128(self, v: u128) -> Result<Self::Ok> {
-        // The KDL specification mentions i128 support, but kdl crate 4.7
-        // only supports i64 range in practice.
-        if v <= i64::MAX as u128 {
-            self.create_value_node("root", KdlValue::Base10(v as i64))
+        // KDL 6.5 now supports i128 natively, but u128 can exceed i128::MAX
+        if v <= i128::MAX as u128 {
+            self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::Integer(v as i128))
         } else {
             Err(Error::UnsupportedType(format!(
-                "u128 value {} exceeds KDL's supported integer range (i64::MAX = {})",
+                "u128 value {} exceeds KDL's supported integer range (i128::MAX = {})",
                 v,
-                i64::MAX
+                i128::MAX
             )))
         }
     }
 
     fn serialize_f32(self, v: f32) -> Result<Self::Ok> {
-        self.create_value_node("root", KdlValue::Base10Float(f64::from(v)))
+        self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::Float(f64::from(v)))
     }
 
     fn serialize_f64(self, v: f64) -> Result<Self::Ok> {
         // Note: KDL specification mentions #inf, #-inf, and #nan for special values,
         // but kdl crate 4.7 doesn't support parsing these. For now, serialize
         // special float values as regular floats (which will be inf, -inf, NaN in text).
-        self.create_value_node("root", KdlValue::Base10Float(v))
+        self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::Float(v))
     }
 
     fn serialize_char(self, v: char) -> Result<Self::Ok> {
-        self.create_value_node("root", KdlValue::RawString(v.to_string()))
+        self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::String(v.to_string()))
     }
 
     fn serialize_str(self, v: &str) -> Result<Self::Ok> {
-        self.create_value_node("root", KdlValue::String(v.to_string()))
+        self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::String(v.to_string()))
     }
 
     fn serialize_bytes(self, v: &[u8]) -> Result<Self::Ok> {
         #[cfg(feature = "bytes")]
         {
             let hex_string = crate::hex::encode_hex(v);
-            self.create_value_node("root", KdlValue::String(hex_string))
+            self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::String(hex_string))
         }
         #[cfg(not(feature = "bytes"))]
         {
@@ -240,8 +233,7 @@ impl<'a> SerializerTrait for &'a mut Serializer {
     }
 
     fn serialize_none(self) -> Result<Self::Ok> {
-        // For None values, we don't create any node
-        Ok(())
+        self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::Null)
     }
 
     fn serialize_some<T>(self, value: &T) -> Result<Self::Ok>
@@ -252,7 +244,7 @@ impl<'a> SerializerTrait for &'a mut Serializer {
     }
 
     fn serialize_unit(self) -> Result<Self::Ok> {
-        self.create_value_node("root", KdlValue::Null)
+        self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::Null)
     }
 
     fn serialize_unit_struct(self, name: &'static str) -> Result<Self::Ok> {
@@ -267,7 +259,7 @@ impl<'a> SerializerTrait for &'a mut Serializer {
         _variant_index: u32,
         variant: &'static str,
     ) -> Result<Self::Ok> {
-        self.create_value_node("root", KdlValue::String(variant.to_string()))
+        self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::String(variant.to_string()))
     }
 
     fn serialize_newtype_struct<T>(self, name: &'static str, value: &T) -> Result<Self::Ok>
@@ -356,8 +348,13 @@ impl<'a> SerializerTrait for &'a mut Serializer {
     }
 
     fn serialize_struct(self, name: &'static str, _len: usize) -> Result<Self::SerializeStruct> {
-        self.push_node_context(name.to_string());
-        Ok(SerializeStructImpl { ser: self })
+        // Only use transparent mode for the actual root serializer with empty node stack
+        let is_root = self.is_root_serializer && self.node_stack.is_empty();
+        if !is_root {
+            // Nested struct - wrap in named node
+            self.push_node_context(name.to_string());
+        }
+        Ok(SerializeStructImpl { ser: self, is_root })
     }
 
     fn serialize_struct_variant(
@@ -390,7 +387,7 @@ impl SerializeSeq for SerializeSeqImpl<'_> {
         T: ?Sized + serde::Serialize,
     {
         // Create a temporary serializer for the item
-        let mut item_serializer = Serializer::new();
+        let mut item_serializer = Serializer::new_for_field();
         value.serialize(&mut item_serializer)?;
 
         let document = item_serializer.into_document();
@@ -400,7 +397,7 @@ impl SerializeSeq for SerializeSeqImpl<'_> {
             let is_complex = node.entries().len() > 1
                 || !node.entries().iter().all(|e| e.name().is_none()) // has properties
                 || node.children().is_some_and(|c| !c.nodes().is_empty()) // has children
-                || node.name().value() != "root"; // enum variants or other meaningful node names
+                || node.name().value() != crate::DEFAULT_NODE_NAME; // enum variants or other meaningful node names
 
             if is_complex {
                 // Complex structure - store as child node
@@ -418,7 +415,7 @@ impl SerializeSeq for SerializeSeqImpl<'_> {
                 {
                     // Check if this value could be a byte (u8 in range 0-255)
                     if let Some(ref mut bytes) = self.bytes_candidate {
-                        if let KdlValue::Base10(i) = &value {
+                        if let KdlValue::Integer(i) = &value {
                             if *i >= 0 && *i <= 255 {
                                 bytes.push(*i as u8);
                             } else {
@@ -455,7 +452,7 @@ impl SerializeSeq for SerializeSeqImpl<'_> {
     }
 
     fn end(self) -> Result<Self::Ok> {
-        let mut node = KdlNode::new("root");
+        let mut node = KdlNode::new(crate::DEFAULT_NODE_NAME);
 
         #[cfg(feature = "bytes")]
         {
@@ -508,7 +505,7 @@ impl SerializeTuple for SerializeTupleImpl<'_> {
     where
         T: ?Sized + serde::Serialize,
     {
-        let mut item_serializer = Serializer::new();
+        let mut item_serializer = Serializer::new_for_field();
         value.serialize(&mut item_serializer)?;
 
         let document = item_serializer.into_document();
@@ -526,7 +523,7 @@ impl SerializeTuple for SerializeTupleImpl<'_> {
     }
 
     fn end(self) -> Result<Self::Ok> {
-        let mut node = KdlNode::new("root");
+        let mut node = KdlNode::new(crate::DEFAULT_NODE_NAME);
         for item in self.items {
             node.entries_mut().push(KdlEntry::new(item));
         }
@@ -549,7 +546,7 @@ impl SerializeTupleStruct for SerializeTupleStructImpl<'_> {
     where
         T: ?Sized + serde::Serialize,
     {
-        let mut item_serializer = Serializer::new();
+        let mut item_serializer = Serializer::new_for_field();
         value.serialize(&mut item_serializer)?;
 
         let document = item_serializer.into_document();
@@ -593,7 +590,7 @@ impl SerializeTupleVariant for SerializeTupleVariantImpl<'_> {
     where
         T: ?Sized + serde::Serialize,
     {
-        let mut item_serializer = Serializer::new();
+        let mut item_serializer = Serializer::new_for_field();
         value.serialize(&mut item_serializer)?;
 
         let document = item_serializer.into_document();
@@ -626,7 +623,7 @@ impl SerializeTupleVariant for SerializeTupleVariantImpl<'_> {
 pub struct SerializeMapImpl<'a> {
     ser: &'a mut Serializer,
     pending_key: Option<String>,
-    items: BTreeMap<String, KdlValue>,
+    items: BTreeMap<String, KdlNode>,
 }
 
 impl SerializeMap for SerializeMapImpl<'_> {
@@ -637,7 +634,7 @@ impl SerializeMap for SerializeMapImpl<'_> {
     where
         T: ?Sized + serde::Serialize,
     {
-        let mut key_serializer = Serializer::new();
+        let mut key_serializer = Serializer::new_for_field();
         key.serialize(&mut key_serializer)?;
 
         let document = key_serializer.into_document();
@@ -645,7 +642,6 @@ impl SerializeMap for SerializeMapImpl<'_> {
             if let Some(entry) = node.entries().first() {
                 match entry.value() {
                     KdlValue::String(s) => self.pending_key = Some(s.clone()),
-                    KdlValue::RawString(s) => self.pending_key = Some(s.clone()),
                     other => self.pending_key = Some(format!("{other}")),
                 }
             } else {
@@ -665,31 +661,43 @@ impl SerializeMap for SerializeMapImpl<'_> {
             .take()
             .unwrap_or_else(|| "unknown".to_string());
 
-        let mut value_serializer = Serializer::new();
+        let mut value_serializer = Serializer::new_for_field();
         value.serialize(&mut value_serializer)?;
 
         let document = value_serializer.into_document();
         if let Some(node) = document.nodes().first() {
-            if let Some(entry) = node.entries().first() {
-                self.items.insert(key, entry.value().clone());
-            } else {
-                self.items.insert(key, KdlValue::Null);
+            // Create a new node with the map key as name
+            let mut key_node = KdlNode::new(key.clone());
+
+            // Copy all entries (values and properties)
+            for entry in node.entries() {
+                key_node.entries_mut().push(entry.clone());
             }
+
+            // Copy children if any
+            if let Some(children) = node.children() {
+                if !children.nodes().is_empty() {
+                    *key_node.children_mut() = Some(children.clone());
+                }
+            }
+
+            self.items.insert(key, key_node);
         } else {
-            self.items.insert(key, KdlValue::Null);
+            // Empty document - create node with null value
+            let mut key_node = KdlNode::new(key.clone());
+            key_node.entries_mut().push(KdlEntry::new(KdlValue::Null));
+            self.items.insert(key, key_node);
         }
 
         Ok(())
     }
 
     fn end(self) -> Result<Self::Ok> {
-        let mut node = KdlNode::new("root");
+        let mut node = KdlNode::new(crate::DEFAULT_NODE_NAME);
         if !self.items.is_empty() {
             let mut child_doc = KdlDocument::new();
-            for (key, value) in self.items {
-                let mut child = KdlNode::new(key);
-                child.entries_mut().push(KdlEntry::new(value));
-                child_doc.nodes_mut().push(child);
+            for (_key, child_node) in self.items {
+                child_doc.nodes_mut().push(child_node);
             }
             *node.children_mut() = Some(child_doc);
         }
@@ -701,6 +709,7 @@ impl SerializeMap for SerializeMapImpl<'_> {
 // Struct serializer
 pub struct SerializeStructImpl<'a> {
     ser: &'a mut Serializer,
+    is_root: bool,
 }
 
 impl SerializeStruct for SerializeStructImpl<'_> {
@@ -711,85 +720,100 @@ impl SerializeStruct for SerializeStructImpl<'_> {
     where
         T: ?Sized + serde::Serialize,
     {
-        // Handle Option<T> specially - skip None values
-        if std::any::type_name::<T>().starts_with("core::option::Option") {
-            let mut temp_serializer = Serializer::new();
-            value.serialize(&mut temp_serializer)?;
-            let temp_doc = temp_serializer.into_document();
+        // Serialize the field value
+        let mut field_serializer = Serializer::new_for_field();
+        value.serialize(&mut field_serializer)?;
+        let field_doc = field_serializer.into_document();
 
-            // If serializing None produced no nodes, skip this field
-            if temp_doc.nodes().is_empty() {
-                return Ok(());
-            }
+        // Handle Option<T> specially - skip None values (empty doc means None)
+        if std::any::type_name::<T>().starts_with("core::option::Option")
+            && field_doc.nodes().is_empty()
+        {
+            return Ok(());
+        }
 
-            // Otherwise, process the Some(value) normally
-            if let Some(node) = temp_doc.nodes().first() {
-                if let Some(entry) = node.entries().first() {
-                    self.ser
-                        .add_property_to_current(key, entry.value().clone())?;
-                } else if let Some(node_children) = node.children() {
-                    if !node_children.nodes().is_empty() {
-                        // Complex nested structure
-                        if let Some((_, children, _)) = self.ser.node_stack.last_mut() {
-                            let mut field_node = KdlNode::new(key);
-                            let mut child_doc = KdlDocument::new();
-                            for child in node_children.nodes() {
-                                child_doc.nodes_mut().push(child.clone());
-                            }
-                            *field_node.children_mut() = Some(child_doc);
-                            children.push(field_node);
-                        }
-                    }
-                } else {
-                    // Empty node
-                    self.ser.add_property_to_current(key, KdlValue::Null)?;
-                }
-            }
+        if self.is_root {
+            // Root level: add field as document node
+            self.serialize_root_field(key, &field_doc)?;
         } else {
-            // Regular field serialization
-            let mut field_serializer = Serializer::new();
-            value.serialize(&mut field_serializer)?;
-            let field_doc = field_serializer.into_document();
-
-            if let Some(node) = field_doc.nodes().first() {
-                if node.entries().len() == 1 && node.children().is_none_or(|c| c.nodes().is_empty())
-                {
-                    // Single simple value - use as property
-                    let entry = &node.entries()[0];
-                    self.ser
-                        .add_property_to_current(key, entry.value().clone())?;
-                } else {
-                    // Multiple entries (array) or complex structure - use as child node
-                    if let Some((_, children, _)) = self.ser.node_stack.last_mut() {
-                        let mut field_node = KdlNode::new(key);
-
-                        // Copy all entries from the serialized field
-                        for entry in node.entries() {
-                            field_node.entries_mut().push(entry.clone());
-                        }
-
-                        // Copy children if any
-                        if let Some(node_children) = node.children() {
-                            if !node_children.nodes().is_empty() {
-                                let mut child_doc = KdlDocument::new();
-                                for child in node_children.nodes() {
-                                    child_doc.nodes_mut().push(child.clone());
-                                }
-                                *field_node.children_mut() = Some(child_doc);
-                            }
-                        }
-
-                        children.push(field_node);
-                    }
-                }
-            }
+            // Nested: add to node context
+            self.serialize_nested_field(key, &field_doc)?;
         }
 
         Ok(())
     }
 
     fn end(self) -> Result<Self::Ok> {
-        self.ser.pop_node_context()
+        if self.is_root {
+            // Root level: nothing to do, fields already added to document
+            Ok(())
+        } else {
+            // Nested: finalize the node context
+            self.ser.pop_node_context()
+        }
+    }
+}
+
+impl SerializeStructImpl<'_> {
+    fn serialize_root_field(&mut self, key: &str, field_doc: &KdlDocument) -> Result<()> {
+        if let Some(node) = field_doc.nodes().first() {
+            let mut field_node = KdlNode::new(key);
+
+            // Copy all entries from the serialized field
+            for entry in node.entries() {
+                field_node.entries_mut().push(entry.clone());
+            }
+
+            // Copy children if any
+            if let Some(node_children) = node.children() {
+                if !node_children.nodes().is_empty() {
+                    let mut child_doc = KdlDocument::new();
+                    for child in node_children.nodes() {
+                        child_doc.nodes_mut().push(child.clone());
+                    }
+                    *field_node.children_mut() = Some(child_doc);
+                }
+            }
+
+            // Add directly to document
+            self.ser.document.nodes_mut().push(field_node);
+        }
+        Ok(())
+    }
+
+    fn serialize_nested_field(&mut self, key: &str, field_doc: &KdlDocument) -> Result<()> {
+        if let Some(node) = field_doc.nodes().first() {
+            if node.entries().len() == 1 && node.children().is_none_or(|c| c.nodes().is_empty()) {
+                // Single simple value - use as property
+                let entry = &node.entries()[0];
+                self.ser
+                    .add_property_to_current(key, entry.value().clone())?;
+            } else {
+                // Multiple entries (array) or complex structure - use as child node
+                if let Some((_, children, _)) = self.ser.node_stack.last_mut() {
+                    let mut field_node = KdlNode::new(key);
+
+                    // Copy all entries from the serialized field
+                    for entry in node.entries() {
+                        field_node.entries_mut().push(entry.clone());
+                    }
+
+                    // Copy children if any
+                    if let Some(node_children) = node.children() {
+                        if !node_children.nodes().is_empty() {
+                            let mut child_doc = KdlDocument::new();
+                            for child in node_children.nodes() {
+                                child_doc.nodes_mut().push(child.clone());
+                            }
+                            *field_node.children_mut() = Some(child_doc);
+                        }
+                    }
+
+                    children.push(field_node);
+                }
+            }
+        }
+        Ok(())
     }
 }
 
@@ -806,7 +830,7 @@ impl SerializeStructVariant for SerializeStructVariantImpl<'_> {
     where
         T: ?Sized + serde::Serialize,
     {
-        let mut field_serializer = Serializer::new();
+        let mut field_serializer = Serializer::new_for_field();
         value.serialize(&mut field_serializer)?;
         let field_doc = field_serializer.into_document();
 

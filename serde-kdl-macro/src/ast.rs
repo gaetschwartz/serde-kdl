@@ -78,7 +78,7 @@ pub(crate) struct KdlProperty {
 #[derive(Clone)]
 pub(crate) enum KdlValue {
     String(KdlString),
-    Integer(i64),
+    Integer(i128),
     Float(f64),
     Boolean(bool),
     Null,
@@ -86,6 +86,8 @@ pub(crate) enum KdlValue {
         type_annotation: String, // Use String instead of Ident for more flexibility
         value: Box<KdlValue>,
     },
+    /// A Rust variable reference (resolved at runtime)
+    Variable(syn::Ident),
 }
 
 /// Represents different types of KDL strings as per Section 3.9
@@ -118,12 +120,11 @@ impl KdlString {
         }
     }
 
-    /// Create a quoted string from a LitStr with Unicode escape processing
+    /// Create a quoted string from a LitStr
+    /// Note: Rust's LitStr::value() already processes escape sequences
     pub(crate) fn from_lit_str_as_quoted(lit_str: syn::LitStr) -> Result<Self> {
-        let processed_value =
-            crate::parse::string::process_string_escapes(&lit_str.value(), lit_str.span())?;
         Ok(KdlString::Quoted {
-            value: processed_value,
+            value: lit_str.value(),
             span: lit_str.span(),
         })
     }
@@ -188,6 +189,7 @@ impl std::fmt::Debug for KdlValue {
             } => {
                 write!(f, "TypeAnnotated({}, {:?})", type_annotation, value)
             }
+            KdlValue::Variable(ident) => write!(f, "Variable({})", ident),
         }
     }
 }
@@ -195,13 +197,15 @@ impl std::fmt::Debug for KdlValue {
 impl KdlValue {
     /// Checks if this value is a valid KDL value according to Section 3.7
     /// A value is either: String, Number (Integer/Float), Boolean, or Null
+    /// Variables are also valid since they resolve to KDL values at runtime
     pub(crate) fn is_valid_value(&self) -> bool {
         match self {
             KdlValue::String(_)
             | KdlValue::Integer(_)
             | KdlValue::Float(_)
             | KdlValue::Boolean(_)
-            | KdlValue::Null => true,
+            | KdlValue::Null
+            | KdlValue::Variable(_) => true,
             KdlValue::TypeAnnotated { value, .. } => value.is_valid_value(),
         }
     }

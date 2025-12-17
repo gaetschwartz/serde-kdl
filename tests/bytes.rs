@@ -292,7 +292,7 @@ mod bytes_tests {
     fn test_bytes_roundtrip_consistency() {
         // Test that serialization and deserialization are consistent using hex_serde
         use rand::Rng;
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
 
         #[derive(Serialize, Deserialize, Debug, PartialEq)]
         struct ByteData {
@@ -301,8 +301,8 @@ mod bytes_tests {
         }
 
         for _ in 0..100 {
-            let len = rng.gen_range(0..=256);
-            let bytes: Vec<u8> = (0..len).map(|_| rng.gen()).collect();
+            let len = rng.random_range(0..=256);
+            let bytes: Vec<u8> = (0..len).map(|_| rng.random()).collect();
 
             let byte_data = ByteData {
                 data: bytes.clone(),

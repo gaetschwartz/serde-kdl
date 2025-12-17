@@ -1,3 +1,4 @@
+use insta::assert_snapshot;
 use serde::{Deserialize, Serialize};
 use serde_kdl::{from_str, to_string};
 
@@ -36,11 +37,12 @@ fn test_serialize_array_config() {
     };
 
     let kdl_string = to_string(&config).expect("Failed to serialize");
-    println!("Serialized array config: {}", kdl_string);
 
-    // Basic validation
-    assert!(kdl_string.contains("ConfigWithArray"));
-    assert!(kdl_string.contains("web-app"));
+    assert_snapshot!(kdl_string, @r"
+    name web-app
+    tags web api rest
+    ports 8080 8443 9090
+    ");
 }
 
 #[test]
@@ -79,11 +81,14 @@ fn test_serialize_nested_structs() {
     };
 
     let kdl_string = to_string(&config).expect("Failed to serialize");
-    println!("Serialized nested config: {}", kdl_string);
 
-    // Basic validation
-    assert!(kdl_string.contains("NestedConfig"));
-    assert!(kdl_string.contains("localhost"));
+    assert_snapshot!(kdl_string, @r#"
+    database host=localhost port=5432 ssl=#true
+    servers{
+    ServerConfig name=api-server endpoint="http://api.example.com"
+    ServerConfig name=web-server endpoint="http://web.example.com"
+    }
+    "#);
 }
 
 #[test]

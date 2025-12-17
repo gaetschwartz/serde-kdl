@@ -1,0 +1,7 @@
+error: invalid unicode character escape
+  --> tests/specs/compile_fail/section_3_9_strings/invalid_unicode_escape_too_large.rs:10:15
+   |
+10 |         node "\u{110000}"
+   |               ^^^^^^^^^^ invalid escape
+   |
+   = help: unicode escape must be at most 10FFFF

@@ -1,0 +1,5 @@
+error: Expected identifier
+ --> tests/specs/compile_fail/section_3_7_values/boolean_as_property_key.rs:8:30
+  |
+8 |     let _ = kdl! { node #true="value" };
+  |                              ^

@@ -6,10 +6,18 @@
 use crate::ast::{KdlString, KdlValue};
 use crate::parse::number::try_parse_number;
 use crate::parse::type_annotation::parse_type_annotation;
+use syn::spanned::Spanned;
+use syn::Token;
 use syn::{
     parse::{Parse, ParseStream},
     Ident, Lit, LitStr, Result,
 };
+
+pub mod bare_identifiers {
+    syn::custom_keyword!(inf);
+    syn::custom_keyword!(nan);
+    syn::custom_keyword!(null);
+}
 
 impl Parse for KdlValue {
     fn parse(input: ParseStream) -> Result<Self> {
@@ -72,36 +80,30 @@ impl Parse for KdlValue {
             }
         }
         // Check for # syntax (like #true, #false, #inf, #-inf, #nan)
-        else if input.peek(syn::token::Pound) {
-            let _pound: syn::token::Pound = input.parse()?;
-            if input.peek(Ident) {
-                let ident: Ident = input.parse()?;
-                let ident_str = ident.to_string();
-                if ident_str == "true" {
-                    Ok(KdlValue::Boolean(true))
-                } else if ident_str == "false" {
-                    Ok(KdlValue::Boolean(false))
-                } else if ident_str == "null" {
-                    Ok(KdlValue::Null)
-                } else if ident_str == "inf" {
-                    Ok(KdlValue::Float(f64::INFINITY))
-                } else if ident_str == "nan" {
-                    Ok(KdlValue::Float(f64::NAN))
-                } else {
-                    Err(syn::Error::new(
-                        input.span(),
-                        format!("Invalid # syntax: #{}. Only #true, #false, #null, #inf, #-inf, and #nan are allowed", ident_str),
-                    ))
-                }
-            } else if input.peek(syn::token::Minus) {
-                // Handle #-inf
-                let _minus: syn::token::Minus = input.parse()?;
-                let ident: Ident = input.parse()?;
-                if ident == "inf" {
-                    Ok(KdlValue::Float(f64::NEG_INFINITY))
-                } else {
-                    Err(syn::Error::new(ident.span(), "Expected 'inf' after '#-'"))
-                }
+        else if input.peek(Token![#]) {
+            let pound: Token![#] = input.parse()?;
+            let span = pound.span();
+            let next_span = input.span();
+            // ensure that # has no space by comparing the spans
+            if next_span.start() != span.end() {
+                return Err(syn::Error::new(
+                    span,
+                    "No whitespace allowed between `#` and the following identifier",
+                ));
+            }
+            if input.peek(bare_identifiers::inf) {
+                let _inf: bare_identifiers::inf = input.parse()?;
+                Ok(KdlValue::Float(f64::INFINITY))
+            } else if input.peek(bare_identifiers::nan) {
+                let _nan: bare_identifiers::nan = input.parse()?;
+                Ok(KdlValue::Float(f64::NAN))
+            } else if input.peek(Token![-]) && input.peek2(bare_identifiers::inf) {
+                let _minus: Token![-] = input.parse()?;
+                let _inf: bare_identifiers::inf = input.parse()?;
+                Ok(KdlValue::Float(f64::NEG_INFINITY))
+            } else if input.peek(bare_identifiers::null) {
+                let _null: bare_identifiers::null = input.parse()?;
+                Ok(KdlValue::Null)
             } else if input.peek(syn::LitBool) {
                 // Handle #true and #false when true/false are literals, not identifiers
                 let boolean: syn::LitBool = input.parse()?;
@@ -109,42 +111,14 @@ impl Parse for KdlValue {
             } else {
                 Err(syn::Error::new(
                     input.span(),
-                    "Expected identifier or literal after #",
+                    "Expected one of `inf`, `-inf`, `nan`, `null`, `true`, or `false` after `#`",
                 ))
             }
         }
-        // Check for identifiers
+        // Check for identifiers - treat as Rust variable references
         else if input.peek(Ident) {
             let ident: Ident = input.parse()?;
-            let identifier = ident.to_string();
-            if identifier == "null" {
-                Ok(KdlValue::Null)
-            } else if identifier == "true" {
-                Ok(KdlValue::Boolean(true))
-            } else if identifier == "false" {
-                Ok(KdlValue::Boolean(false))
-            } else {
-                // Check if there are more tokens that form a compound identifier
-                let mut identifier_parts = vec![identifier];
-
-                // Try to parse dash-separated identifiers like "ubuntu-latest"
-                while input.peek(syn::token::Minus) && input.peek2(Ident) {
-                    let _minus: syn::token::Minus = input.parse()?;
-                    let next_part: Ident = input.parse()?;
-                    identifier_parts.push("-".to_string());
-                    identifier_parts.push(next_part.to_string());
-                }
-
-                let full_identifier = identifier_parts.join("");
-                let span = input.span();
-                let kdl_string = KdlString::Identifier {
-                    value: full_identifier,
-                    span,
-                };
-                // When parsing values, allow keywords since they should be treated as actual values
-                kdl_string.validate_with_context(false)?;
-                Ok(KdlValue::String(kdl_string))
-            }
+            Ok(KdlValue::Variable(ident))
         } else {
             Err(syn::Error::new(
                 input.span(),

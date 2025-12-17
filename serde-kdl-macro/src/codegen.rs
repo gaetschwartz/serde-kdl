@@ -230,19 +230,19 @@ fn generate_value_code(value: &KdlValue) -> Result<TokenStream2> {
             let s = kdl_string.value();
             Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::String(#s.to_string()) })
         }
-        KdlValue::Integer(i) => Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Base10(#i) }),
+        KdlValue::Integer(i) => Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Integer(#i) }),
         KdlValue::Float(f) => {
             // Handle special float values that can't be directly quoted
             if f.is_infinite() {
                 if f.is_sign_positive() {
-                    Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Base10Float(f64::INFINITY) })
+                    Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::INFINITY) })
                 } else {
-                    Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Base10Float(f64::NEG_INFINITY) })
+                    Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::NEG_INFINITY) })
                 }
             } else if f.is_nan() {
-                Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Base10Float(f64::NAN) })
+                Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::NAN) })
             } else {
-                Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Base10Float(#f) })
+                Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Float(#f) })
             }
         }
         KdlValue::Boolean(b) => Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Bool(#b) }),
@@ -254,6 +254,11 @@ fn generate_value_code(value: &KdlValue) -> Result<TokenStream2> {
             // For type-annotated values, we just generate the inner value
             // The type annotation will be handled at the entry level
             generate_value_code(value)
+        }
+        KdlValue::Variable(ident) => {
+            // Use KdlValue::from() - user's variable type must implement Into<KdlValue>
+            // kdl::KdlValue implements From for: i128, f64, &str, String, bool, Option<T>
+            Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::from(#ident) })
         }
     }
 }

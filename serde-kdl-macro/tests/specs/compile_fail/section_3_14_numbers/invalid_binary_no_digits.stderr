@@ -1,0 +1,5 @@
+error[E0768]: no valid digits found for number
+ --> tests/specs/compile_fail/section_3_14_numbers/invalid_binary_no_digits.rs:5:25
+  |
+5 |     let _ = kdl! { node 0b };
+  |                         ^^

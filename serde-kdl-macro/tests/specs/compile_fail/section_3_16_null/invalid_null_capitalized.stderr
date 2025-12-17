@@ -1,0 +1,5 @@
+error: Expected one of `inf`, `-inf`, `nan`, `null`, `true`, or `false` after `#`
+ --> tests/specs/compile_fail/section_3_16_null/invalid_null_capitalized.rs:6:15
+  |
+6 |         node #Null
+  |               ^^^^

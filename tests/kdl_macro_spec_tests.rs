@@ -19,14 +19,13 @@ fn test_basic_document_structure() {
         node2
         node3
     };
-    println!(
-        "Document nodes: {:?}",
+    assert_eq!(
         doc.nodes()
             .iter()
             .map(|n| n.name().value())
-            .collect::<Vec<_>>()
+            .collect::<Vec<_>>(),
+        ["node1", "node2", "node3"]
     );
-    assert_eq!(doc.nodes().len(), 3);
 }
 
 /// Test node arguments (section 3.5)
@@ -40,12 +39,12 @@ fn test_node_arguments() {
     // Integer argument
     let doc = kdl! { node 42 };
     let entry = &doc.nodes()[0].entries()[0];
-    assert_eq!(entry.value().as_i64().unwrap(), 42);
+    assert_eq!(entry.value().as_integer().unwrap(), 42);
 
     // Float argument
     let doc = kdl! { node 2.5 };
     let entry = &doc.nodes()[0].entries()[0];
-    assert_eq!(entry.value().as_f64().unwrap(), 2.5);
+    assert_eq!(entry.value().as_float().unwrap(), 2.5);
 
     // Boolean arguments
     let doc = kdl! { node true false };
@@ -106,7 +105,7 @@ fn test_boolean_values() {
 /// Test null values (section 3.16)
 #[test]
 fn test_null_values() {
-    let doc = kdl! { node null };
+    let doc = kdl! { node #null };
     assert!(doc.nodes()[0].entries()[0].value().is_null());
 }
 
@@ -119,10 +118,10 @@ fn test_type_annotations() {
     // assert_eq!(entry.value().as_string().unwrap(), "value");
 }
 
-/// Test hyphenated identifiers
+/// Test hyphenated identifiers (must use quoted strings)
 #[test]
 fn test_hyphenated_identifiers() {
-    let doc = kdl! { node-name "value" };
+    let doc = kdl! { "node-name" "value" };
     assert_eq!(doc.nodes()[0].name().value(), "node-name");
 }
 
@@ -130,8 +129,14 @@ fn test_hyphenated_identifiers() {
 #[test]
 fn test_negative_numbers() {
     let doc = kdl! { node -42 -2.5 };
-    assert_eq!(doc.nodes()[0].entries()[0].value().as_i64().unwrap(), -42);
-    assert_eq!(doc.nodes()[0].entries()[1].value().as_f64().unwrap(), -2.5);
+    assert_eq!(
+        doc.nodes()[0].entries()[0].value().as_integer().unwrap(),
+        -42
+    );
+    assert_eq!(
+        doc.nodes()[0].entries()[1].value().as_float().unwrap(),
+        -2.5
+    );
 }
 
 /// Test complex nested structures

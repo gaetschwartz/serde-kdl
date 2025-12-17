@@ -1,0 +1,5 @@
+error: Expected one of `inf`, `-inf`, `nan`, `null`, `true`, or `false` after `#`
+ --> tests/specs/compile_fail/section_3_14_numbers/invalid_keyword_case.rs:5:26
+  |
+5 |     let _ = kdl! { node #NaN };
+  |                          ^^^

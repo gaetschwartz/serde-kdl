@@ -1,0 +1,5 @@
+error: Expected identifier
+  --> tests/specs/compile_fail/section_3_10_identifiers/minus_digit.rs:11:9
+   |
+11 |         -42 "value"
+   |         ^

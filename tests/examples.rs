@@ -2,7 +2,6 @@ use rstest::rstest;
 use serde::{Deserialize, Serialize};
 use serde_kdl::{from_str, to_string};
 use std::fs;
-use std::path::PathBuf;
 
 /// Test that we can at least read all example KDL files and handle parsing gracefully
 #[rstest]
@@ -11,47 +10,27 @@ fn test_parse_examples(#[files("examples/*.kdl")] path: std::path::PathBuf) {
         .unwrap_or_else(|e| panic!("Failed to read file {:?}: {}", path, e));
 
     // Try to parse the KDL document - some examples may use older/different syntax
-    match content.parse::<kdl::KdlDocument>() {
-        Ok(doc) => {
-            // Valid KDL - test roundtrip serialization
-            let serialized = doc.to_string();
-            assert!(
-                !serialized.is_empty(),
-                "Serialized document should not be empty for {:?}",
-                path
-            );
+    let doc = content
+        .parse::<kdl::KdlDocument>()
+        .expect("Failed to parse KDL document");
 
-            // Parse the serialized version to ensure roundtrip works at KDL level
-            let _reparsed: kdl::KdlDocument = serialized.parse().unwrap_or_else(|e| {
-                panic!("Failed to reparse serialized KDL from {:?}: {}", path, e)
-            });
+    // Valid KDL - test roundtrip serialization
+    let serialized = doc.to_string();
+    assert!(
+        !serialized.is_empty(),
+        "Serialized document should not be empty for {:?}",
+        path
+    );
 
-            println!(
-                "✓ Successfully processed valid KDL example: {:?}",
-                path.file_name().unwrap()
-            );
-        }
-        Err(e) => {
-            // Invalid KDL syntax - just log it for now since examples may use older format
-            println!(
-                "⚠ Example {:?} uses syntax not supported by current KDL parser: {}",
-                path.file_name().unwrap(),
-                e
-            );
+    // Parse the serialized version to ensure roundtrip works at KDL level
+    let _reparsed: kdl::KdlDocument = serialized
+        .parse()
+        .unwrap_or_else(|e| panic!("Failed to reparse serialized KDL from {:?}: {}", path, e));
 
-            // Verify the file is not empty and contains some KDL-like content
-            assert!(
-                !content.trim().is_empty(),
-                "Example file {:?} should not be empty",
-                path
-            );
-            assert!(
-                content.contains('{') || content.contains('"'),
-                "Example file {:?} should contain KDL-like syntax",
-                path
-            );
-        }
-    }
+    println!(
+        "✓ Successfully processed valid KDL example: {:?}",
+        path.file_name().unwrap()
+    );
 }
 
 /// Test roundtrip serialization for a custom document structure
