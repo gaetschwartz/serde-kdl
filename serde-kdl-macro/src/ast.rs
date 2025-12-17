@@ -91,13 +91,10 @@ pub(crate) enum KdlValue {
 }
 
 /// Represents different types of KDL strings as per Section 3.9
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub(crate) enum KdlString {
     /// Identifier String (Section 3.10) - like `foo`
-    Identifier {
-        value: String,
-        span: proc_macro2::Span,
-    },
+    Identifier(syn::Ident),
     /// Quoted String (Section 3.11) - like `"foo"`
     Quoted {
         value: String,
@@ -105,18 +102,37 @@ pub(crate) enum KdlString {
     },
 }
 
+impl std::fmt::Debug for KdlString {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            KdlString::Identifier(ident) => write!(f, "Identifier({})", ident),
+            KdlString::Quoted { value, .. } => write!(f, "Quoted({:?})", value),
+        }
+    }
+}
+
 impl KdlString {
     /// Get the string value regardless of the string type
-    pub(crate) fn value(&self) -> &str {
+    pub(crate) fn value(&self) -> String {
         match self {
-            KdlString::Identifier { value, .. } | KdlString::Quoted { value, .. } => value,
+            KdlString::Identifier(ident) => ident.to_string(),
+            KdlString::Quoted { value, .. } => value.clone(),
         }
     }
 
     /// Get the span for error reporting
     pub(crate) fn span(&self) -> proc_macro2::Span {
         match self {
-            KdlString::Identifier { span, .. } | KdlString::Quoted { span, .. } => *span,
+            KdlString::Identifier(ident) => ident.span(),
+            KdlString::Quoted { span, .. } => *span,
+        }
+    }
+
+    /// Get the identifier if this is an Identifier variant
+    pub(crate) fn as_ident(&self) -> Option<&syn::Ident> {
+        match self {
+            KdlString::Identifier(ident) => Some(ident),
+            KdlString::Quoted { .. } => None,
         }
     }
 
@@ -129,12 +145,6 @@ impl KdlString {
         })
     }
 
-    /// Create an identifier string from a string value and span
-    #[allow(dead_code)]
-    pub(crate) fn identifier(value: String, span: proc_macro2::Span) -> Self {
-        KdlString::Identifier { value, span }
-    }
-
     /// Validate the string according to Section 3.9 requirements
     pub(crate) fn validate(&self) -> Result<()> {
         self.validate_with_context(true)
@@ -142,13 +152,10 @@ impl KdlString {
 
     /// Validate the string with context about whether keywords should be rejected
     pub(crate) fn validate_with_context(&self, reject_keywords: bool) -> Result<()> {
+        let value = self.value();
+
         // UTF-8 validation - Rust strings are already UTF-8, but let's be explicit
-        if !self.value().is_ascii()
-            && !self
-                .value()
-                .chars()
-                .all(|c| c != char::REPLACEMENT_CHARACTER)
-        {
+        if !value.is_ascii() && !value.chars().all(|c| c != char::REPLACEMENT_CHARACTER) {
             return Err(syn::Error::new(
                 self.span(),
                 "String contains invalid UTF-8 sequences",
@@ -157,10 +164,10 @@ impl KdlString {
 
         // Apply specific validation based on string type
         match self {
-            KdlString::Identifier { .. } => {
+            KdlString::Identifier(_) => {
                 // For identifier strings, apply Section 3.10 validation
                 crate::validation::validate_identifier_string_with_context(
-                    self.value(),
+                    &value,
                     self.span(),
                     reject_keywords,
                 )?;

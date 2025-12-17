@@ -3,7 +3,7 @@
 //! This module handles the generation of Rust code from parsed KDL AST structures.
 
 use crate::ast::{
-    extract_type_annotation, KdlDocument, KdlNode, KdlString, KdlValue, KDL_ENTRY, KDL_NODE,
+    extract_type_annotation, KdlDocument, KdlNode, KdlValue, KDL_ENTRY, KDL_NODE,
     SERDE_KDL_KDL_EXPORT,
 };
 use proc_macro2::TokenStream as TokenStream2;
@@ -273,34 +273,33 @@ fn generate_value_code(value: &KdlValue) -> Result<TokenStream2> {
 fn generate_lsp_hints(document: &KdlDocument) -> TokenStream2 {
     let mut hints = Vec::new();
     collect_hints_from_nodes(&document.nodes, &mut hints);
-    quote! { #(#hints)* }
+
+    if hints.is_empty() {
+        quote! {}
+    } else {
+        quote! { #(#hints)* }
+    }
 }
 
 fn collect_hints_from_nodes(nodes: &[KdlNode], hints: &mut Vec<TokenStream2>) {
     for node in nodes {
-        // Generate struct hint for node names that are identifiers
-        // Each hint is isolated in its own const block to avoid naming conflicts
-        if let KdlString::Identifier { value, span } = &node.name {
-            if let Ok(ident) = syn::parse_str::<syn::Ident>(value) {
-                let ident = syn::Ident::new(&ident.to_string(), *span);
-                hints.push(quote! {
-                    #[allow(non_camel_case_types, dead_code)]
-                    const _: () = { struct #ident; };
-                });
-            }
+        // Generate hint for node names that are identifiers
+        if let Some(ident) = node.name.as_ident() {
+            hints.push(quote! {
+                #[doc(hidden)]
+                #[allow(non_camel_case_types, dead_code, unused)]
+                const _: () = { let #ident: () = (); };
+            });
         }
 
-        // Generate const hint for property keys that are identifiers
-        // We use a unit type to avoid UB from zeroed complex types
+        // Generate hint for property keys that are identifiers
         for prop in &node.properties {
-            if let KdlString::Identifier { value, span } = &prop.key {
-                if let Ok(ident) = syn::parse_str::<syn::Ident>(value) {
-                    let ident = syn::Ident::new(&ident.to_string(), *span);
-                    hints.push(quote! {
-                        #[allow(non_upper_case_globals, dead_code)]
-                        const _: () = { const #ident: () = (); };
-                    });
-                }
+            if let Some(ident) = prop.key.as_ident() {
+                hints.push(quote! {
+                    #[doc(hidden)]
+                    #[allow(non_upper_case_globals, dead_code, unused)]
+                    const _: () = { let #ident: () = (); };
+                });
             }
         }
 

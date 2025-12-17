@@ -155,14 +155,10 @@ fn parse_bare_node_name(input: ParseStream) -> Result<KdlString> {
         return Ok(kdl_string);
     }
 
-    // Otherwise parse as identifier sequence (bare strings)
-    // Parse the main identifier part
+    // Otherwise parse as identifier (bare strings)
     if input.peek(Ident) {
         let ident: Ident = input.parse()?;
-        let kdl_string = KdlString::Identifier {
-            value: ident.to_string(),
-            span: ident.span(),
-        };
+        let kdl_string = KdlString::Identifier(ident);
         kdl_string.validate()?;
         return Ok(kdl_string);
     }
@@ -184,8 +180,17 @@ fn parse_property_key(input: ParseStream) -> Result<KdlString> {
         return Ok(kdl_string);
     }
 
-    // Otherwise parse as identifier sequence (bare strings)
-    // Handle identifiers that might start with punctuation like -, +, .
+    // Check for simple identifier (no leading punctuation)
+    // This allows LSP hints to work for normal property keys
+    if input.peek(Ident) && !input.peek2(syn::token::Minus) {
+        let ident: Ident = input.parse()?;
+        let kdl_string = KdlString::Identifier(ident);
+        kdl_string.validate()?;
+        return Ok(kdl_string);
+    }
+
+    // Handle identifiers that start with punctuation like -, +, .
+    // These are stored as Quoted since they're not valid Rust identifiers
     let mut name_parts = Vec::new();
     let start_span = input.span();
 
@@ -220,8 +225,8 @@ fn parse_property_key(input: ParseStream) -> Result<KdlString> {
 
     let full_key = name_parts.join("");
 
-    // Create a KdlString for validation
-    let kdl_string = KdlString::Identifier {
+    // Store as Quoted since it contains punctuation (not a valid Rust ident)
+    let kdl_string = KdlString::Quoted {
         value: full_key,
         span: ident_span,
     };
