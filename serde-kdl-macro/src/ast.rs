@@ -4,9 +4,7 @@
 //! nodes, values, and related structures in memory.
 
 use proc_macro2::TokenStream as TokenStream2;
-use quote::format_ident;
-use quote::ToTokens;
-use syn::{Path, Result, Token};
+use quote::{format_ident, quote, ToTokens};
 
 /// Reserved type annotations for numbers without decimals (Section 3.8.1)
 #[allow(dead_code)]
@@ -46,9 +44,9 @@ pub(crate) const RESERVED_STRING_TYPES: &[&str] = &[
     "base64",
 ];
 
-pub(crate) const SERDE_KDL_KDL_EXPORT: SerdeKdlPrivate = SerdeKdlPrivate(&["kdl"]);
-pub(crate) const KDL_NODE: SerdeKdlPrivate = SerdeKdlPrivate(&["kdl", "KdlNode"]);
-pub(crate) const KDL_ENTRY: SerdeKdlPrivate = SerdeKdlPrivate(&["kdl", "KdlEntry"]);
+pub(crate) const SERDE_KDL_KDL_EXPORT: ConstPath = ConstPath(&["kdl"]);
+pub(crate) const KDL_NODE: ConstPath = ConstPath(&["kdl", "KdlNode"]);
+pub(crate) const KDL_ENTRY: ConstPath = ConstPath(&["kdl", "KdlEntry"]);
 
 /// Represents a complete KDL document containing multiple nodes
 #[derive(Debug, Clone)]
@@ -138,7 +136,7 @@ impl KdlString {
 
     /// Create a quoted string from a LitStr
     /// Note: Rust's LitStr::value() already processes escape sequences
-    pub(crate) fn from_lit_str_as_quoted(lit_str: syn::LitStr) -> Result<Self> {
+    pub(crate) fn from_lit_str_as_quoted(lit_str: syn::LitStr) -> syn::Result<Self> {
         Ok(KdlString::Quoted {
             value: lit_str.value(),
             span: lit_str.span(),
@@ -146,12 +144,12 @@ impl KdlString {
     }
 
     /// Validate the string according to Section 3.9 requirements
-    pub(crate) fn validate(&self) -> Result<()> {
+    pub(crate) fn validate(&self) -> syn::Result<()> {
         self.validate_with_context(true)
     }
 
     /// Validate the string with context about whether keywords should be rejected
-    pub(crate) fn validate_with_context(&self, reject_keywords: bool) -> Result<()> {
+    pub(crate) fn validate_with_context(&self, reject_keywords: bool) -> syn::Result<()> {
         let value = self.value();
 
         // UTF-8 validation - Rust strings are already UTF-8, but let's be explicit
@@ -256,21 +254,13 @@ pub(crate) fn is_reserved_type(type_annotation: &str) -> bool {
         || RESERVED_STRING_TYPES.contains(&type_annotation)
 }
 
-pub(crate) struct SerdeKdlPrivate<'a>(&'a [&'static str]);
+pub(crate) struct ConstPath<'a>(&'a [&'static str]);
 
-impl ToTokens for SerdeKdlPrivate<'_> {
+impl ToTokens for ConstPath<'_> {
     fn to_tokens(&self, tokens: &mut TokenStream2) {
-        let path = Path {
-            leading_colon: Some(Token![::](proc_macro2::Span::call_site())),
-            segments: self
-                .0
-                .iter()
-                .map(|s| syn::PathSegment {
-                    ident: format_ident!("{}", s),
-                    arguments: syn::PathArguments::None,
-                })
-                .collect(),
-        };
-        path.to_tokens(tokens);
+        for segment in self.0 {
+            let ident = format_ident!("{}", segment);
+            tokens.extend(quote! { :: #ident });
+        }
     }
 }
