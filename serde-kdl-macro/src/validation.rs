@@ -1135,7 +1135,7 @@ mod tests {
         // ASCII range (except the actual newlines)
         for code_point in 0x0000..=0x007F {
             let ch = char::from_u32(code_point).unwrap();
-            let expected_newline = matches!(code_point, 0x000A | 0x000B | 0x000C | 0x000D);
+            let expected_newline = matches!(code_point, 0x000A..=0x000D);
             assert_eq!(
                 is_newline(ch),
                 expected_newline,

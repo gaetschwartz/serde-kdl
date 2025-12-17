@@ -205,30 +205,30 @@ mod tests {
     fn test_parse_spaced() {
         let input: Spaced<LitBool, LitBool> = parse_str("true false").unwrap();
         let Spaced(field, spacing, field2) = input;
-        assert_eq!(field.value, true);
+        assert!(field.value);
         assert_eq!(spacing, LineColumn { line: 0, column: 1 });
-        assert_eq!(field2.value, false);
+        assert!(!field2.value);
     }
 
     #[test]
     fn test_parse_spaced_by_no_spaces() {
         let input: SpacedBy<Token![#], NoSpacing, LitBool> = parse_str("#false").unwrap();
         let SpacedBy(_, _, field2) = input;
-        assert_eq!(field2.value, false);
+        assert!(!field2.value);
     }
 
     #[test]
     fn test_parse_spaced_by_one_space() {
         let input: SpacedBy<Token![#], Spaces<1>, LitBool> = parse_str("# false").unwrap();
         let SpacedBy(_, _, field2) = input;
-        assert_eq!(field2.value, false);
+        assert!(!field2.value);
     }
 
     #[test]
     fn test_parse_spaced_by_2_newlines() {
         let input: SpacedBy<Token![#], Newlines<2>, LitBool> = parse_str("#\n\nfalse").unwrap();
         let SpacedBy(_, _, field2) = input;
-        assert_eq!(field2.value, false);
+        assert!(!field2.value);
     }
 
     #[test]
@@ -278,8 +278,8 @@ mod tests {
         });
         let elements = input.punc.elements;
         assert_eq!(elements.len(), 3);
-        assert_eq!(elements[0].value, true);
-        assert_eq!(elements[1].value, false);
-        assert_eq!(elements[2].value, true);
+        assert!(elements[0].value);
+        assert!(!elements[1].value);
+        assert!(elements[2].value);
     }
 }

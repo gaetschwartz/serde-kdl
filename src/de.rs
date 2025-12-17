@@ -1043,14 +1043,11 @@ impl<'de> DeserializerTrait<'de> for EntryDeserializer<'de> {
         #[cfg(feature = "bytes")]
         {
             // Check if this is a hex string that should be deserialized as bytes
-            match self.entry().value() {
-                KdlValue::String(s) => {
-                    // Try to decode as hex - if successful, use bytes deserializer
-                    if let Ok(bytes) = crate::hex::decode_hex(s) {
-                        return visitor.visit_seq(BytesSeqDeserializer::new(bytes));
-                    }
+            if let KdlValue::String(s) = self.entry().value() {
+                // Try to decode as hex - if successful, use bytes deserializer
+                if let Ok(bytes) = crate::hex::decode_hex(s) {
+                    return visitor.visit_seq(BytesSeqDeserializer::new(bytes));
                 }
-                _ => {}
             }
         }
 
