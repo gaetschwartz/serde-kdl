@@ -3,3 +3,9 @@ error: invalid character in unicode escape: `G`
   |
 9 |         node "\u{GGGG}"
   |                  ^ invalid character in unicode escape
+
+error: Expected a KDL value (string, number, boolean, null, or variable). (Expected a numeric literal)
+ --> tests/specs/compile_fail/section_3_9_strings/invalid_unicode_escape_malformed.rs:9:14
+  |
+9 |         node "\u{GGGG}"
+  |              ^^^^^^^^^^

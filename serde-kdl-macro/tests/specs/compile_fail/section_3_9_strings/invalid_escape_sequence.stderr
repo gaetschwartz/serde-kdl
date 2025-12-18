@@ -3,3 +3,9 @@ error: invalid character in numeric character escape: ` `
   |
 9 |         node "invalid \x escape"
   |                         ^ invalid character in numeric character escape
+
+error: Expected a KDL value (string, number, boolean, null, or variable). (Expected a numeric literal)
+ --> tests/specs/compile_fail/section_3_9_strings/invalid_escape_sequence.rs:9:14
+  |
+9 |         node "invalid \x escape"
+  |              ^^^^^^^^^^^^^^^^^^^

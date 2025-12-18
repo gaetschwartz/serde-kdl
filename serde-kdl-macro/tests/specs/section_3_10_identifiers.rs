@@ -4,13 +4,9 @@
 //! Section 3.10 defines valid identifier characters, initial character restrictions,
 //! and disallowed patterns (numbers, keywords).
 
+use super::doc_to_string;
 use insta::assert_snapshot;
-use kdl::KdlDocument;
 use serde_kdl_macro::kdl;
-
-fn doc_to_string(doc: KdlDocument) -> String {
-    doc.to_string()
-}
 
 /// Test valid identifier patterns in various contexts
 #[test]
@@ -19,7 +15,7 @@ fn test_valid_identifiers() {
     let doc = kdl! {
         node "value"
         foo_bar 42
-        camelCase true
+        camelCase #true
         _underscore "start"
     };
     assert_snapshot!(doc_to_string(doc), @r"
@@ -33,7 +29,7 @@ fn test_valid_identifiers() {
     let doc = kdl! {
         "dash-separated" "arg"
         "with.dots" x=10
-        "plus+sign" enabled=true
+        "plus+sign" enabled=#true
     };
     assert_snapshot!(doc_to_string(doc), @"dash-separated arg with.dots plus+sign x=10 enabled=#true");
 
@@ -69,25 +65,25 @@ fn test_identifiers_in_complex_structures() {
         config environment="production" {
             database host="localhost" port=5432
             "cache-settings" {
-                enabled true
+                enabled #true
                 "max-size" 1000
             }
         }
 
         "my-app" version="1.0.0" {
             features "api" "web" "cli"
-            _internal debug=false
+            _internal debug=#false
         }
     };
     assert_snapshot!(doc_to_string(doc), @r#"
-    config environment=production{
-    database cache-settings host=localhost port=5432{
-    enabled #true max-size 1000
+    config environment=production {
+        database cache-settings host=localhost port=5432 {
+            enabled #true max-size 1000
         }
     }
-    my-app version="1.0.0"{
-    features api web cli
-    _internal debug=#false
+    my-app version="1.0.0" {
+        features api web cli
+        _internal debug=#false
     }
     "#);
 }

@@ -9,13 +9,9 @@
 //! - Quoted and Multi-Line Strings may include disallowed code points as values
 //!   by representing them with their corresponding \u{...} escape
 
+use super::doc_to_string;
 use insta::assert_snapshot;
-use kdl::KdlDocument;
 use serde_kdl_macro::kdl;
-
-fn doc_to_string(doc: KdlDocument) -> String {
-    doc.to_string()
-}
 
 #[test]
 fn test_string_types_and_contexts() {
@@ -87,19 +83,19 @@ fn test_strings_in_nested_structures() {
     };
 
     assert_snapshot!(doc_to_string(doc), @r#"
-root{
-config environment=production app_name="My Application" version="1.0.0"
-localization{
-lang en greeting="Hello 👋"
-lang zh greeting="你好 👋"
-    }
-database{
-connection host=localhost port=5432
-tables{
-users posts-table name=users_table schema=public title="Post 📝" status=active
+    root {
+        config environment=production app_name="My Application" version="1.0.0"
+        localization {
+            lang en greeting="Hello 👋"
+            lang zh greeting="你好 👋"
         }
+        database {
+            connection host=localhost port=5432
+            tables {
+                users posts-table name=users_table schema=public title="Post 📝" status=active
+            }
+        }
+        edge-cases "" a " " "   spaced   "
     }
-edge-cases "" a " " "   spaced   "
-}
-"#);
+    "#);
 }

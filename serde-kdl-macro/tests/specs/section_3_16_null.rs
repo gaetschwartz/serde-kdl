@@ -5,13 +5,9 @@
 //! - Null with type annotations
 //! - Null mixed with other value types
 
+use super::doc_to_string;
 use insta::assert_snapshot;
-use kdl::KdlDocument;
 use serde_kdl_macro::kdl;
-
-fn doc_to_string(doc: KdlDocument) -> String {
-    doc.to_string()
-}
 
 #[test]
 fn test_null_as_arguments_and_properties() {
@@ -60,15 +56,15 @@ fn test_null_in_nested_structures() {
         }
     };
 
-    assert_snapshot!(doc_to_string(doc), @r#"
-parent value=#null{
-child1 #null enabled=#true
-child2 data=test cache=#null{
-grandchild #null active=#null
+    assert_snapshot!(doc_to_string(doc), @r"
+    parent value=#null {
+        child1 #null enabled=#true
+        child2 data=test cache=#null {
+            grandchild #null active=#null
+        }
     }
-}
-root #null{
-nested #null prop=#null
-}
-"#);
+    root #null {
+        nested #null prop=#null
+    }
+    ");
 }

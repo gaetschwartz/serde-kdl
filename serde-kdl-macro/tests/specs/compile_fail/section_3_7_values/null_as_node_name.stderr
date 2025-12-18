@@ -1,4 +1,4 @@
-error: Expected identifier
+error: expected string literal
  --> tests/specs/compile_fail/section_3_7_values/null_as_node_name.rs:8:20
   |
 8 |     let _ = kdl! { #null "arg" };

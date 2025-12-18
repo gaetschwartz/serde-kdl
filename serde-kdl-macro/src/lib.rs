@@ -13,7 +13,6 @@ mod parse;
 mod parser;
 mod validation;
 
-
 /// A KDL macro that allows writing KDL syntax directly in Rust code.
 ///
 /// # Examples

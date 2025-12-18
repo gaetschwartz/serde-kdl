@@ -3,3 +3,9 @@ error: empty unicode escape
   |
 5 |     let _ = kdl! { node "\u{}" }; // Empty Unicode escape sequence
   |                          ^^^^ this escape must have at least 1 hex digit
+
+error: Expected a KDL value (string, number, boolean, null, or variable). (Expected a numeric literal)
+ --> tests/specs/compile_fail/section_3_11_escapes/invalid_unicode_empty.rs:5:25
+  |
+5 |     let _ = kdl! { node "\u{}" }; // Empty Unicode escape sequence
+  |                         ^^^^^^

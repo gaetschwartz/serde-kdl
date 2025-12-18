@@ -1,4 +1,4 @@
-error: Expected one of `inf`, `-inf`, `nan`, `null`, `true`, or `false` after `#`
+error: Expected a KDL value (string, number, boolean, null, or variable). (Expected one of `inf`, `-inf`, `nan`, `null`, `true`, or `false` after `#`)
  --> tests/specs/compile_fail/section_3_16_null/invalid_null_uppercase.rs:6:15
   |
 6 |         node #NULL

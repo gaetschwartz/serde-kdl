@@ -73,110 +73,179 @@ pub(crate) struct KdlProperty {
 }
 
 /// Represents a KDL value (string, number, boolean, etc.)
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub(crate) enum KdlValue {
     String(KdlString),
-    Integer(i128),
-    Float(f64),
-    Boolean(bool),
-    Null,
     TypeAnnotated {
         type_annotation: String, // Use String instead of Ident for more flexibility
         value: Box<KdlValue>,
     },
     /// A Rust variable reference (resolved at runtime)
     Variable(syn::Ident),
+    Lit(KdlLit),
 }
 
-/// Represents different types of KDL strings as per Section 3.9
-#[derive(Clone)]
-pub(crate) enum KdlString {
-    /// Identifier String (Section 3.10) - like `foo`
-    Identifier(syn::Ident),
-    /// Quoted String (Section 3.11) - like `"foo"`
-    Quoted {
-        value: String,
-        span: proc_macro2::Span,
-    },
-}
-
-impl std::fmt::Debug for KdlString {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl ToTokens for KdlValue {
+    fn to_tokens(&self, tokens: &mut TokenStream2) {
         match self {
-            KdlString::Identifier(ident) => write!(f, "Identifier({})", ident),
-            KdlString::Quoted { value, .. } => write!(f, "Quoted({:?})", value),
-        }
-    }
-}
-
-impl KdlString {
-    /// Get the string value regardless of the string type
-    pub(crate) fn value(&self) -> String {
-        match self {
-            KdlString::Identifier(ident) => ident.to_string(),
-            KdlString::Quoted { value, .. } => value.clone(),
-        }
-    }
-
-    /// Get the span for error reporting
-    pub(crate) fn span(&self) -> proc_macro2::Span {
-        match self {
-            KdlString::Identifier(ident) => ident.span(),
-            KdlString::Quoted { span, .. } => *span,
-        }
-    }
-
-    /// Get the identifier if this is an Identifier variant
-    pub(crate) fn as_ident(&self) -> Option<&syn::Ident> {
-        match self {
-            KdlString::Identifier(ident) => Some(ident),
-            KdlString::Quoted { .. } => None,
-        }
-    }
-
-    /// Create a quoted string from a LitStr
-    /// Note: Rust's LitStr::value() already processes escape sequences
-    pub(crate) fn from_lit_str_as_quoted(lit_str: syn::LitStr) -> syn::Result<Self> {
-        Ok(KdlString::Quoted {
-            value: lit_str.value(),
-            span: lit_str.span(),
-        })
-    }
-
-    /// Validate the string according to Section 3.9 requirements
-    pub(crate) fn validate(&self) -> syn::Result<()> {
-        self.validate_with_context(true)
-    }
-
-    /// Validate the string with context about whether keywords should be rejected
-    pub(crate) fn validate_with_context(&self, reject_keywords: bool) -> syn::Result<()> {
-        let value = self.value();
-
-        // UTF-8 validation - Rust strings are already UTF-8, but let's be explicit
-        if !value.is_ascii() && !value.chars().all(|c| c != char::REPLACEMENT_CHARACTER) {
-            return Err(syn::Error::new(
-                self.span(),
-                "String contains invalid UTF-8 sequences",
-            ));
-        }
-
-        // Apply specific validation based on string type
-        match self {
-            KdlString::Identifier(_) => {
-                // For identifier strings, apply Section 3.10 validation
-                crate::validation::validate_identifier_string_with_context(
-                    &value,
-                    self.span(),
-                    reject_keywords,
-                )?;
+            KdlValue::String(kdl_string) => {
+                let s = kdl_string.value();
+                quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::String(#s.to_string()) }
             }
-            KdlString::Quoted { .. } => {
-                // Quoted strings can contain disallowed code points via escapes
-                // We don't validate them here since they may have come from valid Unicode escapes
+            KdlValue::Lit(KdlLit::Integer(i)) => {
+                quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Integer(#i) }
+            }
+            KdlValue::Lit(KdlLit::Float(f)) => {
+                quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Float(#f) }
+            }
+            KdlValue::Lit(KdlLit::Boolean(b)) => {
+                quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Bool(#b) }
+            }
+            KdlValue::Lit(KdlLit::Null(_)) => quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Null },
+            KdlValue::Lit(KdlLit::Nan(_)) => {
+                quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::NAN) }
+            }
+            KdlValue::Lit(KdlLit::Infinity(_)) => {
+                quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::INFINITY) }
+            }
+            KdlValue::Lit(KdlLit::NegInfinity(_)) => {
+                quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::NEG_INFINITY) }
+            }
+            KdlValue::TypeAnnotated {
+                type_annotation: _,
+                value,
+            } => {
+                // For type-annotated values, we just generate the inner value
+                // The type annotation will be handled at the entry level
+                value.to_token_stream()
+            }
+            KdlValue::Variable(ident) => {
+                // Use KdlValue::from() - user's variable type must implement Into<KdlValue>
+                // kdl::KdlValue implements From for: i128, f64, &str, String, bool, Option<T>
+                quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::from(#ident) }
             }
         }
+        .to_tokens(tokens);
+    }
+}
 
-        Ok(())
+pub(crate) use kdl_string::KdlString;
+
+use crate::parse::value::KdlLit;
+
+mod kdl_string {
+    use crate::validation::{self, ValidationOptions};
+
+    /// Represents different types of KDL strings as per Section 3.9
+    #[derive(Clone)]
+    pub struct KdlString {
+        inner: KdlStringInner,
+    }
+    /// Represents different types of KDL strings as per Section 3.9
+    #[allow(dead_code)]
+    #[derive(Debug, Clone)]
+    enum KdlStringInner {
+        /// Identifier String (Section 3.10) - like `foo`
+        Identifier { ident: syn::Ident },
+        /// Quoted String (Section 3.11) - like `"foo"`
+        Quoted {
+            value: String,
+            span: proc_macro2::Span,
+        },
+    }
+
+    impl PartialEq for KdlString {
+        fn eq(&self, other: &Self) -> bool {
+            self.value() == other.value()
+        }
+    }
+
+    impl std::fmt::Debug for KdlString {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            self.inner.fmt(f)
+        }
+    }
+
+    #[allow(dead_code)]
+    impl KdlString {
+        /// Get the string value regardless of the string type
+        pub(crate) fn value(&self) -> String {
+            match &self.inner {
+                KdlStringInner::Identifier { ident } => ident.to_string(),
+                KdlStringInner::Quoted { value, .. } => value.clone(),
+            }
+        }
+
+        /// Get the span for error reporting
+        pub(crate) fn span(&self) -> proc_macro2::Span {
+            match &self.inner {
+                KdlStringInner::Identifier { ident } => ident.span(),
+                KdlStringInner::Quoted { span, .. } => *span,
+            }
+        }
+
+        /// Get the identifier if this is an Identifier variant
+        pub(crate) fn as_ident(&self) -> Option<&syn::Ident> {
+            match &self.inner {
+                KdlStringInner::Identifier { ident } => Some(ident),
+                KdlStringInner::Quoted { .. } => None,
+            }
+        }
+
+        pub(crate) fn new_identifier(ident: syn::Ident) -> syn::Result<Self> {
+            validation::validate_identifier(&ident, ValidationOptions::default())?;
+            Ok(KdlString {
+                inner: KdlStringInner::Identifier { ident },
+            })
+        }
+    }
+
+    impl From<syn::LitStr> for KdlString {
+        fn from(lit: syn::LitStr) -> Self {
+            KdlString {
+                inner: KdlStringInner::Quoted {
+                    value: lit.value(),
+                    span: lit.span(),
+                },
+            }
+        }
+    }
+    impl From<syn::LitCStr> for KdlString {
+        fn from(lit: syn::LitCStr) -> Self {
+            KdlString {
+                inner: KdlStringInner::Quoted {
+                    value: lit.value().to_string_lossy().into_owned(),
+                    span: lit.span(),
+                },
+            }
+        }
+    }
+
+    impl TryFrom<syn::Ident> for KdlString {
+        type Error = syn::Error;
+
+        fn try_from(ident: syn::Ident) -> syn::Result<Self> {
+            KdlString::new_identifier(ident)
+        }
+    }
+
+    impl syn::parse::Parse for KdlString {
+        fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+            let lookahead = input.lookahead1();
+            // Check if it's a string literal first (quoted strings)
+            if lookahead.peek(syn::LitStr) {
+                let lit_str: syn::LitStr = input.parse()?;
+                let kdl_string = KdlString::from(lit_str);
+                Ok(kdl_string)
+            } else if input.peek(syn::Ident) {
+                // Otherwise parse as identifier (bare strings)
+                let ident: syn::Ident = input.parse()?;
+                let kdl_string = KdlString::new_identifier(ident)?;
+                Ok(kdl_string)
+            } else {
+                Err(lookahead.error())
+            }
+        }
     }
 }
 
@@ -184,10 +253,6 @@ impl std::fmt::Debug for KdlValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             KdlValue::String(s) => write!(f, "String({})", s.value()),
-            KdlValue::Integer(i) => write!(f, "Integer({})", i),
-            KdlValue::Float(fl) => write!(f, "Float({})", fl),
-            KdlValue::Boolean(b) => write!(f, "Boolean({})", b),
-            KdlValue::Null => write!(f, "Null"),
             KdlValue::TypeAnnotated {
                 type_annotation,
                 value,
@@ -195,26 +260,12 @@ impl std::fmt::Debug for KdlValue {
                 write!(f, "TypeAnnotated({}, {:?})", type_annotation, value)
             }
             KdlValue::Variable(ident) => write!(f, "Variable({})", ident),
+            KdlValue::Lit(lit) => write!(f, "Lit({:?})", lit),
         }
     }
 }
 
 impl KdlValue {
-    /// Checks if this value is a valid KDL value according to Section 3.7
-    /// A value is either: String, Number (Integer/Float), Boolean, or Null
-    /// Variables are also valid since they resolve to KDL values at runtime
-    pub(crate) fn is_valid_value(&self) -> bool {
-        match self {
-            KdlValue::String(_)
-            | KdlValue::Integer(_)
-            | KdlValue::Float(_)
-            | KdlValue::Boolean(_)
-            | KdlValue::Null
-            | KdlValue::Variable(_) => true,
-            KdlValue::TypeAnnotated { value, .. } => value.is_valid_value(),
-        }
-    }
-
     /// Checks if this value is a String value (required for node names and property keys)
     #[allow(dead_code)]
     pub(crate) fn is_string_value(&self) -> bool {

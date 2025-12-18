@@ -105,7 +105,6 @@ mod variable_tests {
         }
         "#);
     }
-
 }
 
 mod basic_usage_tests {
@@ -132,7 +131,7 @@ mod basic_usage_tests {
     #[test]
     fn test_node_with_boolean() {
         let doc = kdl! {
-            debug true
+            debug #true
         };
 
         assert_snapshot!(doc, @"debug #true")
@@ -150,7 +149,7 @@ mod basic_usage_tests {
     #[test]
     fn test_multiple_arguments() {
         let doc = kdl! {
-            connect "localhost" 5432 true
+            connect "localhost" 5432 #true
         };
 
         assert_snapshot!(doc, @"connect localhost 5432 #true")
@@ -168,7 +167,7 @@ mod basic_usage_tests {
     #[test]
     fn test_mixed_args_and_properties() {
         let doc = kdl! {
-            database "postgres" version=13 ssl=true
+            database "postgres" version=13 ssl=#true
         };
 
         assert_snapshot!(doc, @"database postgres version=13 ssl=#true")
@@ -195,7 +194,7 @@ mod nested_structure_tests {
         let doc = kdl! {
             config {
                 name "my-app"
-                debug true
+                debug #true
             }
         };
 
@@ -211,7 +210,7 @@ mod nested_structure_tests {
     fn test_nested_with_parent_properties() {
         let doc = kdl! {
             server host="localhost" port=8080 {
-                ssl true
+                ssl #true
                 timeout 30
             }
         };

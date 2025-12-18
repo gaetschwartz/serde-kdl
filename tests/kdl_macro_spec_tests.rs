@@ -47,12 +47,12 @@ fn test_node_arguments() {
     assert_eq!(entry.value().as_float().unwrap(), 2.5);
 
     // Boolean arguments
-    let doc = kdl! { node true false };
+    let doc = kdl! { node #true #false };
     assert!(doc.nodes()[0].entries()[0].value().as_bool().unwrap());
     assert!(!doc.nodes()[0].entries()[1].value().as_bool().unwrap());
 
     // Multiple arguments
-    let doc = kdl! { node "arg1" 42 true };
+    let doc = kdl! { node "arg1" 42 #true };
     assert_eq!(doc.nodes()[0].entries().len(), 3);
 }
 
@@ -66,7 +66,7 @@ fn test_node_properties() {
     assert_eq!(entry.value().as_string().unwrap(), "value");
 
     // Multiple properties
-    let doc = kdl! { node key1="value1" key2=42 key3=true };
+    let doc = kdl! { node key1="value1" key2=42 key3=#true };
     assert_eq!(doc.nodes()[0].entries().len(), 3);
 
     // Mixed arguments and properties
@@ -97,7 +97,7 @@ fn test_children_blocks() {
 #[test]
 fn test_boolean_values() {
     // Basic boolean values
-    let doc = kdl! { node true false };
+    let doc = kdl! { node #true #false };
     assert!(doc.nodes()[0].entries()[0].value().as_bool().unwrap());
     assert!(!doc.nodes()[0].entries()[1].value().as_bool().unwrap());
 }
@@ -147,9 +147,9 @@ fn test_complex_nesting() {
             database {
                 host "localhost"
                 port 5432
-                ssl true
+                ssl #true
             }
-            cache enabled=true ttl=3600
+            cache enabled=#true ttl=3600
         }
         logging level="info"
     };

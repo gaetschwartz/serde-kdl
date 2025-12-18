@@ -6,13 +6,9 @@
 //! - Only String values may be used as Node names or Property keys
 //! - Values (both as arguments and in properties) MAY be prefixed by a single Type Annotation (Section 3.8)
 
+use super::doc_to_string;
 use insta::assert_snapshot;
-use kdl::KdlDocument;
 use serde_kdl_macro::kdl;
-
-fn doc_to_string(doc: KdlDocument) -> String {
-    doc.to_string()
-}
 
 #[test]
 fn test_all_value_types_as_arguments_and_properties() {

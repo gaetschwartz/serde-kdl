@@ -3,3 +3,9 @@ error: invalid character in unicode escape: `G`
   |
 5 |     let _ = kdl! { node "\u{GGGG}" }; // Invalid hex character 'G'
   |                             ^ invalid character in unicode escape
+
+error: Expected a KDL value (string, number, boolean, null, or variable). (Expected a numeric literal)
+ --> tests/specs/compile_fail/section_3_11_escapes/invalid_unicode_non_hex.rs:5:25
+  |
+5 |     let _ = kdl! { node "\u{GGGG}" }; // Invalid hex character 'G'
+  |                         ^^^^^^^^^^

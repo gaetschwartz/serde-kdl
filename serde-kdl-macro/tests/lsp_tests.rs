@@ -4,5 +4,6 @@ fn main() {
     kdl! {
         node1 prop1=42
         node2 prop2=100
+        node3 prop3=212
     };
 }

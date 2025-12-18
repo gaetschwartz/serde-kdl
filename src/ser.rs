@@ -259,7 +259,10 @@ impl<'a> SerializerTrait for &'a mut Serializer {
         _variant_index: u32,
         variant: &'static str,
     ) -> Result<Self::Ok> {
-        self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::String(variant.to_string()))
+        self.create_value_node(
+            crate::DEFAULT_NODE_NAME,
+            KdlValue::String(variant.to_string()),
+        )
     }
 
     fn serialize_newtype_struct<T>(self, name: &'static str, value: &T) -> Result<Self::Ok>

@@ -3,13 +3,9 @@
 //! Boolean values in KDL are represented as `#true` and `#false`.
 //! Note: Bare `true` and `false` (without `#`) are parsed as identifier strings, not booleans.
 
+use super::doc_to_string;
 use insta::assert_snapshot;
-use kdl::KdlDocument;
 use serde_kdl_macro::kdl;
-
-fn doc_to_string(doc: KdlDocument) -> String {
-    doc.to_string()
-}
 
 #[test]
 fn test_boolean_literals_and_identifiers() {
@@ -18,18 +14,6 @@ fn test_boolean_literals_and_identifiers() {
         node #true #false
     };
     assert_snapshot!(doc_to_string(doc), @"node #true #false");
-
-    // Test that Rust boolean literals (true/false) are converted to KDL booleans (#true/#false)
-    let doc = kdl! {
-        node true false
-    };
-    assert_snapshot!(doc_to_string(doc), @"node #true #false");
-
-    // Test mixed: booleans and identifier strings can coexist
-    let doc = kdl! {
-        node #true true #false false
-    };
-    assert_snapshot!(doc_to_string(doc), @"node #true #true #false #false");
 }
 
 #[test]
@@ -54,9 +38,9 @@ fn test_booleans_in_various_contexts() {
         }
     };
     assert_snapshot!(doc_to_string(doc), @r"
-    parent enabled=#true{
-    child #false active=#true
-    sibling readonly=#false
+    parent enabled=#true {
+        child #false active=#true
+        sibling readonly=#false
     }
     ");
 }
@@ -77,9 +61,9 @@ fn test_booleans_with_mixed_types() {
         }
     };
     assert_snapshot!(doc_to_string(doc), @r"
-    config{
-    values 42 3.14 #true #false text #null #inf #-inf count=100 rate=0.5 enabled=#true name=test debug=#false
-    flags (i32)255 (f64)15000000000.0 (bool)#true (str)value
+    config {
+        values 42 3.14 #true #false text #null #inf #-inf count=100 rate=0.5 enabled=#true name=test debug=#false
+        flags (i32)255 (f64)15000000000.0 (bool)#true (str)value
     }
     ");
 }

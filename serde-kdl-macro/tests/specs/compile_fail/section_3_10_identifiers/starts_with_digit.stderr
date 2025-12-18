@@ -1,4 +1,4 @@
-error: Expected identifier
+error: expected string literal
   --> tests/specs/compile_fail/section_3_10_identifiers/starts_with_digit.rs:11:9
    |
 11 |         1abc "value"

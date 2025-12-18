@@ -5,3 +5,9 @@ error: invalid unicode character escape
   |                          ^^^^^^^^ invalid escape
   |
   = help: unicode escape must not be a surrogate
+
+error: Expected a KDL value (string, number, boolean, null, or variable). (Expected a numeric literal)
+ --> tests/specs/compile_fail/section_3_11_escapes/invalid_unicode_surrogate_dfff.rs:5:25
+  |
+5 |     let _ = kdl! { node "\u{DFFF}" }; // Surrogate code point (not a valid Unicode scalar)
+  |                         ^^^^^^^^^^

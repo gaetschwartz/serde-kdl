@@ -3,13 +3,9 @@
 //! This module tests the implementation of escape sequences in quoted strings according to the KDL specification.
 //! Section 3.11 defines standard escape sequences and Unicode escape sequences.
 
+use super::doc_to_string;
 use insta::assert_snapshot;
-use kdl::KdlDocument;
 use serde_kdl_macro::kdl;
-
-fn doc_to_string(doc: KdlDocument) -> String {
-    doc.to_string()
-}
 
 /// Test standard escape sequences: \n, \r, \t, \\, \"
 /// Covers Section 3.11.1 - Standard escape sequences
@@ -64,8 +60,8 @@ fn test_escapes_in_all_contexts() {
 
     assert_snapshot!(doc_to_string(doc), @r#"
     "node\nname" "arg\ttab" "quote\"here" key="value\nhere" prop=😀
-    escaped_node{
-    childA "nested\narg" "property\tkey"="backslash\\test"
+    escaped_node {
+        childA "nested\narg" "property\tkey"="backslash\\test"
     }
     "#);
 }

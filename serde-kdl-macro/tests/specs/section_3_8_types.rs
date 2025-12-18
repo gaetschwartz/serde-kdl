@@ -9,13 +9,9 @@
 //! - Reserved type annotations for numbers with decimals (Section 3.8.2)
 //! - Reserved type annotations for strings (Section 3.8.3)
 
+use super::doc_to_string;
 use insta::assert_snapshot;
-use kdl::KdlDocument;
 use serde_kdl_macro::kdl;
-
-fn doc_to_string(doc: KdlDocument) -> String {
-    doc.to_string()
-}
 
 #[test]
 fn test_value_type_annotations() {
@@ -57,9 +53,9 @@ fn test_node_name_type_annotations() {
     assert_snapshot!(doc_to_string(doc), @r#"
     (published)article title="Hello World"
     (contributor)person name="Foo McBar" age=(u8)30
-    (service)database host=(hostname)localhost port=(u16)5432{
-    (table)users name=(regex)"[a-zA-Z]+"
-    (table)posts title=Test
+    (service)database host=(hostname)localhost port=(u16)5432 {
+        (table)users name=(regex)"[a-zA-Z]+"
+        (table)posts title=Test
     }
     "#);
 }

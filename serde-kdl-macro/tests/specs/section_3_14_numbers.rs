@@ -7,13 +7,9 @@
 //! - Octal: 0o prefix
 //! - Binary: 0b prefix
 
+use super::doc_to_string;
 use insta::assert_snapshot;
-use kdl::KdlDocument;
 use serde_kdl_macro::kdl;
-
-fn doc_to_string(doc: KdlDocument) -> String {
-    doc.to_string()
-}
 
 #[test]
 fn test_decimal_numbers_and_keywords() {
@@ -79,9 +75,9 @@ fn test_numbers_in_context() {
         }
     };
     assert_snapshot!(doc_to_string(doc), @r"
-    server 8080 localhost{
-    config timeout=30 max_connections=1000 rate=0.5
-    flags mask=255 permissions=493 bits=204
+    server 8080 localhost {
+        config timeout=30 max_connections=1000 rate=0.5
+        flags mask=255 permissions=493 bits=204
     }
     ");
 

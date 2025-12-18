@@ -1,4 +1,4 @@
-error: Expected identifier
+error: Expected a KDL value (string, number, boolean, null, or variable). (Expected a numeric literal)
  --> tests/specs/compile_fail/section_3_7_values/null_as_property_key.rs:8:30
   |
 8 |     let _ = kdl! { node #null="value" };

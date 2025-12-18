@@ -2,20 +2,23 @@
 //!
 //! This module handles the generation of Rust code from parsed KDL AST structures.
 
-use crate::ast::{
-    extract_type_annotation, KdlDocument, KdlNode, KdlValue, KDL_ENTRY, KDL_NODE,
-    SERDE_KDL_KDL_EXPORT,
+use crate::{
+    ast::{
+        extract_type_annotation, KdlDocument, KdlNode, KdlValue, KDL_ENTRY, KDL_NODE,
+        SERDE_KDL_KDL_EXPORT,
+    },
+    parse::value::KdlLit,
 };
 use proc_macro2::TokenStream as TokenStream2;
-use quote::quote;
-use syn::Result;
+use quote::{format_ident, quote};
+use syn::{spanned::Spanned as _, Result};
 
 pub(crate) fn generate_kdl_code(document: &KdlDocument) -> Result<TokenStream2> {
     let node_codes: Result<Vec<_>> = document.nodes.iter().map(generate_node_code).collect();
     let node_codes = node_codes?;
 
     // Generate LSP hints for IDE support
-    let lsp_hints = generate_lsp_hints(document);
+    let lsp_hints = ide_hints::generate_lsp_hints(document);
 
     Ok(quote! {
         {
@@ -35,21 +38,19 @@ fn generate_node_code(node: &KdlNode) -> Result<TokenStream2> {
     let arg_codes: Result<Vec<_>> = node
         .arguments
         .iter()
-        .map(|arg| {
-            let value_code = generate_value_code(arg)?;
-            let type_annotation = extract_type_annotation(arg);
-
+        .map(|value| {
+            let type_annotation = extract_type_annotation(value);
             if let Some(type_str) = type_annotation {
                 Ok(quote! {
                     {
-                        let mut entry = #SERDE_KDL_KDL_EXPORT::KdlEntry::new(#value_code);
+                        let mut entry = #SERDE_KDL_KDL_EXPORT::KdlEntry::new(#value);
                         entry.set_ty(#type_str);
                         entry
                     }
                 })
             } else {
                 Ok(quote! {
-                    #SERDE_KDL_KDL_EXPORT::KdlEntry::new(#value_code)
+                    #SERDE_KDL_KDL_EXPORT::KdlEntry::new(#value)
                 })
             }
         })
@@ -62,20 +63,20 @@ fn generate_node_code(node: &KdlNode) -> Result<TokenStream2> {
         .iter()
         .map(|prop| {
             let key = prop.key.value();
-            let value_code = generate_value_code(&prop.value)?;
+            let value = &prop.value;
             let type_annotation = extract_type_annotation(&prop.value);
 
             if let Some(type_str) = type_annotation {
                 Ok(quote! {
                     {
-                        let mut entry = #SERDE_KDL_KDL_EXPORT::KdlEntry::new_prop(#key, #value_code);
+                        let mut entry = #SERDE_KDL_KDL_EXPORT::KdlEntry::new_prop(#key, #value);
                         entry.set_ty(#type_str);
                         node.entries_mut().push(entry);
                     }
                 })
             } else {
                 Ok(quote! {
-                    node.entries_mut().push(#SERDE_KDL_KDL_EXPORT::KdlEntry::new_prop(#key, #value_code));
+                    node.entries_mut().push(#SERDE_KDL_KDL_EXPORT::KdlEntry::new_prop(#key, #value));
                 })
             }
         })
@@ -137,21 +138,20 @@ fn generate_child_node_code(node: &KdlNode) -> Result<TokenStream2> {
     let arg_codes: Result<Vec<_>> = node
         .arguments
         .iter()
-        .map(|arg| {
-            let value_code = generate_value_code(arg)?;
-            let type_annotation = extract_type_annotation(arg);
+        .map(|value| {
+            let type_annotation = extract_type_annotation(value);
 
             if let Some(type_str) = type_annotation {
                 Ok(quote! {
                     {
-                        let mut entry = #SERDE_KDL_KDL_EXPORT::KdlEntry::new(#value_code);
+                        let mut entry = #SERDE_KDL_KDL_EXPORT::KdlEntry::new(#value);
                         entry.set_ty(#type_str);
                         entry
                     }
                 })
             } else {
                 Ok(quote! {
-                    #SERDE_KDL_KDL_EXPORT::KdlEntry::new(#value_code)
+                    #SERDE_KDL_KDL_EXPORT::KdlEntry::new(#value)
                 })
             }
         })
@@ -164,20 +164,20 @@ fn generate_child_node_code(node: &KdlNode) -> Result<TokenStream2> {
         .iter()
         .map(|prop| {
             let key = prop.key.value();
-            let value_code = generate_value_code(&prop.value)?;
+            let value = &prop.value;
             let type_annotation = extract_type_annotation(&prop.value);
 
             if let Some(type_str) = type_annotation {
                 Ok(quote! {
                     {
-                        let mut entry = #SERDE_KDL_KDL_EXPORT::KdlEntry::new_prop(#key, #value_code);
+                        let mut entry = #SERDE_KDL_KDL_EXPORT::KdlEntry::new_prop(#key, #value);
                         entry.set_ty(#type_str);
                         child_node.entries_mut().push(entry);
                     }
                 })
             } else {
                 Ok(quote! {
-                    child_node.entries_mut().push(#SERDE_KDL_KDL_EXPORT::KdlEntry::new_prop(#key, #value_code));
+                    child_node.entries_mut().push(#SERDE_KDL_KDL_EXPORT::KdlEntry::new_prop(#key, #value));
                 })
             }
         })
@@ -228,78 +228,88 @@ fn generate_child_node_code(node: &KdlNode) -> Result<TokenStream2> {
     })
 }
 
-fn generate_value_code(value: &KdlValue) -> Result<TokenStream2> {
-    match value {
-        KdlValue::String(kdl_string) => {
-            let s = kdl_string.value();
-            Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::String(#s.to_string()) })
-        }
-        KdlValue::Integer(i) => Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Integer(#i) }),
-        KdlValue::Float(f) => {
-            // Handle special float values that can't be directly quoted
-            if f.is_infinite() {
-                if f.is_sign_positive() {
-                    Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::INFINITY) })
-                } else {
-                    Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::NEG_INFINITY) })
-                }
-            } else if f.is_nan() {
-                Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::NAN) })
-            } else {
-                Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Float(#f) })
-            }
-        }
-        KdlValue::Boolean(b) => Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Bool(#b) }),
-        KdlValue::Null => Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Null }),
-        KdlValue::TypeAnnotated {
-            type_annotation: _,
-            value,
-        } => {
-            // For type-annotated values, we just generate the inner value
-            // The type annotation will be handled at the entry level
-            generate_value_code(value)
-        }
-        KdlValue::Variable(ident) => {
-            // Use KdlValue::from() - user's variable type must implement Into<KdlValue>
-            // kdl::KdlValue implements From for: i128, f64, &str, String, bool, Option<T>
-            Ok(quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::from(#ident) })
-        }
+#[cfg(not(feature = "ide-hints"))]
+mod ide_hints {
+    pub fn generate_lsp_hints(document: &KdlDocument) -> TokenStream2 {
+        TokenStream2::new()
     }
 }
 
-/// Generate phantom const bindings for LSP/IDE support.
-/// This creates bindings that use the same identifiers as the KDL input,
-/// allowing IDEs to provide syntax highlighting and other features.
-fn generate_lsp_hints(document: &KdlDocument) -> TokenStream2 {
-    let mut hints = Vec::new();
-    collect_hints_from_nodes(&document.nodes, &mut hints);
+#[cfg(feature = "ide-hints")]
+mod ide_hints {
+    use super::*;
+    /// Generate phantom const bindings for LSP/IDE support.
+    /// This creates bindings that use the same identifiers as the KDL input,
+    /// allowing IDEs to provide syntax highlighting and other features.
+    pub fn generate_lsp_hints(document: &KdlDocument) -> TokenStream2 {
+        let mut hints = TokenStream2::new();
+        collect_hints_from_nodes(&document.nodes, &mut hints);
+        hints
+    }
 
-    quote! { #(#hints)* }
-}
-
-fn collect_hints_from_nodes(nodes: &[KdlNode], hints: &mut Vec<TokenStream2>) {
-    for node in nodes {
-        // Generate hint for node names that are identifiers
-        if let Some(ident) = node.name.as_ident() {
-            hints.push(quote! {
-                #[doc(hidden)]
-                #[allow(non_snake_case, non_camel_case_types, dead_code, unused)]
-                const _: () = { let #ident: () = (); };
-            });
-        }
-
-        // Generate hint for property keys that are identifiers
-        for prop in &node.properties {
-            if let Some(ident) = prop.key.as_ident() {
-                hints.push(quote! {
-                    #[doc(hidden)]
-                    #[allow(non_snake_case, non_upper_case_globals, dead_code, unused)]
-                    const _: () = { let #ident: () = (); };
+    fn collect_hints_from_nodes(nodes: &[KdlNode], hints: &mut TokenStream2) {
+        for node in nodes {
+            // Generate hint for node names that are identifiers
+            if let Some(ident) = node.name.as_ident() {
+                hints.extend(quote! {
+                    #[allow(non_snake_case, non_camel_case_types, dead_code, unused)]
+                    {
+                      /// Phantom struct for LSP support
+                      struct #ident;
+                    }
                 });
             }
-        }
 
-        // Recurse into children
-        collect_hints_from_nodes(&node.children, hints);
+            // Generate hint for property keys that are identifiers
+            for prop in &node.properties {
+                if let Some(ident) = prop.key.as_ident() {
+                    hints.extend(quote! {
+                        #[allow(non_snake_case, non_upper_case_globals, dead_code, unused)]
+                        { let #ident: () = (); }
+                    });
+                }
+                // Generate hint for property values
+                hints.extend(value_hint(&prop.value));
+            }
+
+            // Generate hint for argument values
+            for arg in &node.arguments {
+                hints.extend(value_hint(arg));
+            }
+
+            // Recurse into children
+            collect_hints_from_nodes(&node.children, hints);
+        }
+    }
+
+    fn value_hint(value: &KdlValue) -> TokenStream2 {
+        match value {
+            KdlValue::Lit(KdlLit::Null(null)) => {
+                quote! {
+                    #[allow(non_snake_case, non_upper_case_globals, unused)]
+                    { const #null: #SERDE_KDL_KDL_EXPORT::KdlValue = #SERDE_KDL_KDL_EXPORT::KdlValue::Null; }
+                }
+            }
+            KdlValue::Lit(KdlLit::Nan(nan)) => {
+                quote! {
+                    #[allow(non_snake_case, non_upper_case_globals, unused)]
+                    { const #nan: #SERDE_KDL_KDL_EXPORT::KdlValue = #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::NAN); }
+                }
+            }
+            KdlValue::Lit(KdlLit::Infinity(inf)) => {
+                quote! {
+                    #[allow(non_snake_case, non_upper_case_globals, unused)]
+                    { const #inf: #SERDE_KDL_KDL_EXPORT::KdlValue = #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::INFINITY); }
+                }
+            }
+            KdlValue::Lit(KdlLit::NegInfinity(inf)) => {
+                let ident = format_ident!("neg_inf", span = inf.span());
+                quote! {
+                    #[allow(non_snake_case, non_upper_case_globals, unused)]
+                    { const #ident: #SERDE_KDL_KDL_EXPORT::KdlValue = #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::NEG_INFINITY); }
+                }
+            }
+            _ => quote! {},
+        }
     }
 }

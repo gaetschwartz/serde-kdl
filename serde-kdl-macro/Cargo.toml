@@ -10,6 +10,10 @@ keywords = ["kdl", "serde", "serialization", "config", "parser", "macro"]
 categories = ["encoding", "parser-implementations", "config"]
 authors = ["Gaëtan Schwartz"]
 
+[features]
+default = ["ide-hints"]
+ide-hints = []
+
 [lib]
 proc-macro = true
 

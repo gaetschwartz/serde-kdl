@@ -6,8 +6,8 @@
 use crate::ast::{KdlNode, KdlProperty, KdlString, KdlValue};
 use crate::parse::type_annotation::parse_type_annotation;
 use syn::{
-    parse::{Parse, ParseStream},
-    token::{Brace, Eq},
+    parse::{discouraged::Speculative, Parse, ParseStream},
+    token::Brace,
     Ident, LitStr, Result, Token,
 };
 
@@ -15,6 +15,7 @@ impl Parse for KdlNode {
     fn parse(input: ParseStream) -> Result<Self> {
         // Get the line number where this node starts BEFORE parsing the name
         // (used to distinguish variables from new nodes)
+        // FIXME: This doesn't work in rust-analyzer since it returns dummy spans (1:0)
         let node_line = input.span().start().line;
 
         // Parse optional type annotation for node name
@@ -27,23 +28,13 @@ impl Parse for KdlNode {
         // Parse arguments and properties
         while !input.is_empty() && !input.peek(Brace) && !input.peek(Token![;]) {
             // Look ahead to see if this is a property (identifier followed by =)
-            let checkpoint = input.fork();
-
             // Try to parse as property first (string key followed by =)
             // We need more sophisticated lookahead for hyphenated identifiers
-            if is_property_ahead(&checkpoint) {
+            if is_property_ahead(&input) {
                 // Parse property key (must be a String value according to Section 3.7)
-                let key = parse_property_key(input)?;
-                let _eq: Eq = input.parse()?;
+                let key: KdlString = input.parse()?;
+                let _eq: Token![=] = input.parse()?;
                 let value: KdlValue = input.parse()?;
-
-                // Validate that the value is a valid KDL value according to Section 3.7
-                if !value.is_valid_value() {
-                    return Err(syn::Error::new(
-                        input.span(),
-                        "Property values must be String, Number, Boolean, or Null (Section 3.7)",
-                    ));
-                }
 
                 properties.push(KdlProperty { key, value });
             } else {
@@ -78,15 +69,11 @@ impl Parse for KdlNode {
                 }
 
                 // Try to parse as argument (literal value or identifier)
-                match input.parse::<KdlValue>() {
+                let fork = input.fork();
+                match fork.parse::<KdlValue>() {
                     Ok(value) => {
-                        // Validate that the value is a valid KDL value according to Section 3.7
-                        if !value.is_valid_value() {
-                            return Err(syn::Error::new(
-                                input.span(),
-                                "Arguments must be String, Number, Boolean, or Null (Section 3.7)",
-                            ));
-                        }
+                        // Successfully parsed as value, commit the parse
+                        input.advance_to(&fork);
                         arguments.push(value);
                     }
                     Err(e) => {
@@ -132,147 +119,18 @@ fn parse_node_name_with_type_annotation(input: ParseStream) -> Result<(Option<St
         // Allow optional whitespace between type annotation and name
         // (This is handled automatically by syn's parsing)
 
-        let name = parse_bare_node_name(input)?;
+        let name = input.parse()?;
         Ok((Some(type_annotation), name))
     } else {
-        let name = parse_bare_node_name(input)?;
+        let name: KdlString = input.parse()?;
         Ok((None, name))
     }
 }
 
-// Helper function to parse node names that might have dashes or be string literals
-// According to Section 3.7, node names must be String values
-fn parse_bare_node_name(input: ParseStream) -> Result<KdlString> {
-    // Check if it's a string literal first (quoted strings)
-    // Note: Rust's LitStr::value() already processes escape sequences
-    if input.peek(LitStr) {
-        let lit_str: LitStr = input.parse()?;
-        let kdl_string = KdlString::Quoted {
-            value: lit_str.value(),
-            span: lit_str.span(),
-        };
-        kdl_string.validate()?;
-        return Ok(kdl_string);
-    }
-
-    // Otherwise parse as identifier (bare strings)
-    if input.peek(Ident) {
-        let ident: Ident = input.parse()?;
-        let kdl_string = KdlString::Identifier(ident);
-        kdl_string.validate()?;
-        return Ok(kdl_string);
-    }
-
-    Err(syn::Error::new(input.span(), "Expected identifier"))
-}
-
-// Helper function to parse property keys (must be String values according to Section 3.7)
-fn parse_property_key(input: ParseStream) -> Result<KdlString> {
-    // Check if it's a string literal first (quoted strings)
-    // Note: Rust's LitStr::value() already processes escape sequences
-    if input.peek(LitStr) {
-        let lit_str: LitStr = input.parse()?;
-        let kdl_string = KdlString::Quoted {
-            value: lit_str.value(),
-            span: lit_str.span(),
-        };
-        kdl_string.validate()?;
-        return Ok(kdl_string);
-    }
-
-    // Check for simple identifier (no leading punctuation)
-    // This allows LSP hints to work for normal property keys
-    if input.peek(Ident) && !input.peek2(syn::token::Minus) {
-        let ident: Ident = input.parse()?;
-        let kdl_string = KdlString::Identifier(ident);
-        kdl_string.validate()?;
-        return Ok(kdl_string);
-    }
-
-    // Handle identifiers that start with punctuation like -, +, .
-    // These are stored as Quoted since they're not valid Rust identifiers
-    let mut name_parts = Vec::new();
-    let start_span = input.span();
-
-    // Handle leading punctuation characters
-    while input.peek(syn::token::Minus)
-        || input.peek(syn::token::Plus)
-        || input.peek(syn::token::Dot)
-    {
-        if input.peek(syn::token::Minus) {
-            let _: syn::token::Minus = input.parse()?;
-            name_parts.push("-".to_string());
-        } else if input.peek(syn::token::Plus) {
-            let _: syn::token::Plus = input.parse()?;
-            name_parts.push("+".to_string());
-        } else if input.peek(syn::token::Dot) {
-            let _: syn::token::Dot = input.parse()?;
-            name_parts.push(".".to_string());
-        }
-    }
-
-    // Parse the main identifier part
-    let ident_span = if input.peek(Ident) {
-        let ident: Ident = input.parse()?;
-        let span = ident.span();
-        name_parts.push(ident.to_string());
-        span
-    } else if name_parts.is_empty() {
-        return Err(syn::Error::new(input.span(), "Expected identifier"));
-    } else {
-        start_span
-    };
-
-    let full_key = name_parts.join("");
-
-    // Store as Quoted since it contains punctuation (not a valid Rust ident)
-    let kdl_string = KdlString::Quoted {
-        value: full_key,
-        span: ident_span,
-    };
-    kdl_string.validate()?;
-
-    Ok(kdl_string)
-}
-
 // Helper function to determine if the input stream starts with a property
 fn is_property_ahead(input: &syn::parse::ParseBuffer) -> bool {
-    if input.peek(LitStr) && input.peek2(Eq) {
-        // String literal followed by = is definitely a property
+    if (input.peek(LitStr) || input.peek(Ident)) && input.peek2(Token![=]) {
         return true;
-    }
-
-    // Try to parse an identifier sequence (which may start with punctuation)
-    let checkpoint = input.fork();
-
-    // Handle leading punctuation characters
-    while checkpoint.peek(syn::token::Minus)
-        || checkpoint.peek(syn::token::Plus)
-        || checkpoint.peek(syn::token::Dot)
-    {
-        if checkpoint.peek(syn::token::Minus) {
-            if checkpoint.parse::<syn::token::Minus>().is_err() {
-                break;
-            }
-        } else if checkpoint.peek(syn::token::Plus) {
-            if checkpoint.parse::<syn::token::Plus>().is_err() {
-                break;
-            }
-        } else if checkpoint.peek(syn::token::Dot) && checkpoint.parse::<syn::token::Dot>().is_err()
-        {
-            break;
-        }
-    }
-
-    // Try to parse the main identifier part
-    if checkpoint.peek(Ident) {
-        if checkpoint.parse::<Ident>().is_ok() {
-            // Check if followed by =
-            return checkpoint.peek(Eq);
-        }
-    } else {
-        // If we have some punctuation but no identifier following, check if = follows
-        return checkpoint.peek(Eq);
     }
 
     false

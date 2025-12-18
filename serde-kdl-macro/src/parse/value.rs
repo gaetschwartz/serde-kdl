@@ -3,14 +3,16 @@
 //! This module handles parsing of KDL values including strings, numbers,
 //! booleans, null, and type-annotated values.
 
+use std::ops::RangeBounds;
+
 use crate::ast::{KdlString, KdlValue};
-use crate::parse::number::try_parse_number;
 use crate::parse::type_annotation::parse_type_annotation;
+use proc_macro2::Span;
 use syn::spanned::Spanned;
 use syn::Token;
 use syn::{
     parse::{Parse, ParseStream},
-    Ident, Lit, LitStr, Result,
+    Ident, Result,
 };
 
 pub mod bare_identifiers {
@@ -39,91 +41,131 @@ impl Parse for KdlValue {
                 value,
             });
         }
-
-        // Try to parse as a number first (handles all formats including negative numbers)
-        if let Some(number_value) = try_parse_number(input)? {
-            Ok(number_value)
-        }
-        // Check for string literals
-        else if input.peek(LitStr) {
-            let lit_str: LitStr = input.parse()?;
-            let kdl_string = KdlString::from_lit_str_as_quoted(lit_str)?;
-            // When parsing values, allow keywords since they should be treated as actual values
-            kdl_string.validate_with_context(false)?;
-            Ok(KdlValue::String(kdl_string))
-        }
-        // Check for boolean literals
-        else if input.peek(syn::LitBool) {
-            let boolean: syn::LitBool = input.parse()?;
-            Ok(KdlValue::Boolean(boolean.value))
-        }
         // Check for other literals (bool, str - numbers are handled above)
-        else if input.peek(Lit) {
-            let lit: Lit = input.parse()?;
-            match lit {
-                Lit::Bool(lit_bool) => Ok(KdlValue::Boolean(lit_bool.value)),
-                Lit::Str(lit_str) => {
-                    let kdl_string = KdlString::from_lit_str_as_quoted(lit_str)?;
-                    // When parsing values, allow keywords since they should be treated as actual values
-                    kdl_string.validate_with_context(false)?;
-                    Ok(KdlValue::String(kdl_string))
-                }
-                Lit::Int(_) | Lit::Float(_) => {
-                    // Numbers should have been handled by try_parse_number above
-                    // If we reach here, it means our number parser missed something
-                    Err(syn::Error::new(
-                        lit.span(),
-                        "Number parsing failed - this should not happen",
-                    ))
-                }
-                _ => Err(syn::Error::new(lit.span(), "Unsupported literal type")),
-            }
+        if input.peek(syn::LitStr) {
+            let lit_str: syn::LitStr = input.parse()?;
+            return Ok(KdlValue::String(KdlString::from(lit_str)));
         }
-        // Check for # syntax (like #true, #false, #inf, #-inf, #nan)
-        else if input.peek(Token![#]) {
+        // Check for identifiers - treat as Rust variable references
+        if input.peek(Ident) {
+            let ident: Ident = input.parse()?;
+            return Ok(KdlValue::Variable(ident));
+        }
+
+        match input.parse::<KdlLit>() {
+            Ok(lit) => Ok(KdlValue::Lit(lit)),
+            Err(e) => Err(syn::Error::new(
+                e.span(),
+                format!("Expected a KDL value (string, number, boolean, null, or variable). ({e})"),
+            )),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) enum KdlLit {
+    Integer(i128),
+    Float(f64),
+    Boolean(bool),
+    Nan(bare_identifiers::nan),
+    Infinity(bare_identifiers::inf),
+    NegInfinity(bare_identifiers::inf),
+    Null(bare_identifiers::null),
+}
+
+impl KdlLit {
+    fn from_radix(
+        mut s: String,
+        radix: u32,
+        range: impl RangeBounds<usize>,
+        span: Span,
+    ) -> Result<Self> {
+        // remove all underscores from s
+        s.retain(|c| c != '_');
+        let range = (range.start_bound().cloned(), range.end_bound().cloned());
+        Ok(Self::Integer(
+            i128::from_str_radix(&s[range], radix).map_err(|e| {
+                syn::Error::new(span, format!("Failed to parse integer literal '{s}': {e}"))
+            })?,
+        ))
+    }
+    fn parse_number(input: ParseStream) -> Result<Self> {
+        if input.peek(syn::LitInt) {
+            let lit_int: syn::LitInt = input.parse()?;
+            let repr = lit_int.to_string();
+            let out = match repr.as_bytes() {
+                [b'0', b'b' | b'B', ..] => Self::from_radix(repr, 2, 2.., lit_int.span()),
+                [b'0', b'o' | b'O', ..] => Self::from_radix(repr, 8, 2.., lit_int.span()),
+                [b'0', b'x' | b'X', ..] => Self::from_radix(repr, 16, 2.., lit_int.span()),
+                _ => Ok(Self::Integer(lit_int.base10_parse()?)),
+            };
+            out
+        } else if input.peek(syn::LitFloat) {
+            let lit_float: syn::LitFloat = input.parse()?;
+            Ok(Self::Float(lit_float.base10_parse()?))
+        } else {
+            Err(syn::Error::new(input.span(), "Expected a numeric literal"))
+        }
+    }
+}
+
+impl syn::parse::Parse for KdlLit {
+    fn parse(input: ParseStream) -> Result<Self> {
+        if input.peek(Token![#]) {
             let pound: Token![#] = input.parse()?;
-            let span = pound.span();
+            let pound_span = pound.span();
             let next_span = input.span();
             // ensure that # has no space by comparing the spans
-            if next_span.start() != span.end() {
-                return Err(syn::Error::new(
-                    span,
+            return if next_span.start() != pound_span.end() {
+                Err(syn::Error::new(
+                    pound_span,
                     "No whitespace allowed between `#` and the following identifier",
-                ));
-            }
-            if input.peek(bare_identifiers::inf) {
-                let _inf: bare_identifiers::inf = input.parse()?;
-                Ok(KdlValue::Float(f64::INFINITY))
+                ))
+            } else if input.peek(bare_identifiers::inf) {
+                let inf: bare_identifiers::inf = input.parse()?;
+                Ok(Self::Infinity(inf))
             } else if input.peek(bare_identifiers::nan) {
-                let _nan: bare_identifiers::nan = input.parse()?;
-                Ok(KdlValue::Float(f64::NAN))
+                let nan: bare_identifiers::nan = input.parse()?;
+                Ok(Self::Nan(nan))
             } else if input.peek(Token![-]) && input.peek2(bare_identifiers::inf) {
                 let _minus: Token![-] = input.parse()?;
-                let _inf: bare_identifiers::inf = input.parse()?;
-                Ok(KdlValue::Float(f64::NEG_INFINITY))
+                let inf: bare_identifiers::inf = input.parse()?;
+                Ok(Self::NegInfinity(inf))
             } else if input.peek(bare_identifiers::null) {
-                let _null: bare_identifiers::null = input.parse()?;
-                Ok(KdlValue::Null)
+                let null: bare_identifiers::null = input.parse()?;
+                Ok(Self::Null(null))
             } else if input.peek(syn::LitBool) {
                 // Handle #true and #false when true/false are literals, not identifiers
                 let boolean: syn::LitBool = input.parse()?;
-                Ok(KdlValue::Boolean(boolean.value))
+                Ok(Self::Boolean(boolean.value))
             } else {
                 Err(syn::Error::new(
                     input.span(),
                     "Expected one of `inf`, `-inf`, `nan`, `null`, `true`, or `false` after `#`",
                 ))
-            }
+            };
         }
-        // Check for identifiers - treat as Rust variable references
-        else if input.peek(Ident) {
-            let ident: Ident = input.parse()?;
-            Ok(KdlValue::Variable(ident))
-        } else {
-            Err(syn::Error::new(
-                input.span(),
-                "Expected string, number, boolean, null, or identifier",
-            ))
+
+        if input.peek(Token![+]) {
+            let _plus: Token![+] = input.parse()?;
+            return Self::parse_number(input);
+        }
+
+        Self::parse_number(input)
+    }
+}
+
+impl PartialEq for KdlLit {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (KdlLit::Integer(a), KdlLit::Integer(b)) => a == b,
+            (KdlLit::Float(a), KdlLit::Float(b)) => a == b,
+            (KdlLit::Boolean(a), KdlLit::Boolean(b)) => a == b,
+            (KdlLit::Nan(_), KdlLit::Nan(_)) => true,
+            (KdlLit::Infinity(_), KdlLit::Infinity(_)) => true,
+            (KdlLit::NegInfinity(_), KdlLit::NegInfinity(_)) => true,
+            (KdlLit::Null(_), KdlLit::Null(_)) => true,
+            _ => false,
         }
     }
 }
