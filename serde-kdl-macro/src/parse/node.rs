@@ -30,7 +30,7 @@ impl Parse for KdlNode {
             // Look ahead to see if this is a property (identifier followed by =)
             // Try to parse as property first (string key followed by =)
             // We need more sophisticated lookahead for hyphenated identifiers
-            if is_property_ahead(&input) {
+            if is_property_ahead(input) {
                 // Parse property key (must be a String value according to Section 3.7)
                 let key: KdlString = input.parse()?;
                 let _eq: Token![=] = input.parse()?;

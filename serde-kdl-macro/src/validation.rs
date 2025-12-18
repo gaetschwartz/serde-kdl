@@ -104,15 +104,9 @@ pub(crate) fn validate_type_annotation(type_annotation: &str, value: &KdlValue) 
 // Identifier String Validation (Section 3.10)
 // =============================================================================
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub(crate) struct ValidationOptions {
     pub strict: bool,
-}
-
-impl Default for ValidationOptions {
-    fn default() -> Self {
-        Self { strict: false }
-    }
 }
 
 pub const RESERVED_KEYWORDS: &[&str] = &["inf", "-inf", "nan", "true", "false", "null"];
@@ -120,7 +114,7 @@ pub const RESERVED_KEYWORDS: &[&str] = &["inf", "-inf", "nan", "true", "false", 
 /// Validates an identifier string with context about whether keywords should be rejected
 pub(crate) fn validate_identifier(ident: &syn::Ident, options: ValidationOptions) -> Result<()> {
     let ident_str = ident.to_string();
-    validate_identifier_string(&*ident_str, ident.span(), options)
+    validate_identifier_string(&ident_str, ident.span(), options)
 }
 
 /// Validates an identifier string with context about whether keywords should be rejected
@@ -129,7 +123,7 @@ pub(crate) fn validate_identifier_string(
     span: Span,
     options: ValidationOptions,
 ) -> Result<()> {
-    if RESERVED_KEYWORDS.contains(&&*ident_str) {
+    if RESERVED_KEYWORDS.contains(&ident_str) {
         return Err(syn::Error::new(
             span,
             format!(
@@ -891,14 +885,12 @@ mod strict {
             for ident in &whitespace_identifiers {
                 let result = validate_identifier_string_test(ident);
                 // Note: Some of these will fail due to whitespace, but not due to newlines
-                if result.is_err() {
-                    let error_msg = result.unwrap_err().to_string();
-                    assert!(
-                        !error_msg.contains("newline"),
-                        "Identifier '{}' should not fail due to newline validation",
-                        ident
-                    );
-                }
+                let error_msg = result.unwrap_err().to_string();
+                assert!(
+                    !error_msg.contains("newline"),
+                    "Identifier '{}' should not fail due to newline validation",
+                    ident
+                );
             }
         }
 
