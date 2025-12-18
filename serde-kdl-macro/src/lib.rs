@@ -5,12 +5,14 @@
 //! and generates the corresponding kdl crate data structures.
 
 use proc_macro::TokenStream;
+use proc_macro2::TokenStream as TokenStream2;
+
+use crate::{ast::KdlDocument, expand::generate_kdl_code};
 
 // Module declarations
 mod ast;
-mod codegen;
+mod expand;
 mod parse;
-mod parser;
 mod validation;
 
 /// A KDL macro that allows writing KDL syntax directly in Rust code.
@@ -35,8 +37,13 @@ mod validation;
 /// ```
 #[proc_macro]
 pub fn kdl(input: TokenStream) -> TokenStream {
-    match parser::kdl_impl(input) {
+    match kdl_impl(input.into()) {
         Ok(tokens) => tokens.into(),
         Err(err) => err.to_compile_error().into(),
     }
+}
+
+pub(crate) fn kdl_impl(input: TokenStream2) -> syn::Result<TokenStream2> {
+    let document = syn::parse2::<KdlDocument>(input)?;
+    generate_kdl_code(&document)
 }

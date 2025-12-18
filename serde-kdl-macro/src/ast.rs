@@ -3,6 +3,8 @@
 //! This module contains all the type definitions for representing KDL documents,
 //! nodes, values, and related structures in memory.
 
+use crate::parse::value::KdlLit;
+pub(crate) use kdl_string::KdlString;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{format_ident, quote, ToTokens};
 
@@ -128,10 +130,6 @@ impl ToTokens for KdlValue {
         .to_tokens(tokens);
     }
 }
-
-pub(crate) use kdl_string::KdlString;
-
-use crate::parse::value::KdlLit;
 
 mod kdl_string {
     use crate::validation::{self, ValidationOptions};

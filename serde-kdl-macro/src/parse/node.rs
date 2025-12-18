@@ -57,8 +57,7 @@ impl Parse for KdlNode {
                     // Use line numbers to distinguish variables from new nodes:
                     // - Same line as node: variable reference
                     // - Different line: new node
-                    let checkpoint = input.fork();
-                    let ident: Ident = checkpoint.parse().unwrap();
+                    let ident: Ident = input.fork().parse().unwrap();
                     let ident_line = ident.span().start().line;
 
                     if ident_line != node_line {
@@ -98,14 +97,18 @@ impl Parse for KdlNode {
             }
         }
 
-        Ok(KdlNode {
+        let _: Option<Token![;]> = input.parse()?;
+
+        let kdl_node = KdlNode {
             name,
             type_annotation,
             properties,
             arguments,
             children,
             has_children_block,
-        })
+        };
+
+        Ok(kdl_node)
     }
 }
 

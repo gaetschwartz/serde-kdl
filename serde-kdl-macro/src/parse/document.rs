@@ -5,7 +5,7 @@
 use crate::ast::{KdlDocument, KdlNode};
 use syn::{
     parse::{Parse, ParseStream},
-    Result, Token,
+    Result,
 };
 
 impl Parse for KdlDocument {
@@ -13,12 +13,8 @@ impl Parse for KdlDocument {
         let mut nodes = Vec::new();
 
         while !input.is_empty() {
-            nodes.push(input.parse::<KdlNode>()?);
-
-            // Skip optional semicolons between nodes
-            if input.peek(Token![;]) {
-                let _: Token![;] = input.parse()?;
-            }
+            let node = input.parse::<KdlNode>()?;
+            nodes.push(node);
         }
 
         Ok(KdlDocument { nodes })

@@ -253,10 +253,7 @@ mod ide_hints {
             if let Some(ident) = node.name.as_ident() {
                 hints.extend(quote! {
                     #[allow(non_snake_case, non_camel_case_types, dead_code, unused)]
-                    {
-                      /// Phantom struct for LSP support
-                      struct #ident;
-                    }
+                    { struct #ident; }
                 });
             }
 
@@ -264,8 +261,8 @@ mod ide_hints {
             for prop in &node.properties {
                 if let Some(ident) = prop.key.as_ident() {
                     hints.extend(quote! {
-                        #[allow(non_snake_case, non_upper_case_globals, dead_code, unused)]
-                        { let #ident: () = (); }
+                        #[allow(non_snake_case, non_camel_case_types, dead_code, unused)]
+                        { struct #ident; }
                     });
                 }
                 // Generate hint for property values
