@@ -237,6 +237,8 @@ mod ide_hints {
 
 #[cfg(feature = "ide-hints")]
 mod ide_hints {
+    use crate::ast::KdlString;
+
     use super::*;
     /// Generate phantom const bindings for LSP/IDE support.
     /// This creates bindings that use the same identifiers as the KDL input,
@@ -250,21 +252,30 @@ mod ide_hints {
     fn collect_hints_from_nodes(nodes: &[KdlNode], hints: &mut TokenStream2) {
         for node in nodes {
             // Generate hint for node names that are identifiers
-            if let Some(ident) = node.name.as_ident() {
-                hints.extend(quote! {
-                    #[allow(non_snake_case, non_camel_case_types, dead_code, unused)]
-                    { struct #ident; }
-                });
-            }
+            let node_ident = match &node.name {
+                KdlString::Identifier { ident } => ident.clone(),
+                KdlString::Quoted { value, span } => {
+                    format_ident!("{}", sanitize_ident(value), span = *span)
+                }
+            };
+            hints.extend(quote! {
+                #[allow(non_snake_case, non_camel_case_types, dead_code, unused)]
+                { struct #node_ident; }
+            });
 
             // Generate hint for property keys that are identifiers
             for prop in &node.properties {
-                if let Some(ident) = prop.key.as_ident() {
-                    hints.extend(quote! {
-                        #[allow(non_snake_case, non_camel_case_types, dead_code, unused)]
-                        { struct #ident; }
-                    });
-                }
+                let ident = match &prop.key {
+                    KdlString::Identifier { ident } => ident.clone(),
+                    KdlString::Quoted { value, span } => {
+                        format_ident!("{}", sanitize_ident(value), span = *span)
+                    }
+                };
+                hints.extend(quote! {
+                    #[allow(non_snake_case, non_camel_case_types, dead_code, unused)]
+                    { enum #node_ident { #ident(#SERDE_KDL_KDL_EXPORT::KdlValue) } }
+                });
+
                 // Generate hint for property values
                 hints.extend(value_hint(&prop.value));
             }
@@ -308,5 +319,22 @@ mod ide_hints {
             }
             _ => quote! {},
         }
+    }
+
+    fn sanitize_ident(input: &str) -> String {
+        let mut output = String::with_capacity(input.len());
+        if let Some(first_char) = input.chars().next() {
+            if first_char.is_numeric() {
+                output.push('_');
+            }
+        }
+        for c in input.chars() {
+            if c.is_alphanumeric() || c == '_' {
+                output.push(c);
+            } else {
+                output.push('_');
+            }
+        }
+        output
     }
 }

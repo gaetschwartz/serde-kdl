@@ -135,14 +135,9 @@ mod kdl_string {
     use crate::validation::{self, ValidationOptions};
 
     /// Represents different types of KDL strings as per Section 3.9
-    #[derive(Clone)]
-    pub struct KdlString {
-        inner: KdlStringInner,
-    }
-    /// Represents different types of KDL strings as per Section 3.9
     #[allow(dead_code)]
     #[derive(Debug, Clone)]
-    enum KdlStringInner {
+    pub enum KdlString {
         /// Identifier String (Section 3.10) - like `foo`
         Identifier { ident: syn::Ident },
         /// Quoted String (Section 3.11) - like `"foo"`
@@ -158,63 +153,59 @@ mod kdl_string {
         }
     }
 
-    impl std::fmt::Debug for KdlString {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            self.inner.fmt(f)
-        }
-    }
-
     #[allow(dead_code)]
     impl KdlString {
         /// Get the string value regardless of the string type
         pub(crate) fn value(&self) -> String {
-            match &self.inner {
-                KdlStringInner::Identifier { ident } => ident.to_string(),
-                KdlStringInner::Quoted { value, .. } => value.clone(),
+            match &self {
+                KdlString::Identifier { ident } => ident.to_string(),
+                KdlString::Quoted { value, .. } => value.clone(),
             }
         }
 
         /// Get the span for error reporting
         pub(crate) fn span(&self) -> proc_macro2::Span {
-            match &self.inner {
-                KdlStringInner::Identifier { ident } => ident.span(),
-                KdlStringInner::Quoted { span, .. } => *span,
+            match &self {
+                KdlString::Identifier { ident } => ident.span(),
+                KdlString::Quoted { span, .. } => *span,
             }
         }
 
         /// Get the identifier if this is an Identifier variant
         pub(crate) fn as_ident(&self) -> Option<&syn::Ident> {
-            match &self.inner {
-                KdlStringInner::Identifier { ident } => Some(ident),
-                KdlStringInner::Quoted { .. } => None,
+            match &self {
+                KdlString::Identifier { ident } => Some(ident),
+                KdlString::Quoted { .. } => None,
+            }
+        }
+
+        /// Get the quoted string if this is a Quoted variant
+        pub(crate) fn as_quoted(&self) -> Option<(&str, proc_macro2::Span)> {
+            match &self {
+                KdlString::Quoted { value, span } => Some((value, *span)),
+                KdlString::Identifier { .. } => None,
             }
         }
 
         pub(crate) fn new_identifier(ident: syn::Ident) -> syn::Result<Self> {
             validation::validate_identifier(&ident, ValidationOptions::default())?;
-            Ok(KdlString {
-                inner: KdlStringInner::Identifier { ident },
-            })
+            Ok(KdlString::Identifier { ident })
         }
     }
 
     impl From<syn::LitStr> for KdlString {
         fn from(lit: syn::LitStr) -> Self {
-            KdlString {
-                inner: KdlStringInner::Quoted {
-                    value: lit.value(),
-                    span: lit.span(),
-                },
+            KdlString::Quoted {
+                value: lit.value(),
+                span: lit.span(),
             }
         }
     }
     impl From<syn::LitCStr> for KdlString {
         fn from(lit: syn::LitCStr) -> Self {
-            KdlString {
-                inner: KdlStringInner::Quoted {
-                    value: lit.value().to_string_lossy().into_owned(),
-                    span: lit.span(),
-                },
+            KdlString::Quoted {
+                value: lit.value().to_string_lossy().into_owned(),
+                span: lit.span(),
             }
         }
     }
