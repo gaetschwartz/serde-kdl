@@ -1,3 +1,5 @@
+#![allow(clippy::approx_constant)]
+
 use insta::assert_snapshot;
 use kdl::KdlDocument;
 use serde_kdl_macro::kdl;
