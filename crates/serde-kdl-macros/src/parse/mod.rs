@@ -8,6 +8,8 @@
 //! - `type_annotation`: Type annotation parsing
 //! - `number`: Number parsing (Section 3.14)
 
+#[allow(unused)]
+pub(crate) mod comments;
 pub(crate) mod document;
 pub(crate) mod node;
 pub(crate) mod type_annotation;

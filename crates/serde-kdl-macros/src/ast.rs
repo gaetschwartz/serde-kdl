@@ -68,10 +68,21 @@ pub(crate) struct KdlNode {
 }
 
 /// Represents a KDL property (key="value" pair)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) struct KdlProperty {
     pub(crate) key: KdlString, // According to Section 3.7, property keys must be String values
     pub(crate) value: KdlValue,
+}
+
+#[allow(dead_code)]
+impl KdlProperty {
+    /// Create a new KdlProperty
+    pub(crate) fn new(key: impl Into<KdlString>, value: impl Into<KdlValue>) -> Self {
+        KdlProperty {
+            key: key.into(),
+            value: value.into(),
+        }
+    }
 }
 
 /// Represents a KDL value (string, number, boolean, etc.)
@@ -85,6 +96,35 @@ pub(crate) enum KdlValue {
     /// A Rust variable reference (resolved at runtime)
     Variable(syn::Ident),
     Lit(KdlLit),
+}
+
+impl From<i128> for KdlValue {
+    fn from(i: i128) -> Self {
+        KdlValue::Lit(KdlLit::Integer(i))
+    }
+}
+impl From<f64> for KdlValue {
+    fn from(f: f64) -> Self {
+        KdlValue::Lit(KdlLit::Float(f))
+    }
+}
+
+impl From<bool> for KdlValue {
+    fn from(b: bool) -> Self {
+        KdlValue::Lit(KdlLit::Boolean(b))
+    }
+}
+
+impl From<(&str, proc_macro2::Span)> for KdlValue {
+    fn from((s, span): (&str, proc_macro2::Span)) -> Self {
+        KdlValue::String(KdlString::from((s, span)))
+    }
+}
+
+impl From<(String, proc_macro2::Span)> for KdlValue {
+    fn from((s, span): (String, proc_macro2::Span)) -> Self {
+        KdlValue::String(KdlString::from((s, span)))
+    }
 }
 
 impl ToTokens for KdlValue {
@@ -191,6 +231,17 @@ mod kdl_string {
             validation::validate_identifier(&ident, ValidationOptions::default())?;
             Ok(KdlString::Identifier { ident })
         }
+
+        #[cfg(test)]
+        pub(crate) fn ident(ident: impl AsRef<str>) -> Self {
+            KdlString::Identifier {
+                ident: syn::Ident::new(ident.as_ref(), proc_macro2::Span::call_site()),
+            }
+        }
+
+        pub(crate) fn new_quoted(value: String, span: proc_macro2::Span) -> Self {
+            KdlString::Quoted { value, span }
+        }
     }
 
     impl From<syn::LitStr> for KdlString {
@@ -207,6 +258,16 @@ mod kdl_string {
                 value: lit.value().to_string_lossy().into_owned(),
                 span: lit.span(),
             }
+        }
+    }
+    impl From<(String, proc_macro2::Span)> for KdlString {
+        fn from((value, span): (String, proc_macro2::Span)) -> Self {
+            KdlString::Quoted { value, span }
+        }
+    }
+    impl From<(&str, proc_macro2::Span)> for KdlString {
+        fn from((value, span): (&str, proc_macro2::Span)) -> Self {
+            (value.to_string(), span).into()
         }
     }
 
@@ -233,6 +294,39 @@ mod kdl_string {
                 Ok(kdl_string)
             } else {
                 Err(lookahead.error())
+            }
+        }
+    }
+
+    #[cfg(test)]
+    mod test {
+        use super::*;
+        use crate::ast::KdlValue;
+
+        impl From<String> for KdlString {
+            fn from(value: String) -> Self {
+                KdlString::Quoted {
+                    value,
+                    span: proc_macro2::Span::call_site(),
+                }
+            }
+        }
+        impl From<&str> for KdlString {
+            fn from(value: &str) -> Self {
+                KdlString::Quoted {
+                    value: value.to_string(),
+                    span: proc_macro2::Span::call_site(),
+                }
+            }
+        }
+        impl From<&str> for KdlValue {
+            fn from(s: &str) -> Self {
+                KdlValue::String(KdlString::from(s))
+            }
+        }
+        impl From<String> for KdlValue {
+            fn from(s: String) -> Self {
+                KdlValue::String(KdlString::from(s))
             }
         }
     }
