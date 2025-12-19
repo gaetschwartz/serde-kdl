@@ -1,7 +1,7 @@
+use super::node::NodeDeserializer;
 use crate::error::{Error, Result};
 use kdl::KdlNode;
 use serde::de::{DeserializeSeed, MapAccess};
-use super::node::NodeDeserializer;
 
 // Map deserializer
 pub(crate) struct MapDeserializer<'de> {
@@ -46,7 +46,7 @@ impl<'de> MapAccess<'de> for MapDeserializer<'de> {
             let de = NodeDeserializer::new(node);
             seed.deserialize(de)
         } else {
-            Err(Error::Serde("no current node for value".to_string()))
+            Err(Error::NoCurrentNode)
         }
     }
 }

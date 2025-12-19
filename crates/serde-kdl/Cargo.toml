@@ -19,6 +19,7 @@ macros = ["dep:serde-kdl-macros"]
 serde.workspace = true
 kdl.workspace = true
 thiserror = "2.0"
+miette = "7.4"
 serde-kdl-macros = { path = "../serde-kdl-macros", optional = true }
 
 [dev-dependencies]

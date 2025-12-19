@@ -1,8 +1,8 @@
+use super::entry::EntryDeserializer;
+use super::node::NodeDeserializer;
 use crate::error::{Error, Result};
 use kdl::{KdlEntry, KdlNode, KdlValue};
 use serde::de::{DeserializeSeed, MapAccess};
-use super::node::NodeDeserializer;
-use super::entry::EntryDeserializer;
 
 // Struct deserializer that handles both properties and children
 pub(crate) struct StructDeserializer<'de> {
@@ -91,7 +91,7 @@ impl<'de> MapAccess<'de> for StructDeserializer<'de> {
                 }
             }
         } else {
-            Err(Error::Serde("no current value for field".to_string()))
+            Err(Error::NoCurrentValue)
         }
     }
 }
@@ -136,7 +136,7 @@ impl<'de> MapAccess<'de> for RootStructDeserializer<'de> {
             let de = NodeDeserializer::new(node);
             seed.deserialize(de)
         } else {
-            Err(Error::Serde("no current node for value".to_string()))
+            Err(Error::NoCurrentNode)
         }
     }
 }
