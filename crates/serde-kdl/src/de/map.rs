@@ -46,7 +46,7 @@ impl<'de> MapAccess<'de> for MapDeserializer<'de> {
             let de = NodeDeserializer::new(node);
             seed.deserialize(de)
         } else {
-            Err(Error::Serde("no current node for value".to_string()))
+            Err(Error::NoCurrentNode)
         }
     }
 }
