@@ -79,18 +79,18 @@ pub enum Error {
     InvalidSequenceIndex(usize),
 
     #[error("Map keys must serialize to strings in KDL. Found: {0:?}")]
+    #[diagnostic(
+        code(serde_kdl::invalid_map_key),
+        help("ensure map keys serialize to string values")
+    )]
     InvalidMapKey(Box<kdl::KdlNode>),
 
     #[error("missing key when serializing map")]
-    KeyMissingInMapSerialization,
-    /// Invalid hex string when deserializing bytes.
-    #[cfg(feature = "bytes")]
-    #[error("invalid hex string: {0}")]
     #[diagnostic(
-        code(serde_kdl::invalid_hex),
-        help("ensure the string contains only valid hexadecimal characters")
+        code(serde_kdl::map_key_missing),
+        help("ensure all map entries have valid string keys")
     )]
-    InvalidHexString(String),
+    KeyMissingInMapSerialization,
 
     /// No current node available for value deserialization.
     #[error("no current node for value")]
