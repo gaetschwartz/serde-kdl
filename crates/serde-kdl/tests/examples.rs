@@ -5,7 +5,7 @@ use std::fs;
 
 /// Test that we can at least read all example KDL files and handle parsing gracefully
 #[rstest]
-fn test_parse_examples(#[files("examples/*.kdl")] path: std::path::PathBuf) {
+fn test_parse_examples(#[files("../../specs/examples/*.kdl")] path: std::path::PathBuf) {
     let content = fs::read_to_string(&path)
         .unwrap_or_else(|e| panic!("Failed to read file {:?}: {}", path, e));
 
