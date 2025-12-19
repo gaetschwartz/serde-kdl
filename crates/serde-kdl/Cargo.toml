@@ -1,0 +1,29 @@
+[package]
+name = "serde-kdl"
+description = "Serde serialization and deserialization for KDL (Kindly Document Language)"
+documentation = "https://docs.rs/serde-kdl"
+keywords = ["kdl", "serde", "serialization", "config", "parser"]
+categories = ["encoding", "parser-implementations", "config"]
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[features]
+default = ["bytes", "macros"]
+bytes = []
+macros = ["dep:serde-kdl-macros"]
+
+[dependencies]
+serde.workspace = true
+kdl.workspace = true
+thiserror = "2.0"
+serde-kdl-macros = { path = "../serde-kdl-macros", optional = true }
+
+[dev-dependencies]
+serde_json = "1.0"
+rstest = "0.26"
+rand = "0.9"
+insta = "1.44.3"
+pretty_assertions = "1.4.1"

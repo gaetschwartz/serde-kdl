@@ -1,34 +1,14 @@
 [workspace]
-members = [".", "serde-kdl-macro"]
+members = ["crates/*"]
+resolver = "2"
 
-[package]
-name = "serde-kdl"
+[workspace.package]
 version = "0.1.0"
 edition = "2021"
-description = "Serde serialization and deserialization for KDL (Kindly Document Language)"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/kdl-org/serde-kdl"
-documentation = "https://docs.rs/serde-kdl"
-keywords = ["kdl", "serde", "serialization", "config", "parser"]
-categories = ["encoding", "parser-implementations", "config"]
 authors = ["Gaëtan Schwartz"]
 
-[features]
-default = ["bytes", "macros"]
-bytes = []
-macros = ["dep:serde-kdl-macro"]
-
-[dependencies]
+[workspace.dependencies]
 serde = { version = "1.0", features = ["derive"] }
 kdl = "6.5"
-thiserror = "2.0"
-serde-kdl-macro = { path = "serde-kdl-macro", optional = true }
-rstest = "0.26"
-
-[dev-dependencies]
-serde_derive = "1.0"
-serde_json = "1.0"
-rstest = "0.26"
-rand = "0.9"
-insta = "1.44.3"
-pretty_assertions = "1.4.1"

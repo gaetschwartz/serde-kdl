@@ -1,0 +1,32 @@
+[package]
+name = "serde-kdl-macros"
+description = "Procedural macros for serde-kdl"
+documentation = "https://docs.rs/serde-kdl-macros"
+keywords = ["kdl", "serde", "serialization", "config", "parser", "macro"]
+categories = ["encoding", "parser-implementations", "config"]
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[features]
+default = ["ide-hints"]
+ide-hints = []
+
+[lib]
+proc-macro = true
+
+[dependencies]
+kdl.workspace = true
+syn = { version = "2.0", features = ["full"] }
+quote = "1.0"
+proc-macro2 = { version = "1.0", features = ["span-locations"] }
+
+[dev-dependencies]
+serde.workspace = true
+serde_json = "1.0"
+rstest = "0.26"
+trybuild = { version = "1.0.114", features = ["diff"] }
+insta = "1.44.3"
+pretty_assertions = "1.4.1"
