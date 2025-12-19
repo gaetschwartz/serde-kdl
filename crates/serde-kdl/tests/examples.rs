@@ -6,8 +6,8 @@ use std::fs;
 /// Test that we can at least read all example KDL files and handle parsing gracefully
 #[rstest]
 fn test_parse_examples(#[files("../../specs/examples/*.kdl")] path: std::path::PathBuf) {
-    let content = fs::read_to_string(&path)
-        .unwrap_or_else(|e| panic!("Failed to read file {:?}: {}", path, e));
+    let content =
+        fs::read_to_string(&path).unwrap_or_else(|e| panic!("Failed to read file {path:?}: {e}"));
 
     // Try to parse the KDL document - some examples may use older/different syntax
     let doc = content
@@ -18,14 +18,13 @@ fn test_parse_examples(#[files("../../specs/examples/*.kdl")] path: std::path::P
     let serialized = doc.to_string();
     assert!(
         !serialized.is_empty(),
-        "Serialized document should not be empty for {:?}",
-        path
+        "Serialized document should not be empty for {path:?}"
     );
 
     // Parse the serialized version to ensure roundtrip works at KDL level
     let _reparsed: kdl::KdlDocument = serialized
         .parse()
-        .unwrap_or_else(|e| panic!("Failed to reparse serialized KDL from {:?}: {}", path, e));
+        .unwrap_or_else(|e| panic!("Failed to reparse serialized KDL from {path:?}: {e}"));
 
     println!(
         "✓ Successfully processed valid KDL example: {:?}",
@@ -86,7 +85,7 @@ fn test_roundtrip_document_structure() {
     };
 
     let serialized = to_string(&document).expect("Failed to serialize document");
-    println!("Serialized document structure: {}", serialized);
+    println!("Serialized document structure: {serialized}");
 
     let deserialized: DocumentTest = from_str(&serialized).expect("Failed to deserialize document");
     assert_eq!(document, deserialized);
@@ -143,7 +142,7 @@ fn test_complex_node_structures() {
     };
 
     let serialized = to_string(&config).expect("Failed to serialize complex config");
-    println!("Serialized complex config: {}", serialized);
+    println!("Serialized complex config: {serialized}");
 
     let deserialized: ComplexConfig =
         from_str(&serialized).expect("Failed to deserialize complex config");

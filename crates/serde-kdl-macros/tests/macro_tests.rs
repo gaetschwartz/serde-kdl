@@ -118,7 +118,7 @@ mod basic_usage_tests {
             simple_node 42
         };
 
-        assert_snapshot!(doc, @"simple_node 42")
+        assert_snapshot!(doc, @"simple_node 42");
     }
 
     #[test]
@@ -127,7 +127,7 @@ mod basic_usage_tests {
             config "my-app"
         };
 
-        assert_snapshot!(doc, @"config my-app")
+        assert_snapshot!(doc, @"config my-app");
     }
 
     #[test]
@@ -136,7 +136,7 @@ mod basic_usage_tests {
             debug #true
         };
 
-        assert_snapshot!(doc, @"debug #true")
+        assert_snapshot!(doc, @"debug #true");
     }
 
     #[test]
@@ -145,7 +145,7 @@ mod basic_usage_tests {
             version 1.5
         };
 
-        assert_snapshot!(doc, @"version 1.5")
+        assert_snapshot!(doc, @"version 1.5");
     }
 
     #[test]
@@ -154,7 +154,7 @@ mod basic_usage_tests {
             connect "localhost" 5432 #true
         };
 
-        assert_snapshot!(doc, @"connect localhost 5432 #true")
+        assert_snapshot!(doc, @"connect localhost 5432 #true");
     }
 
     #[test]
@@ -163,7 +163,7 @@ mod basic_usage_tests {
             server host="localhost" port=8080
         };
 
-        assert_snapshot!(doc, @"server host=localhost port=8080")
+        assert_snapshot!(doc, @"server host=localhost port=8080");
     }
 
     #[test]
@@ -172,7 +172,7 @@ mod basic_usage_tests {
             database "postgres" version=13 ssl=#true
         };
 
-        assert_snapshot!(doc, @"database postgres version=13 ssl=#true")
+        assert_snapshot!(doc, @"database postgres version=13 ssl=#true");
     }
 }
 
@@ -188,7 +188,7 @@ mod nested_structure_tests {
         assert_snapshot!(doc, @r"
         parent{
         }
-        ")
+        ");
     }
 
     #[test]
@@ -205,7 +205,7 @@ mod nested_structure_tests {
         name my-app
         debug #true
         }
-        ")
+        ");
     }
 
     #[test]
@@ -222,7 +222,7 @@ mod nested_structure_tests {
         ssl #true
         timeout 30
         }
-        ")
+        ");
     }
 }
 
@@ -239,7 +239,7 @@ mod edge_case_tests {
         assert_snapshot!(doc, @r"
         negative -42
         negative_float -3.14
-        ")
+        ");
     }
 
     #[test]
@@ -248,7 +248,7 @@ mod edge_case_tests {
             empty_string ""
         };
 
-        assert_snapshot!(doc, @r#"empty_string """#)
+        assert_snapshot!(doc, @r#"empty_string """#);
     }
 
     #[test]
@@ -261,7 +261,7 @@ mod edge_case_tests {
         assert_snapshot!(doc, @r"
         zero 0
         zero_float 0.0
-        ")
+        ");
     }
 }
 

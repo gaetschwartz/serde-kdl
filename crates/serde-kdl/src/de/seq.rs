@@ -1,8 +1,8 @@
+use super::entry::EntryDeserializer;
+use super::node::NodeDeserializer;
 use crate::error::{Error, Result};
 use kdl::KdlNode;
 use serde::de::{DeserializeSeed, SeqAccess};
-use super::node::NodeDeserializer;
-use super::entry::EntryDeserializer;
 
 // Sequence deserializer
 pub(crate) struct SeqDeserializer<'de> {

@@ -1,11 +1,11 @@
+use super::map::MapDeserializer;
+use super::seq::SeqDeserializer;
+use super::structs::StructDeserializer;
+use super::variants::EnumDeserializer;
 use crate::error::{Error, Result};
 use kdl::{KdlNode, KdlValue};
 use serde::de::Visitor;
 use serde::Deserializer as DeserializerTrait;
-use super::seq::SeqDeserializer;
-use super::map::MapDeserializer;
-use super::structs::StructDeserializer;
-use super::variants::EnumDeserializer;
 
 /// A deserializer that works directly with a single `KdlNode`
 pub(crate) struct NodeDeserializer<'de> {
@@ -57,8 +57,11 @@ impl<'de> DeserializerTrait<'de> for NodeDeserializer<'de> {
                 visitor.visit_unit()
             } else {
                 // Check if all children are sequence items (named "-")
-                let is_sequence = children.nodes().iter().all(|n| n.name().value() == crate::DEFAULT_NODE_NAME);
-                
+                let is_sequence = children
+                    .nodes()
+                    .iter()
+                    .all(|n| n.name().value() == crate::DEFAULT_NODE_NAME);
+
                 if is_sequence {
                     // Sequence with "-" wrapper nodes
                     let seq_de = SeqDeserializer::from_children(children.nodes());
@@ -179,7 +182,7 @@ impl<'de> DeserializerTrait<'de> for NodeDeserializer<'de> {
         // If node has entries, children, or a type annotation, treat as Some
         let has_content = !self.node.entries().is_empty()
             || self.node.children().is_some_and(|c| !c.nodes().is_empty())
-            || self.node.ty().is_some();  // Type annotation means it's an enum value
+            || self.node.ty().is_some(); // Type annotation means it's an enum value
 
         if has_content {
             visitor.visit_some(self)

@@ -93,7 +93,7 @@ fn test_roundtrip_nested_structs() {
 fn test_serialize_simple_array() {
     let numbers = vec![1, 2, 3, 4, 5];
     let kdl_string = serde_kdl::to_string_pretty(&numbers).expect("Failed to serialize");
-    println!("Serialized array: {}", kdl_string);
+    println!("Serialized array: {kdl_string}");
 
     let deserialized: Vec<i32> = serde_kdl::from_str(&kdl_string).expect("Failed to deserialize");
     assert_eq!(numbers, deserialized);
@@ -108,7 +108,7 @@ fn test_serialize_string_array() {
         "kdl".to_string(),
     ];
     let kdl_string = serde_kdl::to_string_pretty(&words).expect("Failed to serialize");
-    println!("Serialized string array: {}", kdl_string);
+    println!("Serialized string array: {kdl_string}");
 
     let deserialized: Vec<String> =
         serde_kdl::from_str(&kdl_string).expect("Failed to deserialize");

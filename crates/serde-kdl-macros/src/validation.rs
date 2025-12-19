@@ -28,10 +28,7 @@ pub(crate) fn validate_type_annotation(type_annotation: &str, value: &KdlValue) 
                 // This is a reserved type but not for integers
                 Err(syn::Error::new(
                     proc_macro2::Span::call_site(),
-                    format!(
-                        "Type annotation '{}' is not valid for integer values",
-                        type_annotation
-                    ),
+                    format!("Type annotation '{type_annotation}' is not valid for integer values"),
                 ))
             }
         }
@@ -48,10 +45,7 @@ pub(crate) fn validate_type_annotation(type_annotation: &str, value: &KdlValue) 
                 // This is a reserved type but not for floats
                 Err(syn::Error::new(
                     proc_macro2::Span::call_site(),
-                    format!(
-                        "Type annotation '{}' is not valid for float values",
-                        type_annotation
-                    ),
+                    format!("Type annotation '{type_annotation}' is not valid for float values"),
                 ))
             }
         }
@@ -66,26 +60,22 @@ pub(crate) fn validate_type_annotation(type_annotation: &str, value: &KdlValue) 
                 // This is a reserved type but not for strings
                 Err(syn::Error::new(
                     proc_macro2::Span::call_site(),
-                    format!(
-                        "Type annotation '{}' is not valid for string values",
-                        type_annotation
-                    ),
+                    format!("Type annotation '{type_annotation}' is not valid for string values"),
                 ))
             }
         }
         KdlValue::Lit(KdlLit::Boolean(_) | KdlLit::Null(_)) => {
             // Boolean and null values don't have reserved type annotations,
             // but custom annotations are allowed
-            if !is_reserved_type(type_annotation) {
-                Ok(())
-            } else {
+            if is_reserved_type(type_annotation) {
                 Err(syn::Error::new(
                     proc_macro2::Span::call_site(),
                     format!(
-                        "Type annotation '{}' is reserved and not valid for this value type",
-                        type_annotation
+                        "Type annotation '{type_annotation}' is reserved and not valid for this value type"
                     ),
                 ))
+            } else {
+                Ok(())
             }
         }
         KdlValue::TypeAnnotated { value, .. } => {
@@ -526,9 +516,7 @@ mod strict {
 
                 assert!(
                     result.is_err(),
-                    "Identifier validation should fail for {}: '{}'",
-                    description,
-                    identifier
+                    "Identifier validation should fail for {description}: '{identifier}'"
                 );
             }
         }
@@ -582,7 +570,7 @@ mod strict {
                 let result = validate_identifier_string_test(identifier);
 
                 if result.is_ok() {
-                    println!("Note: Identifier '{}' was unexpectedly valid", identifier);
+                    println!("Note: Identifier '{identifier}' was unexpectedly valid");
                 }
                 // We don't assert failure here because the exact rules depend on the implementation
             }
@@ -649,8 +637,7 @@ mod strict {
             // The test should complete reasonably quickly (within 1 second)
             assert!(
                 duration.as_secs() < 1,
-                "Whitespace validation took too long: {:?}",
-                duration
+                "Whitespace validation took too long: {duration:?}"
             );
         }
 
@@ -888,8 +875,7 @@ mod strict {
                 let error_msg = result.unwrap_err().to_string();
                 assert!(
                     !error_msg.contains("newline"),
-                    "Identifier '{}' should not fail due to newline validation",
-                    ident
+                    "Identifier '{ident}' should not fail due to newline validation"
                 );
             }
         }
@@ -1004,8 +990,7 @@ mod strict {
             // The test should complete reasonably quickly (within 1 second)
             assert!(
                 duration.as_secs() < 1,
-                "Newline validation took too long: {:?}",
-                duration
+                "Newline validation took too long: {duration:?}"
             );
         }
 
@@ -1126,8 +1111,7 @@ mod strict {
                 assert_eq!(
                     is_newline(ch),
                     expected_newline,
-                    "ASCII character U+{:04X} newline detection failed",
-                    code_point
+                    "ASCII character U+{code_point:04X} newline detection failed"
                 );
             }
 
@@ -1138,8 +1122,7 @@ mod strict {
                 assert_eq!(
                     is_newline(ch),
                     expected_newline,
-                    "Latin-1 Supplement character U+{:04X} newline detection failed",
-                    code_point
+                    "Latin-1 Supplement character U+{code_point:04X} newline detection failed"
                 );
             }
 
@@ -1150,8 +1133,7 @@ mod strict {
                 assert_eq!(
                     is_newline(ch),
                     expected_newline,
-                    "General Punctuation character U+{:04X} newline detection failed",
-                    code_point
+                    "General Punctuation character U+{code_point:04X} newline detection failed"
                 );
             }
         }
@@ -1168,8 +1150,7 @@ mod strict {
                 let ch = char::from_u32(code_point).unwrap();
                 assert!(
                     is_disallowed_code_point(ch),
-                    "Control character U+{:04X} should be disallowed",
-                    code_point
+                    "Control character U+{code_point:04X} should be disallowed"
                 );
             }
         }
@@ -1182,8 +1163,7 @@ mod strict {
                 let ch = char::from_u32(code_point).unwrap();
                 assert!(
                     is_disallowed_code_point(ch),
-                    "Control character U+{:04X} should be disallowed",
-                    code_point
+                    "Control character U+{code_point:04X} should be disallowed"
                 );
             }
         }
@@ -1207,16 +1187,14 @@ mod strict {
                 if let Some(ch) = char::from_u32(code_point) {
                     assert!(
                         is_disallowed_code_point(ch),
-                        "Surrogate code point U+{:04X} should be disallowed",
-                        code_point
+                        "Surrogate code point U+{code_point:04X} should be disallowed"
                     );
                 }
                 // Even if char::from_u32 returns None, these code points should be disallowed
                 // Our implementation checks the numeric range directly
                 assert!(
                     (0xD800..=0xDFFF).contains(&code_point),
-                    "Code point U+{:04X} should be in disallowed surrogate range",
-                    code_point
+                    "Code point U+{code_point:04X} should be in disallowed surrogate range"
                 );
             }
         }
@@ -1229,8 +1207,7 @@ mod strict {
                 let ch = char::from_u32(code_point).unwrap();
                 assert!(
                     is_disallowed_code_point(ch),
-                    "Direction control character U+{:04X} should be disallowed",
-                    code_point
+                    "Direction control character U+{code_point:04X} should be disallowed"
                 );
             }
 
@@ -1239,8 +1216,7 @@ mod strict {
                 let ch = char::from_u32(code_point).unwrap();
                 assert!(
                     is_disallowed_code_point(ch),
-                    "Direction control character U+{:04X} should be disallowed",
-                    code_point
+                    "Direction control character U+{code_point:04X} should be disallowed"
                 );
             }
 
@@ -1249,8 +1225,7 @@ mod strict {
                 let ch = char::from_u32(code_point).unwrap();
                 assert!(
                     is_disallowed_code_point(ch),
-                    "Direction control character U+{:04X} should be disallowed",
-                    code_point
+                    "Direction control character U+{code_point:04X} should be disallowed"
                 );
             }
         }
@@ -1496,8 +1471,7 @@ mod strict {
             // The test should complete reasonably quickly (within 1 second)
             assert!(
                 duration.as_secs() < 1,
-                "Disallowed code point validation took too long: {:?}",
-                duration
+                "Disallowed code point validation took too long: {duration:?}"
             );
         }
 
@@ -1599,13 +1573,11 @@ mod strict {
                 let ch = char::from_u32(code_point).unwrap();
                 assert!(
                     is_disallowed_code_point(ch),
-                    "Control character U+{:04X} should be disallowed",
-                    code_point
+                    "Control character U+{code_point:04X} should be disallowed"
                 );
                 assert!(
                     !is_valid_identifier_character(ch),
-                    "Control character U+{:04X} should not be valid in identifiers",
-                    code_point
+                    "Control character U+{code_point:04X} should not be valid in identifiers"
                 );
             }
 
@@ -1614,13 +1586,11 @@ mod strict {
                 let ch = char::from_u32(code_point).unwrap();
                 assert!(
                     is_disallowed_code_point(ch),
-                    "Control character U+{:04X} should be disallowed",
-                    code_point
+                    "Control character U+{code_point:04X} should be disallowed"
                 );
                 assert!(
                     !is_valid_identifier_character(ch),
-                    "Control character U+{:04X} should not be valid in identifiers",
-                    code_point
+                    "Control character U+{code_point:04X} should not be valid in identifiers"
                 );
             }
 
@@ -1636,13 +1606,11 @@ mod strict {
                     let ch = char::from_u32(code_point).unwrap();
                     assert!(
                         is_disallowed_code_point(ch),
-                        "Direction control character U+{:04X} should be disallowed",
-                        code_point
+                        "Direction control character U+{code_point:04X} should be disallowed"
                     );
                     assert!(
                         !is_valid_identifier_character(ch),
-                        "Direction control character U+{:04X} should not be valid in identifiers",
-                        code_point
+                        "Direction control character U+{code_point:04X} should not be valid in identifiers"
                     );
                 }
             }

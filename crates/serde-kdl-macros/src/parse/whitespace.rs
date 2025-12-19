@@ -159,12 +159,11 @@ where
             if input.is_empty() {
                 if terminated {
                     break;
-                } else {
-                    return Err(syn::Error::new(
-                        span_punct,
-                        "Expected another element after punctuation, found end of input",
-                    ));
                 }
+                return Err(syn::Error::new(
+                    span_punct,
+                    "Expected another element after punctuation, found end of input",
+                ));
             }
 
             // Capture span BEFORE parsing next element

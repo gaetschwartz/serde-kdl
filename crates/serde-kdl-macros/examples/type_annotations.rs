@@ -19,7 +19,7 @@ fn main() {
         }
     };
 
-    println!("Generated KDL document: {:#?}", doc);
+    println!("Generated KDL document: {doc:#?}");
 
     // The macro generates proper KdlDocument with type annotations
     println!("\nDocument has {} nodes", doc.nodes().len());
@@ -34,7 +34,7 @@ fn main() {
 
         for entry in node.entries() {
             if let Some(ty) = entry.ty() {
-                println!("  Entry has type annotation: {}", ty);
+                println!("  Entry has type annotation: {ty}");
             }
         }
     }

@@ -76,7 +76,7 @@ pub(crate) struct KdlProperty {
 
 #[allow(dead_code)]
 impl KdlProperty {
-    /// Create a new KdlProperty
+    /// Create a new `KdlProperty`
     pub(crate) fn new(key: impl Into<KdlString>, value: impl Into<KdlValue>) -> Self {
         KdlProperty {
             key: key.into(),
@@ -340,10 +340,10 @@ impl std::fmt::Debug for KdlValue {
                 type_annotation,
                 value,
             } => {
-                write!(f, "TypeAnnotated({}, {:?})", type_annotation, value)
+                write!(f, "TypeAnnotated({type_annotation}, {value:?})")
             }
-            KdlValue::Variable(ident) => write!(f, "Variable({})", ident),
-            KdlValue::Lit(lit) => write!(f, "Lit({:?})", lit),
+            KdlValue::Variable(ident) => write!(f, "Variable({ident})"),
+            KdlValue::Lit(lit) => write!(f, "Lit({lit:?})"),
         }
     }
 }
@@ -363,14 +363,14 @@ impl KdlValue {
     #[allow(dead_code)]
     pub(crate) fn as_string(&self) -> Option<String> {
         match self {
-            KdlValue::String(s) => Some(s.value().to_string()),
+            KdlValue::String(s) => Some(s.value().clone()),
             KdlValue::TypeAnnotated { value, .. } => value.as_string(),
             _ => None,
         }
     }
 }
 
-/// Extract type annotation from a KdlValue if present
+/// Extract type annotation from a `KdlValue` if present
 pub(crate) fn extract_type_annotation(value: &KdlValue) -> Option<&str> {
     match value {
         KdlValue::TypeAnnotated {

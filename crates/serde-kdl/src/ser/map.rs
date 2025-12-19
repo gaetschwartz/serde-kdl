@@ -33,7 +33,7 @@ impl SerializeMap for SerializeMapImpl<'_> {
                 let KdlValue::String(s) = entry.value_mut() else {
                     return Err(Error::InvalidMapKey(Box::new(node)));
                 };
-                self.pending_key = Some(mem::take(s))
+                self.pending_key = Some(mem::take(s));
             } else {
                 return Err(Error::InvalidMapKey(Box::new(node)));
             }

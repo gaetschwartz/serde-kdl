@@ -1,9 +1,9 @@
+use super::node::NodeDeserializer;
+use super::seq::SeqDeserializer;
+use super::structs::StructDeserializer;
 use crate::error::{Error, Result};
 use kdl::KdlNode;
 use serde::de::{DeserializeSeed, EnumAccess, VariantAccess, Visitor};
-use super::seq::SeqDeserializer;
-use super::structs::StructDeserializer;
-use super::node::NodeDeserializer;
 
 // Enum deserializer
 pub(crate) struct EnumDeserializer<'de> {

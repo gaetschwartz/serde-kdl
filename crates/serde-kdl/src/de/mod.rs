@@ -3,16 +3,16 @@ use kdl::{KdlDocument, KdlNode, KdlValue};
 use serde::de::Visitor;
 use serde::{forward_to_deserialize_any, Deserializer as DeserializerTrait};
 
-mod seq;
+mod entry;
 mod map;
+mod node;
+mod seq;
 mod structs;
 mod variants;
-mod node;
-mod entry;
 
-use seq::SeqDeserializer;
 use map::MapDeserializer;
-use structs::{StructDeserializer, RootStructDeserializer};
+use seq::SeqDeserializer;
+use structs::{RootStructDeserializer, StructDeserializer};
 use variants::EnumDeserializer;
 
 /// A deserializer that converts KDL documents directly to Rust values.
