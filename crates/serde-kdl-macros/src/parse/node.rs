@@ -65,6 +65,18 @@ impl Parse for KdlNode {
                         break;
                     }
                     // Same line = variable reference, continue to parse as value
+                } else if input.peek(LitStr) {
+                    // Use line numbers to distinguish variables from new nodes:
+                    // - Same line as node: variable reference
+                    // - Different line: new node
+                    let ident: LitStr = input.fork().parse().unwrap();
+                    let ident_line = ident.span().start().line;
+
+                    if ident_line != node_line {
+                        // Different line = new node
+                        break;
+                    }
+                    // Same line = variable reference, continue to parse as value
                 }
 
                 // Try to parse as argument (literal value or identifier)

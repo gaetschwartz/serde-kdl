@@ -31,7 +31,11 @@ fn test_valid_identifiers() {
         "with.dots" x=10
         "plus+sign" enabled=#true
     };
-    assert_snapshot!(doc_to_string(doc), @"dash-separated arg with.dots plus+sign x=10 enabled=#true");
+    assert_snapshot!(doc_to_string(doc), @r"
+    dash-separated arg
+    with.dots x=10
+    plus+sign enabled=#true
+    ");
 
     // Unicode identifiers
     let doc = kdl! {
@@ -39,7 +43,11 @@ fn test_valid_identifiers() {
         "東京" country="Japan"
         "москва" country="Russia"
     };
-    assert_snapshot!(doc_to_string(doc), @"café 東京 москва location=Paris country=Japan country=Russia");
+    assert_snapshot!(doc_to_string(doc), @r"
+    café location=Paris
+    東京 country=Japan
+    москва country=Russia
+    ");
 }
 
 /// Test that quoted strings bypass identifier restrictions
@@ -55,7 +63,15 @@ fn test_quoted_strings_bypass_restrictions() {
         "null" "keyword"
         "(parens)" "punctuation"
     };
-    assert_snapshot!(doc_to_string(doc), @r#""123abc" starts-with-digit "+123" plus-digit "-456" minus-digit ".789" dot-digit "true" keyword "null" keyword "(parens)" punctuation"#);
+    assert_snapshot!(doc_to_string(doc), @r#"
+    "123abc" starts-with-digit
+    "+123" plus-digit
+    "-456" minus-digit
+    ".789" dot-digit
+    "true" keyword
+    "null" keyword
+    "(parens)" punctuation
+    "#);
 }
 
 /// Test identifiers in complex document structures
@@ -77,8 +93,10 @@ fn test_identifiers_in_complex_structures() {
     };
     assert_snapshot!(doc_to_string(doc), @r#"
     config environment=production {
-        database cache-settings host=localhost port=5432 {
-            enabled #true max-size 1000
+        database host=localhost port=5432
+        cache-settings {
+            enabled #true
+            max-size 1000
         }
     }
     my-app version="1.0.0" {

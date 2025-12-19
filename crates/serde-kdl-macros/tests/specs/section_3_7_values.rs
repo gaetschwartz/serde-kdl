@@ -31,13 +31,13 @@ fn test_all_value_types_as_arguments_and_properties() {
         mixed "text" 42 #true #null str="hello" num=99 bool=#false null_val=#null
     };
 
-    assert_snapshot!(doc_to_string(doc), @r#"
-    strings hello world text=value name=test
-    numbers 42 -10 3.14 -2.71 count=100 ratio=0.5
-    booleans #true #false enabled=#true debug=#false
-    nulls #null #null data=#null cache=#null
-    mixed text 42 #true #null str=hello num=99 bool=#false null_val=#null
-    "#);
+    assert_snapshot!(doc_to_string(doc), @r"
+    strings text=value name=test hello world
+    numbers count=100 ratio=0.5 42 -10 3.14 -2.71
+    booleans enabled=#true debug=#false #true #false
+    nulls data=#null cache=#null #null #null
+    mixed str=hello num=99 bool=#false null_val=#null text 42 #true #null
+    ");
 }
 
 #[test]
@@ -51,11 +51,12 @@ fn test_strings_as_node_names_and_property_keys() {
         node2 "quoted-key"="value"
     };
 
-    assert_snapshot!(doc_to_string(doc), @r#"
-    simple_node arg quoted-node arg
+    assert_snapshot!(doc_to_string(doc), @r"
+    simple_node arg
+    quoted-node arg
     node1 simple-key=value
     node2 quoted-key=value
-    "#);
+    ");
 }
 
 #[test]

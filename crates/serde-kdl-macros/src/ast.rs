@@ -48,7 +48,6 @@ pub(crate) const RESERVED_STRING_TYPES: &[&str] = &[
 
 pub(crate) const SERDE_KDL_KDL_EXPORT: ConstPath = ConstPath(&["kdl"]);
 pub(crate) const KDL_NODE: ConstPath = ConstPath(&["kdl", "KdlNode"]);
-pub(crate) const KDL_ENTRY: ConstPath = ConstPath(&["kdl", "KdlEntry"]);
 
 /// Represents a complete KDL document containing multiple nodes
 #[derive(Debug, Clone)]
@@ -172,6 +171,8 @@ impl ToTokens for KdlValue {
 }
 
 mod kdl_string {
+    use std::borrow::Cow;
+
     use crate::validation::{self, ValidationOptions};
 
     /// Represents different types of KDL strings as per Section 3.9
@@ -196,10 +197,10 @@ mod kdl_string {
     #[allow(dead_code)]
     impl KdlString {
         /// Get the string value regardless of the string type
-        pub(crate) fn value(&self) -> String {
+        pub(crate) fn value(&self) -> Cow<'_, str> {
             match &self {
-                KdlString::Identifier { ident } => ident.to_string(),
-                KdlString::Quoted { value, .. } => value.clone(),
+                KdlString::Identifier { ident } => ident.to_string().into(),
+                KdlString::Quoted { value, .. } => value.into(),
             }
         }
 
@@ -344,28 +345,6 @@ impl std::fmt::Debug for KdlValue {
             }
             KdlValue::Variable(ident) => write!(f, "Variable({ident})"),
             KdlValue::Lit(lit) => write!(f, "Lit({lit:?})"),
-        }
-    }
-}
-
-impl KdlValue {
-    /// Checks if this value is a String value (required for node names and property keys)
-    #[allow(dead_code)]
-    pub(crate) fn is_string_value(&self) -> bool {
-        match self {
-            KdlValue::String(_) => true,
-            KdlValue::TypeAnnotated { value, .. } => value.is_string_value(),
-            _ => false,
-        }
-    }
-
-    /// Returns the string representation if this is a string value
-    #[allow(dead_code)]
-    pub(crate) fn as_string(&self) -> Option<String> {
-        match self {
-            KdlValue::String(s) => Some(s.value().clone()),
-            KdlValue::TypeAnnotated { value, .. } => value.as_string(),
-            _ => None,
         }
     }
 }

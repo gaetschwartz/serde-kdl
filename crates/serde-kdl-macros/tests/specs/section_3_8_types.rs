@@ -32,8 +32,8 @@ fn test_value_type_annotations() {
     floats (f32)3.14 (f64)2.718281828 (decimal64)123.456
     strings (email)test@example.com (url)"https://example.com" (uuid)"550e8400-e29b-41d4-a716-446655440000"
     properties int=(i32)42 float=(f64)3.14 text=(regex).*
-    whitespace (u8)123 (f32)2.71 key=(email)user@test.com
-    custom (MyType)value (custom-type)42 flag=(AppBoolean)#true
+    whitespace key=(email)user@test.com (u8)123 (f32)2.71
+    custom flag=(AppBoolean)#true (MyType)value (custom-type)42
     "#);
 }
 
