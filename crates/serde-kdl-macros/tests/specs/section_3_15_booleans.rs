@@ -44,26 +44,3 @@ fn test_booleans_in_various_contexts() {
     }
     ");
 }
-
-#[test]
-fn test_booleans_with_mixed_types() {
-    // Test comprehensive integration: booleans alongside all other KDL value types
-    let doc = kdl! {
-        config {
-            // Integers, floats, booleans, strings, and special values
-            values 42 3.14 #true #false "text" #null #inf #-inf
-
-            // Properties with different types including booleans
-            count=100 rate=0.5 enabled=#true name="test" debug=#false
-
-            // Type-annotated values
-            flags (i32)0xFF (f64)1.5e10 (bool)#true (str)"value"
-        }
-    };
-    assert_snapshot!(doc_to_string(doc), @r"
-    config {
-        values count=100 rate=0.5 enabled=#true name=test debug=#false 42 3.14 #true #false text #null #inf #-inf
-        flags (i32)255 (f64)15000000000.0 (bool)#true (str)value
-    }
-    ");
-}

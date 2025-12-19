@@ -6,7 +6,6 @@
 use std::ops::RangeBounds;
 
 use crate::ast::{KdlIdentifier, KdlValue};
-use crate::parse::type_annotation::parse_type_annotation;
 use proc_macro2::Span;
 use syn::spanned::Spanned;
 use syn::Token;
@@ -23,24 +22,6 @@ pub mod bare_identifiers {
 
 impl Parse for KdlValue {
     fn parse(input: ParseStream) -> Result<Self> {
-        // Check for type annotation: (type)value
-        if input.peek(syn::token::Paren) {
-            let type_annotation = parse_type_annotation(input)?;
-
-            // Allow optional whitespace between type annotation and value
-            // (This is handled automatically by syn's parsing)
-
-            let value = Box::new(input.parse::<KdlValue>()?);
-
-            // Note: Type annotation validation is optional per KDL spec
-            // We could validate here but choose to be permissive for now
-            // validate_type_annotation(&type_annotation, &value)?;
-
-            return Ok(KdlValue::TypeAnnotated {
-                type_annotation,
-                value,
-            });
-        }
         // Check for other literals (bool, str - numbers are handled above)
         if input.peek(syn::LitStr) {
             let lit_str: syn::LitStr = input.parse()?;
@@ -62,15 +43,29 @@ impl Parse for KdlValue {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub(crate) enum KdlLit {
-    Integer(i128),
-    Float(f64),
-    Boolean(bool),
+    Integer(i128, Span),
+    Float(f64, Span),
+    Boolean(bool, Span),
     Nan(bare_identifiers::nan),
     Infinity(bare_identifiers::inf),
     NegInfinity(bare_identifiers::inf),
     Null(bare_identifiers::null),
+}
+
+impl std::fmt::Debug for KdlLit {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            KdlLit::Integer(value, _) => write!(f, "Integer({value})"),
+            KdlLit::Float(value, _) => write!(f, "Float({value})"),
+            KdlLit::Boolean(value, _) => write!(f, "Boolean({value})"),
+            KdlLit::Nan(_) => write!(f, "Nan"),
+            KdlLit::Infinity(_) => write!(f, "Infinity"),
+            KdlLit::NegInfinity(_) => write!(f, "NegInfinity"),
+            KdlLit::Null(_) => write!(f, "Null"),
+        }
+    }
 }
 
 impl KdlLit {
@@ -87,6 +82,7 @@ impl KdlLit {
             i128::from_str_radix(&s[range], radix).map_err(|e| {
                 syn::Error::new(span, format!("Failed to parse integer literal '{s}': {e}"))
             })?,
+            span,
         ))
     }
     fn parse_number(input: ParseStream) -> Result<Self> {
@@ -97,14 +93,26 @@ impl KdlLit {
                 [b'0', b'b' | b'B', ..] => Self::from_radix(repr, 2, 2.., lit_int.span()),
                 [b'0', b'o' | b'O', ..] => Self::from_radix(repr, 8, 2.., lit_int.span()),
                 [b'0', b'x' | b'X', ..] => Self::from_radix(repr, 16, 2.., lit_int.span()),
-                _ => Ok(Self::Integer(lit_int.base10_parse()?)),
+                _ => Ok(Self::Integer(lit_int.base10_parse()?, lit_int.span())),
             };
             out
         } else if input.peek(syn::LitFloat) {
             let lit_float: syn::LitFloat = input.parse()?;
-            Ok(Self::Float(lit_float.base10_parse()?))
+            Ok(Self::Float(lit_float.base10_parse()?, lit_float.span()))
         } else {
             Err(syn::Error::new(input.span(), "Expected a numeric literal"))
+        }
+    }
+
+    pub(crate) fn span(&self) -> Span {
+        match self {
+            KdlLit::Integer(_, span) => *span,
+            KdlLit::Float(_, span) => *span,
+            KdlLit::Boolean(_, span) => *span,
+            KdlLit::Nan(nan) => nan.span(),
+            KdlLit::Infinity(inf) => inf.span(),
+            KdlLit::NegInfinity(inf) => inf.span(),
+            KdlLit::Null(null) => null.span(),
         }
     }
 }
@@ -137,7 +145,7 @@ impl syn::parse::Parse for KdlLit {
             } else if input.peek(syn::LitBool) {
                 // Handle #true and #false when true/false are literals, not identifiers
                 let boolean: syn::LitBool = input.parse()?;
-                Ok(Self::Boolean(boolean.value))
+                Ok(Self::Boolean(boolean.value, boolean.span()))
             } else {
                 Err(syn::Error::new(
                     input.span(),
@@ -158,9 +166,9 @@ impl syn::parse::Parse for KdlLit {
 impl PartialEq for KdlLit {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (KdlLit::Integer(a), KdlLit::Integer(b)) => a == b,
-            (KdlLit::Float(a), KdlLit::Float(b)) => a == b,
-            (KdlLit::Boolean(a), KdlLit::Boolean(b)) => a == b,
+            (KdlLit::Integer(a, _), KdlLit::Integer(b, _)) => a == b,
+            (KdlLit::Float(a, _), KdlLit::Float(b, _)) => a == b,
+            (KdlLit::Boolean(a, _), KdlLit::Boolean(b, _)) => a == b,
             (KdlLit::Nan(_), KdlLit::Nan(_)) => true,
             (KdlLit::Infinity(_), KdlLit::Infinity(_)) => true,
             (KdlLit::NegInfinity(_), KdlLit::NegInfinity(_)) => true,

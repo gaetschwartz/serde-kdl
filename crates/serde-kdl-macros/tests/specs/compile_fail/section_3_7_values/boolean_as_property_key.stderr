@@ -1,5 +1,5 @@
-error: Expected a KDL value (string, number, boolean, null, or variable). (Expected a numeric literal)
- --> tests/specs/compile_fail/section_3_7_values/boolean_as_property_key.rs:8:30
+error: Expected a string literal or identifier.
+ --> tests/specs/compile_fail/section_3_7_values/boolean_as_property_key.rs:8:26
   |
 8 |     let _ = kdl! { node #true="value" };
-  |                              ^
+  |                          ^^^^

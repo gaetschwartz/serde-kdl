@@ -258,6 +258,6 @@ mod ide_hints {
                 Err(_) => output.push('_'),
             }
         }
-        panic!("Failed to sanitize identifier: {}", input);
+        panic!("Failed to sanitize identifier: {input}");
     }
 }

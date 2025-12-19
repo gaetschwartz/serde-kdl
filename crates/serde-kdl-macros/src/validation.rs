@@ -17,7 +17,7 @@ use syn::Result;
 #[allow(dead_code)]
 pub(crate) fn validate_type_annotation(type_annotation: &str, value: &KdlValue) -> Result<()> {
     match value {
-        KdlValue::Lit(KdlLit::Integer(_)) => {
+        KdlValue::Lit(KdlLit::Integer(_, _)) => {
             // For integers, only integer type annotations or custom (non-reserved) annotations are allowed
             if RESERVED_INTEGER_TYPES.contains(&type_annotation) {
                 Ok(())
@@ -33,7 +33,7 @@ pub(crate) fn validate_type_annotation(type_annotation: &str, value: &KdlValue) 
             }
         }
         KdlValue::Lit(
-            KdlLit::Float(_) | KdlLit::Nan(_) | KdlLit::Infinity(_) | KdlLit::NegInfinity(_),
+            KdlLit::Float(_, _) | KdlLit::Nan(_) | KdlLit::Infinity(_) | KdlLit::NegInfinity(_),
         ) => {
             // For floats, only float type annotations or custom (non-reserved) annotations are allowed
             if RESERVED_FLOAT_TYPES.contains(&type_annotation) {
@@ -64,7 +64,7 @@ pub(crate) fn validate_type_annotation(type_annotation: &str, value: &KdlValue) 
                 ))
             }
         }
-        KdlValue::Lit(KdlLit::Boolean(_) | KdlLit::Null(_)) => {
+        KdlValue::Lit(KdlLit::Boolean(_, _) | KdlLit::Null(_)) => {
             // Boolean and null values don't have reserved type annotations,
             // but custom annotations are allowed
             if is_reserved_type(type_annotation) {
@@ -77,10 +77,6 @@ pub(crate) fn validate_type_annotation(type_annotation: &str, value: &KdlValue) 
             } else {
                 Ok(())
             }
-        }
-        KdlValue::TypeAnnotated { value, .. } => {
-            // For nested type annotations, validate the inner value
-            validate_type_annotation(type_annotation, value)
         }
         KdlValue::Variable(_) => {
             // Variables are resolved at runtime, we can't validate the type annotation

@@ -45,5 +45,6 @@ pub fn kdl(input: TokenStream) -> TokenStream {
 
 pub(crate) fn kdl_impl(input: TokenStream2) -> syn::Result<TokenStream2> {
     let document = syn::parse2::<KdlDocument>(input)?;
+    // eprintln!("Parsed KDL Document: {:#?}", document);
     generate_kdl_code(&document)
 }

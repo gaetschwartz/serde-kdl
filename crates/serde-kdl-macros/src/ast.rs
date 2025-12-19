@@ -3,10 +3,11 @@
 //! This module contains all the type definitions for representing KDL documents,
 //! nodes, values, and related structures in memory.
 
-use crate::parse::value::KdlLit;
+use crate::parse::{type_annotation::MaybeAnnotated, value::KdlLit};
 pub(crate) use kdl_string::KdlIdentifier;
 use proc_macro2::TokenStream as TokenStream2;
-use quote::{format_ident, quote, ToTokens};
+use quote::{format_ident, quote, quote_spanned, ToTokens};
+use syn::spanned::Spanned as _;
 
 /// Reserved type annotations for numbers without decimals (Section 3.8.1)
 #[allow(dead_code)]
@@ -57,13 +58,15 @@ pub(crate) struct KdlDocument {
 
 /// Represents a single KDL node with optional properties, arguments, and children
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub(crate) struct KdlNode {
     pub(crate) name: KdlIdentifier,
     pub(crate) type_annotation: Option<KdlIdentifier>, // Type annotation for node name
     pub(crate) properties: Vec<KdlProperty>,
-    pub(crate) arguments: Vec<KdlValue>,
+    pub(crate) arguments: Vec<MaybeAnnotated<KdlValue>>,
     pub(crate) children: Vec<KdlNode>,
     pub(crate) has_children_block: bool,
+    pub(crate) terminator: Terminator,
 }
 
 impl KdlNode {
@@ -72,20 +75,31 @@ impl KdlNode {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum Terminator {
+    Brace,
+    Semicolon,
+    Eol,
+    Eof,
+}
+
 /// Represents a KDL property (key="value" pair)
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct KdlProperty {
     pub(crate) key: KdlIdentifier, // According to Section 3.7, property keys must be String values
-    pub(crate) value: KdlValue,
+    pub(crate) value: MaybeAnnotated<KdlValue>,
 }
 
-#[allow(dead_code)]
+#[cfg(test)]
 impl KdlProperty {
     /// Create a new `KdlProperty`
     pub(crate) fn new(key: impl Into<KdlIdentifier>, value: impl Into<KdlValue>) -> Self {
         KdlProperty {
             key: key.into(),
-            value: value.into(),
+            value: MaybeAnnotated {
+                type_annotation: None,
+                item: value.into(),
+            },
         }
     }
 }
@@ -94,40 +108,17 @@ impl KdlProperty {
 #[derive(Clone, PartialEq)]
 pub(crate) enum KdlValue {
     String(KdlIdentifier),
-    TypeAnnotated {
-        type_annotation: KdlIdentifier, // Use String instead of Ident for more flexibility
-        value: Box<KdlValue>,
-    },
-    /// A Rust variable reference (resolved at runtime)
     Variable(syn::Ident),
     Lit(KdlLit),
 }
 
 impl KdlValue {
-    pub(crate) fn type_annotation(&self) -> Option<&KdlIdentifier> {
+    pub(crate) fn span(&self) -> proc_macro2::Span {
         match self {
-            KdlValue::TypeAnnotated {
-                type_annotation, ..
-            } => Some(type_annotation),
-            _ => None,
+            KdlValue::String(s) => s.span(),
+            KdlValue::Variable(ident) => ident.span(),
+            KdlValue::Lit(lit) => lit.span(),
         }
-    }
-}
-
-impl From<i128> for KdlValue {
-    fn from(i: i128) -> Self {
-        KdlValue::Lit(KdlLit::Integer(i))
-    }
-}
-impl From<f64> for KdlValue {
-    fn from(f: f64) -> Self {
-        KdlValue::Lit(KdlLit::Float(f))
-    }
-}
-
-impl From<bool> for KdlValue {
-    fn from(b: bool) -> Self {
-        KdlValue::Lit(KdlLit::Boolean(b))
     }
 }
 
@@ -148,39 +139,31 @@ impl ToTokens for KdlValue {
         match self {
             KdlValue::String(kdl_string) => {
                 let s = kdl_string.value();
-                quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::String(#s.to_string()) }
+                quote_spanned! {kdl_string.span()=> #SERDE_KDL_KDL_EXPORT::KdlValue::String(#s.to_string()) }
             }
-            KdlValue::Lit(KdlLit::Integer(i)) => {
-                quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Integer(#i) }
+            KdlValue::Lit(KdlLit::Integer(i, span)) => {
+                quote_spanned! {*span=> #SERDE_KDL_KDL_EXPORT::KdlValue::Integer(#i) }
             }
-            KdlValue::Lit(KdlLit::Float(f)) => {
-                quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Float(#f) }
+            KdlValue::Lit(KdlLit::Float(f, span)) => {
+                quote_spanned! {*span=> #SERDE_KDL_KDL_EXPORT::KdlValue::Float(#f) }
             }
-            KdlValue::Lit(KdlLit::Boolean(b)) => {
-                quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Bool(#b) }
+            KdlValue::Lit(KdlLit::Boolean(b, span)) => {
+                quote_spanned! {*span=> #SERDE_KDL_KDL_EXPORT::KdlValue::Bool(#b) }
             }
-            KdlValue::Lit(KdlLit::Null(_)) => quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Null },
-            KdlValue::Lit(KdlLit::Nan(_)) => {
-                quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::NAN) }
+            KdlValue::Lit(KdlLit::Null(n)) => quote_spanned! {n.span()=> #SERDE_KDL_KDL_EXPORT::KdlValue::Null },
+            KdlValue::Lit(KdlLit::Nan(n)) => {
+                quote_spanned! {n.span()=> #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::NAN) }
             }
-            KdlValue::Lit(KdlLit::Infinity(_)) => {
-                quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::INFINITY) }
+            KdlValue::Lit(KdlLit::Infinity(n)) => {
+                quote_spanned! {n.span()=> #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::INFINITY) }
             }
-            KdlValue::Lit(KdlLit::NegInfinity(_)) => {
-                quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::NEG_INFINITY) }
-            }
-            KdlValue::TypeAnnotated {
-                type_annotation: _,
-                value,
-            } => {
-                // For type-annotated values, we just generate the inner value
-                // The type annotation will be handled at the entry level
-                value.to_token_stream()
+            KdlValue::Lit(KdlLit::NegInfinity(n)) => {
+                quote_spanned! {n.span()=> #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::NEG_INFINITY) }
             }
             KdlValue::Variable(ident) => {
                 // Use KdlValue::from() - user's variable type must implement Into<KdlValue>
                 // kdl::KdlValue implements From for: i128, f64, &str, String, bool, Option<T>
-                quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::from(#ident) }
+                quote_spanned! {ident.span()=> #SERDE_KDL_KDL_EXPORT::KdlValue::from(#ident) }
             }
         }
         .to_tokens(tokens);
@@ -190,7 +173,7 @@ impl ToTokens for KdlValue {
 mod kdl_string {
     use super::*;
     use crate::validation::{self, ValidationOptions};
-    use quote::ToTokens;
+    use quote::{quote_spanned, ToTokens};
     use std::borrow::Cow;
 
     /// Represents different types of KDL strings as per Section 3.9
@@ -271,7 +254,11 @@ mod kdl_string {
 
     impl ToTokens for KdlIdentifier {
         fn to_tokens(&self, tokens: &mut TokenStream2) {
-            self.value().to_tokens(tokens);
+            let value = self.value();
+            quote_spanned! {self.span()=>
+                #value
+            }
+            .to_tokens(tokens);
         }
     }
 
@@ -310,6 +297,36 @@ mod kdl_string {
         }
     }
 
+    impl TryFrom<KdlValue> for KdlIdentifier {
+        type Error = syn::Error;
+
+        fn try_from(value: KdlValue) -> syn::Result<Self> {
+            match value {
+                KdlValue::String(kdl_string) => Ok(kdl_string),
+                KdlValue::Variable(ident) => KdlIdentifier::new_identifier(ident),
+                _ => Err(syn::Error::new(
+                    value.span(),
+                    "Expected a string literal or identifier.",
+                )),
+            }
+        }
+    }
+
+    impl TryFrom<MaybeAnnotated<KdlValue>> for KdlIdentifier {
+        type Error = syn::Error;
+
+        fn try_from(value: MaybeAnnotated<KdlValue>) -> syn::Result<Self> {
+            let item = KdlIdentifier::try_from(value.item)?;
+            if let Some(type_ann) = value.type_annotation {
+                return Err(syn::Error::new(
+                    type_ann.span(),
+                    "Type annotations are not allowed on property keys.",
+                ));
+            }
+            Ok(item)
+        }
+    }
+
     impl syn::parse::Parse for KdlIdentifier {
         fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
             let lookahead = input.lookahead1();
@@ -319,7 +336,6 @@ mod kdl_string {
                 let kdl_string = KdlIdentifier::from(lit_str);
                 Ok(kdl_string)
             } else if input.peek(syn::Ident) {
-                // Otherwise parse as identifier (bare strings)
                 let ident: syn::Ident = input.parse()?;
                 let kdl_string = KdlIdentifier::new_identifier(ident)?;
                 Ok(kdl_string)
@@ -360,6 +376,22 @@ mod kdl_string {
                 KdlValue::String(KdlIdentifier::from(s))
             }
         }
+        impl From<i128> for KdlValue {
+            fn from(i: i128) -> Self {
+                KdlValue::Lit(KdlLit::Integer(i, proc_macro2::Span::call_site()))
+            }
+        }
+        impl From<f64> for KdlValue {
+            fn from(f: f64) -> Self {
+                KdlValue::Lit(KdlLit::Float(f, proc_macro2::Span::call_site()))
+            }
+        }
+
+        impl From<bool> for KdlValue {
+            fn from(b: bool) -> Self {
+                KdlValue::Lit(KdlLit::Boolean(b, proc_macro2::Span::call_site()))
+            }
+        }
     }
 }
 
@@ -367,12 +399,6 @@ impl std::fmt::Debug for KdlValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             KdlValue::String(s) => write!(f, "String({})", s.value()),
-            KdlValue::TypeAnnotated {
-                type_annotation,
-                value,
-            } => {
-                write!(f, "TypeAnnotated({type_annotation}, {value:?})")
-            }
             KdlValue::Variable(ident) => write!(f, "Variable({ident})"),
             KdlValue::Lit(lit) => write!(f, "Lit({lit:?})"),
         }

@@ -44,7 +44,7 @@ impl<T: syn::parse::Parse> syn::parse::Parse for Commented<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast::*;
+    use crate::{ast::*, parse::type_annotation::MaybeAnnotated};
     use quote::quote;
 
     #[test]
@@ -65,6 +65,9 @@ mod tests {
             vec![KdlProperty::new(KdlIdentifier::ident("key"), "value")]
         );
 
-        assert_eq!(parsed.item.arguments, vec![KdlValue::from(42)]);
+        assert_eq!(
+            parsed.item.arguments,
+            vec![MaybeAnnotated::new(KdlValue::from(42), None)]
+        );
     }
 }

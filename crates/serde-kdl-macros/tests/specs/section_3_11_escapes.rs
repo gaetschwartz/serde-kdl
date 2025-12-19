@@ -53,8 +53,7 @@ fn test_escapes_in_all_contexts() {
     let doc = kdl! {
         "node\nname" "arg\ttab" "quote\"here" key="value\nhere" prop="\u{1F600}"
         escaped_node {
-            "child\u{41}" "nested\narg"
-            "property\tkey"="backslash\u{005C}test"
+            "child\u{41}" "nested\narg" "property\tkey"="backslash\u{005C}test"
         }
     };
 
