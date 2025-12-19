@@ -1,7 +1,6 @@
-use super::entry::EntryDeserializer;
 use super::node::NodeDeserializer;
 use crate::error::{Error, Result};
-use kdl::{KdlEntry, KdlNode, KdlValue};
+use kdl::KdlNode;
 use serde::de::{DeserializeSeed, MapAccess};
 
 // Struct deserializer that only handles child nodes (no properties)

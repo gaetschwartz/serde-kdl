@@ -101,6 +101,14 @@ pub enum Error {
     #[error("no current value for field")]
     #[diagnostic(code(serde_kdl::no_current_value))]
     NoCurrentValue,
+
+    /// Enum variant missing required type annotation.
+    #[error("enum variant missing type annotation")]
+    #[diagnostic(
+        code(serde_kdl::variant_without_type_annotation),
+        help("add a type annotation to specify the enum variant, e.g., (VariantName)field_name")
+    )]
+    VariantWithoutTypeAnnotation,
 }
 
 impl serde::ser::Error for Error {

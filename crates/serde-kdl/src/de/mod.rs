@@ -282,9 +282,7 @@ impl<'de> DeserializerTrait<'de> for &mut Deserializer<'de> {
         }
 
         // No type annotation found - error
-        Err(Error::Serde(
-            "enum requires type annotation, e.g., (Variant)field_name".to_string(),
-        ))
+        Err(Error::VariantWithoutTypeAnnotation)
     }
 
     forward_to_deserialize_any!(
