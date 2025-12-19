@@ -85,7 +85,7 @@ where
 ///
 /// ```
 /// use serde::Serialize;
-/// use serde_kdl::to_pretty_string;
+/// use serde_kdl::to_string_pretty;
 ///
 /// #[derive(Serialize)]
 /// struct Server {
@@ -107,7 +107,7 @@ where
 ///     debug: true,
 /// };
 ///
-/// let pretty = to_pretty_string(&config).unwrap();
+/// let pretty = to_string_pretty(&config).unwrap();
 /// assert_eq!(pretty, "\
 /// server host=localhost port=8080
 /// debug #true
@@ -259,7 +259,7 @@ where
 ///
 /// // Create document with macro
 /// let doc = kdl! {
-///     AppSettings name="my-app" debug=true workers=4
+///     AppSettings name="my-app" debug=#true workers=4
 /// };
 ///
 /// // Deserialize directly from the document
@@ -281,7 +281,7 @@ where
 /// }
 ///
 /// // Start with macro-generated base
-/// let mut doc = kdl! {
+/// let doc = kdl! {
 ///     Config name="base-app" version="1.0.0"
 /// };
 ///
