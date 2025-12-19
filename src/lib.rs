@@ -115,7 +115,7 @@ where
 /// ```
 ///
 /// Compare with [`to_string`] which produces compact output without formatting.
-pub fn to_pretty_string<T>(value: &T) -> Result<String>
+pub fn to_string_pretty<T>(value: &T) -> Result<String>
 where
     T: serde::Serialize,
 {

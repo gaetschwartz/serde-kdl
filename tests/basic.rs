@@ -115,7 +115,7 @@ fn test_serde_cargo() {
         ]),
         features: vec!["feature3".to_string(), "feature4".to_string()],
     };
-    let pretty = serde_kdl::to_pretty_string(&cargo).unwrap();
+    let pretty = serde_kdl::to_string_pretty(&cargo).unwrap();
     assert_snapshot!(pretty, @r#"
     package name=my_crate version="0.1.0"
     dependencies {
