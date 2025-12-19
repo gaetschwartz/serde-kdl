@@ -34,10 +34,6 @@ pub enum Error {
 
     #[error("invalid sequence index: {0}")]
     InvalidSequenceIndex(usize),
-
-    #[cfg(feature = "bytes")]
-    #[error("invalid hex string: {0}")]
-    InvalidHexString(String),
 }
 
 impl serde::ser::Error for Error {

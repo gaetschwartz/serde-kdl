@@ -2,30 +2,20 @@ use crate::error::{Error, Result};
 use kdl::KdlValue;
 use serde::de::Visitor;
 use serde::{forward_to_deserialize_any, Deserializer as DeserializerTrait};
-#[cfg(feature = "bytes")]
-use super::seq::BytesSeqDeserializer;
 
 /// A deserializer that works directly with a single `KdlEntry`
 /// This is useful for deserializing sequence elements that could be enums
-pub(crate) enum EntryDeserializer<'de> {
-    Borrowed(&'de kdl::KdlEntry),
-    Owned(Box<kdl::KdlEntry>),
+pub(crate) struct EntryDeserializer<'de> {
+    entry: &'de kdl::KdlEntry,
 }
 
 impl<'de> EntryDeserializer<'de> {
     pub(crate) fn new(entry: &'de kdl::KdlEntry) -> Self {
-        Self::Borrowed(entry)
-    }
-
-    pub(crate) fn new_owned(entry: kdl::KdlEntry) -> Self {
-        Self::Owned(Box::new(entry))
+        Self { entry }
     }
 
     fn entry(&self) -> &kdl::KdlEntry {
-        match self {
-            Self::Borrowed(entry) => entry,
-            Self::Owned(entry) => entry.as_ref(),
-        }
+        self.entry
     }
 }
 
@@ -84,63 +74,22 @@ impl<'de> DeserializerTrait<'de> for EntryDeserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        #[cfg(feature = "bytes")]
-        {
-            match self.entry().value() {
-                KdlValue::String(s) => {
-                    let bytes = crate::hex::decode_hex(s)?;
-                    visitor.visit_bytes(&bytes)
-                }
-                _ => Err(Error::UnsupportedType(
-                    "bytes must be represented as hex strings".to_string(),
-                )),
-            }
-        }
-        #[cfg(not(feature = "bytes"))]
-        {
-            let _ = visitor; // Silence unused parameter warning
-            Err(Error::UnsupportedType("byte arrays".to_string()))
-        }
+        let _ = visitor;
+        Err(Error::UnsupportedType("byte arrays".to_string()))
     }
 
     fn deserialize_byte_buf<V>(self, visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        #[cfg(feature = "bytes")]
-        {
-            match self.entry().value() {
-                KdlValue::String(s) => {
-                    let bytes = crate::hex::decode_hex(s)?;
-                    visitor.visit_byte_buf(bytes)
-                }
-                _ => Err(Error::UnsupportedType(
-                    "bytes must be represented as hex strings".to_string(),
-                )),
-            }
-        }
-        #[cfg(not(feature = "bytes"))]
-        {
-            let _ = visitor; // Silence unused parameter warning
-            Err(Error::UnsupportedType("byte arrays".to_string()))
-        }
+        let _ = visitor;
+        Err(Error::UnsupportedType("byte arrays".to_string()))
     }
 
     fn deserialize_seq<V>(self, visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        #[cfg(feature = "bytes")]
-        {
-            // Check if this is a hex string that should be deserialized as bytes
-            if let KdlValue::String(s) = self.entry().value() {
-                // Try to decode as hex - if successful, use bytes deserializer
-                if let Ok(bytes) = crate::hex::decode_hex(s) {
-                    return visitor.visit_seq(BytesSeqDeserializer::new(bytes));
-                }
-            }
-        }
-
         // Fallback to normal any deserialization
         self.deserialize_any(visitor)
     }

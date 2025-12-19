@@ -2,12 +2,6 @@ mod de;
 mod error;
 mod ser;
 
-#[cfg(feature = "bytes")]
-mod hex;
-
-#[cfg(feature = "bytes")]
-pub mod hex_serde;
-
 pub use de::Deserializer;
 pub use error::{Error, Result};
 pub use ser::Serializer;
@@ -109,7 +103,10 @@ where
 ///
 /// let pretty = to_string_pretty(&config).unwrap();
 /// assert_eq!(pretty, "\
-/// server host=localhost port=8080
+/// server {
+///     host localhost
+///     port 8080
+/// }
 /// debug #true
 /// ");
 /// ```
@@ -212,7 +209,11 @@ where
 ///     enabled: bool,
 /// }
 ///
-/// let kdl_string = r#"Config name="web-server" port=8080 enabled=#true"#;
+/// let kdl_string = r#"
+/// name "web-server"
+/// port 8080
+/// enabled #true
+/// "#;
 /// let config: Config = from_str(kdl_string).unwrap();
 ///
 /// assert_eq!(config.name, "web-server");
@@ -257,9 +258,11 @@ where
 ///     workers: u32,
 /// }
 ///
-/// // Create document with macro
+/// // Create document with macro (using new format: fields as child nodes)
 /// let doc = kdl! {
-///     AppSettings name="my-app" debug=#true workers=4
+///     name "my-app"
+///     debug #true
+///     workers 4
 /// };
 ///
 /// // Deserialize directly from the document
@@ -280,9 +283,10 @@ where
 ///     version: String,
 /// }
 ///
-/// // Start with macro-generated base
+/// // Create document with macro (fields as child nodes with values as arguments)
 /// let doc = kdl! {
-///     Config name="base-app" version="1.0.0"
+///     name "base-app"
+///     version "1.0.0"
 /// };
 ///
 /// // You can deserialize from the complete document

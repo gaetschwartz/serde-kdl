@@ -57,16 +57,29 @@ fn test_roundtrip_nested_structs() {
     let kdl_string = serde_kdl::to_string_pretty(&original).expect("Failed to serialize");
 
     assert_snapshot!(kdl_string, @r#"
-    database host=db.example.com port=5432 ssl=#false {
-        flags read_only replica
+    database {
+        host db.example.com
+        port 5432
+        ssl #false
+        flags {
+            - read_only
+            - replica
+        }
     }
     servers {
-        Server {
+        - {
             routes {
-                Route path="/api" method=GET
+                - {
+                    path "/api"
+                    method GET
+                }
             }
-            config use_tls=#true {
-                features http2 compression
+            config {
+                use_tls #true
+                features {
+                    - http2
+                    - compression
+                }
             }
         }
     }

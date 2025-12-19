@@ -53,46 +53,20 @@ impl<'de> SeqAccess<'de> for SeqDeserializer<'de> {
             }
             SeqMode::Children => {
                 if let Some(child) = self.children.next() {
-                    let de = NodeDeserializer::new(child);
-                    seed.deserialize(de).map(Some)
+                    // Check if this is a "-" wrapper node
+                    if child.name().value() == "-" {
+                        // For "-" nodes, deserialize from the node's content
+                        let de = NodeDeserializer::new(child);
+                        seed.deserialize(de).map(Some)
+                    } else {
+                        // Regular child node
+                        let de = NodeDeserializer::new(child);
+                        seed.deserialize(de).map(Some)
+                    }
                 } else {
                     Ok(None)
                 }
             }
-        }
-    }
-}
-
-/// A specialized sequence deserializer for converting hex strings to bytes
-#[cfg(feature = "bytes")]
-pub(crate) struct BytesSeqDeserializer {
-    bytes: Vec<u8>,
-    index: usize,
-}
-
-#[cfg(feature = "bytes")]
-impl BytesSeqDeserializer {
-    pub(crate) fn new(bytes: Vec<u8>) -> Self {
-        Self { bytes, index: 0 }
-    }
-}
-
-#[cfg(feature = "bytes")]
-impl<'de> SeqAccess<'de> for BytesSeqDeserializer {
-    type Error = Error;
-
-    fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>>
-    where
-        T: DeserializeSeed<'de>,
-    {
-        if self.index < self.bytes.len() {
-            let byte = self.bytes[self.index];
-            self.index += 1;
-            use serde::de::value::U8Deserializer;
-            seed.deserialize(U8Deserializer::<Error>::new(byte))
-                .map(Some)
-        } else {
-            Ok(None)
         }
     }
 }

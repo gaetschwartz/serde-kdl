@@ -1,15 +1,12 @@
 use crate::error::{Error, Result};
-use kdl::{KdlDocument, KdlEntry, KdlNode, KdlValue};
+use kdl::{KdlDocument, KdlEntry, KdlNode};
 use serde::ser::SerializeSeq;
 use super::Serializer;
 
 // Sequence serializer
 pub struct SerializeSeqImpl<'a> {
     pub(crate) ser: &'a mut Serializer,
-    pub(crate) items: Vec<KdlValue>,
     pub(crate) child_nodes: Vec<KdlNode>,
-    #[cfg(feature = "bytes")]
-    pub(crate) bytes_candidate: Option<Vec<u8>>,
 }
 
 impl SerializeSeq for SerializeSeqImpl<'_> {
@@ -26,99 +23,48 @@ impl SerializeSeq for SerializeSeqImpl<'_> {
 
         let document = item_serializer.into_document();
         if let Some(node) = document.nodes().first() {
-            // Check if this is a complex structure (has multiple entries, properties, or children)
-            // Also consider enum variants (nodes with meaningful names) as complex
-            let is_complex = node.entries().len() > 1
-                || !node.entries().iter().all(|e| e.name().is_none()) // has properties
-                || node.children().is_some_and(|c| !c.nodes().is_empty()) // has children
-                || node.name().value() != crate::DEFAULT_NODE_NAME; // enum variants or other meaningful node names
+            // Create a new node with "-" as the name
+            let mut wrapper_node = KdlNode::new("-");
 
-            if is_complex {
-                // Complex structure - store as child node
-                self.child_nodes.push(node.clone());
-                #[cfg(feature = "bytes")]
-                {
-                    // Complex elements mean this can't be a simple byte array
-                    self.bytes_candidate = None;
-                }
-            } else if let Some(entry) = node.entries().first() {
-                // Simple value - store in items for inline representation
-                let value = entry.value().clone();
+            // Copy all entries (arguments) from the serialized value
+            for entry in node.entries() {
+                wrapper_node.entries_mut().push(entry.clone());
+            }
 
-                #[cfg(feature = "bytes")]
-                {
-                    // Check if this value could be a byte (u8 in range 0-255)
-                    if let Some(ref mut bytes) = self.bytes_candidate {
-                        if let KdlValue::Integer(i) = &value {
-                            if *i >= 0 && *i <= 255 {
-                                bytes.push(*i as u8);
-                            } else {
-                                // Value out of u8 range, not a byte array
-                                self.bytes_candidate = None;
-                            }
-                        } else {
-                            // Non-integer value, not a byte array
-                            self.bytes_candidate = None;
-                        }
-                    }
-                }
-
-                self.items.push(value);
-            } else {
-                // Node without value - create a null
-                self.items.push(KdlValue::Null);
-                #[cfg(feature = "bytes")]
-                {
-                    // Null values mean this can't be a simple byte array
-                    self.bytes_candidate = None;
+            // Copy children if any (for complex structures)
+            if let Some(node_children) = node.children() {
+                if !node_children.nodes().is_empty() {
+                    *wrapper_node.children_mut() = Some(node_children.clone());
                 }
             }
+
+            // Copy type annotation if present (for enum variants)
+            if let Some(ty) = node.ty() {
+                wrapper_node.set_ty(ty.clone());
+            }
+
+            self.child_nodes.push(wrapper_node);
         } else {
-            self.items.push(KdlValue::Null);
-            #[cfg(feature = "bytes")]
-            {
-                // Null values mean this can't be a simple byte array
-                self.bytes_candidate = None;
-            }
+            // Empty document - create a "-" node with null value
+            let mut wrapper_node = KdlNode::new("-");
+            wrapper_node.entries_mut().push(KdlEntry::new(kdl::KdlValue::Null));
+            self.child_nodes.push(wrapper_node);
         }
 
         Ok(())
     }
 
     fn end(self) -> Result<Self::Ok> {
+        // Create the parent node with "-" as the name
         let mut node = KdlNode::new(crate::DEFAULT_NODE_NAME);
 
-        #[cfg(feature = "bytes")]
-        {
-            // Check if this sequence is a byte array that should be serialized as hex
-            if let Some(bytes) = self.bytes_candidate {
-                if !bytes.is_empty()
-                    && self.child_nodes.is_empty()
-                    && self.items.len() == bytes.len()
-                {
-                    // This looks like a byte array - serialize as hex string instead
-                    let hex_string = crate::hex::encode_hex(&bytes);
-                    node.entries_mut()
-                        .push(KdlEntry::new(KdlValue::String(hex_string)));
-                    self.ser.current_node = Some(node);
-                    return Ok(());
-                }
-            }
+        // If we have child nodes, add them in a children block
+        // Even if empty, we still create an empty children block for empty sequences
+        let mut child_doc = KdlDocument::new();
+        for child in self.child_nodes {
+            child_doc.nodes_mut().push(child);
         }
-
-        // Add simple values as entries
-        for item in self.items {
-            node.entries_mut().push(KdlEntry::new(item));
-        }
-
-        // Add complex structures as children
-        if !self.child_nodes.is_empty() {
-            let mut child_doc = KdlDocument::new();
-            for child in self.child_nodes {
-                child_doc.nodes_mut().push(child);
-            }
-            *node.children_mut() = Some(child_doc);
-        }
+        *node.children_mut() = Some(child_doc);
 
         self.ser.current_node = Some(node);
         Ok(())

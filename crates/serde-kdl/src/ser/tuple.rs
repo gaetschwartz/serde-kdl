@@ -76,8 +76,8 @@ impl SerializeTupleStruct for SerializeTupleStructImpl<'_> {
     }
 
     fn end(self) -> Result<Self::Ok> {
-        // Add the tuple values as entries to the current struct node
-        if let Some((_, children, _)) = self.ser.node_stack.last_mut() {
+        // Add the tuple values as entries to the current node
+        if let Some((_name, children)) = self.ser.node_stack.last_mut() {
             let mut node = KdlNode::new("tuple");
             for item in self.items {
                 node.entries_mut().push(KdlEntry::new(item));
@@ -91,6 +91,7 @@ impl SerializeTupleStruct for SerializeTupleStructImpl<'_> {
 // Tuple variant serializer
 pub struct SerializeTupleVariantImpl<'a> {
     pub(crate) ser: &'a mut Serializer,
+    pub(crate) variant: String,
     pub(crate) items: Vec<KdlValue>,
 }
 
@@ -120,13 +121,16 @@ impl SerializeTupleVariant for SerializeTupleVariantImpl<'_> {
     }
 
     fn end(self) -> Result<Self::Ok> {
-        if let Some((_, children, _)) = self.ser.node_stack.last_mut() {
-            let mut node = KdlNode::new("tuple");
-            for item in self.items {
-                node.entries_mut().push(KdlEntry::new(item));
-            }
-            children.push(node);
+        // Create a node with the variant as type annotation
+        let mut node = KdlNode::new(crate::DEFAULT_NODE_NAME);
+        node.set_ty(kdl::KdlIdentifier::from(self.variant.as_str()));
+
+        // Add all tuple items as arguments
+        for item in self.items {
+            node.entries_mut().push(KdlEntry::new(item));
         }
-        self.ser.pop_node_context()
+
+        self.ser.current_node = Some(node);
+        Ok(())
     }
 }

@@ -3,8 +3,6 @@ use kdl::{KdlNode, KdlValue};
 use serde::de::Visitor;
 use serde::Deserializer as DeserializerTrait;
 use super::seq::SeqDeserializer;
-#[cfg(feature = "bytes")]
-use super::seq::BytesSeqDeserializer;
 use super::map::MapDeserializer;
 use super::structs::StructDeserializer;
 use super::variants::EnumDeserializer;
@@ -72,35 +70,22 @@ impl<'de> DeserializerTrait<'de> for NodeDeserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        // Check for single string entry that might be hex bytes
-        #[cfg(feature = "bytes")]
-        {
-            if self.node.entries().len() == 1 {
-                if let Some(entry) = self.node.entries().first() {
-                    if entry.name().is_none() {
-                        // Not a property
-                        if let KdlValue::String(s) = entry.value() {
-                            // Try to decode as hex - if successful, use bytes deserializer
-                            if let Ok(bytes) = crate::hex::decode_hex(s) {
-                                return visitor.visit_seq(BytesSeqDeserializer::new(bytes));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
+        // Sequences are in children with "-" nodes, or from entries for tuples
         if !self.node.entries().is_empty() {
+            // Tuple-like sequence from entries
             let seq_de = SeqDeserializer::from_entries(self.node.entries());
             visitor.visit_seq(seq_de)
         } else if let Some(children) = self.node.children() {
             if children.nodes().is_empty() {
+                // Empty collection
                 visitor.visit_seq(SeqDeserializer::from_entries(&[]))
             } else {
+                // Sequence from children (may include "-" wrapper nodes)
                 let seq_de = SeqDeserializer::from_children(children.nodes());
                 visitor.visit_seq(seq_de)
             }
         } else {
+            // Empty sequence
             visitor.visit_seq(SeqDeserializer::from_entries(&[]))
         }
     }
@@ -123,78 +108,35 @@ impl<'de> DeserializerTrait<'de> for NodeDeserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        #[cfg(feature = "bytes")]
-        {
-            if let Some(entry) = self.node.entries().first() {
-                match entry.value() {
-                    KdlValue::String(s) => {
-                        let bytes = crate::hex::decode_hex(s)?;
-                        visitor.visit_bytes(&bytes)
-                    }
-                    _ => Err(Error::UnsupportedType(
-                        "bytes must be represented as hex strings".to_string(),
-                    )),
-                }
-            } else {
-                Err(Error::UnsupportedType(
-                    "no value found for bytes".to_string(),
-                ))
-            }
-        }
-        #[cfg(not(feature = "bytes"))]
-        {
-            let _ = visitor; // Silence unused parameter warning
-            Err(Error::UnsupportedType("byte arrays".to_string()))
-        }
+        let _ = visitor;
+        Err(Error::UnsupportedType("byte arrays".to_string()))
     }
 
     fn deserialize_byte_buf<V>(self, visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        #[cfg(feature = "bytes")]
-        {
-            if let Some(entry) = self.node.entries().first() {
-                match entry.value() {
-                    KdlValue::String(s) => {
-                        let bytes = crate::hex::decode_hex(s)?;
-                        visitor.visit_byte_buf(bytes)
-                    }
-                    _ => Err(Error::UnsupportedType(
-                        "bytes must be represented as hex strings".to_string(),
-                    )),
-                }
-            } else {
-                Err(Error::UnsupportedType(
-                    "no value found for bytes".to_string(),
-                ))
-            }
-        }
-        #[cfg(not(feature = "bytes"))]
-        {
-            let _ = visitor; // Silence unused parameter warning
-            Err(Error::UnsupportedType("byte arrays".to_string()))
-        }
+        let _ = visitor;
+        Err(Error::UnsupportedType("byte arrays".to_string()))
     }
 
     fn deserialize_enum<V>(
         self,
         _name: &'static str,
-        variants: &'static [&'static str],
+        _variants: &'static [&'static str],
         visitor: V,
     ) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        let node_name = self.node.name().value();
-
-        // If node name is a known variant, use it
-        if variants.contains(&node_name) {
-            return visitor.visit_enum(EnumDeserializer::new(node_name, self.node));
+        // Check for type annotation (e.g., (VariantName)field_name)
+        if let Some(ty) = self.node.ty() {
+            let variant_name = ty.value();
+            return visitor.visit_enum(EnumDeserializer::new(variant_name, self.node));
         }
 
-        // Otherwise check if the node has a single string value - use it as variant name
-        // This handles the transparent format: `field_name VariantName`
+        // Check if the node has a single string value - use it as variant name
+        // This handles unit enums serialized as strings
         if self.node.entries().len() == 1 {
             if let Some(entry) = self.node.entries().first() {
                 if entry.name().is_none() {
@@ -206,28 +148,34 @@ impl<'de> DeserializerTrait<'de> for NodeDeserializer<'de> {
             }
         }
 
-        // Fallback to node name as variant
-        visitor.visit_enum(EnumDeserializer::new(node_name, self.node))
+        // No type annotation found - error
+        Err(Error::Serde(
+            "enum requires type annotation, e.g., (Variant)field_name".to_string(),
+        ))
     }
 
     fn deserialize_option<V>(self, visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
-        // Check if the first entry is Null - that means None
-        if let Some(entry) = self.node.entries().first() {
-            if matches!(entry.value(), KdlValue::Null) {
-                return visitor.visit_none();
+        // Check if node has a single #null argument -> None
+        if self.node.entries().len() == 1 {
+            if let Some(entry) = self.node.entries().first() {
+                if matches!(entry.value(), KdlValue::Null) {
+                    return visitor.visit_none();
+                }
             }
         }
 
-        // If node has entries or children, treat as Some
+        // If node has entries, children, or a type annotation, treat as Some
         let has_content = !self.node.entries().is_empty()
-            || self.node.children().is_some_and(|c| !c.nodes().is_empty());
+            || self.node.children().is_some_and(|c| !c.nodes().is_empty())
+            || self.node.ty().is_some();  // Type annotation means it's an enum value
 
         if has_content {
             visitor.visit_some(self)
         } else {
+            // Empty node means None
             visitor.visit_none()
         }
     }

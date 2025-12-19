@@ -13,8 +13,8 @@ pub use tuple::{SerializeTupleImpl, SerializeTupleStructImpl, SerializeTupleVari
 pub use map::SerializeMapImpl;
 pub use structs::{SerializeStructImpl, SerializeStructVariantImpl};
 
-/// Node context for serialization: (`node_name`, children, properties)
-type NodeContext = (String, Vec<KdlNode>, Vec<(String, KdlValue)>);
+/// Node context for serialization: (`node_name`, children)
+type NodeContext = (String, Vec<KdlNode>);
 
 /// A serializer that converts Rust values directly to KDL documents.
 pub struct Serializer {
@@ -66,11 +66,11 @@ impl Serializer {
     }
 
     fn push_node_context(&mut self, name: String) {
-        self.node_stack.push((name, Vec::new(), Vec::new()));
+        self.node_stack.push((name, Vec::new()));
     }
 
     fn pop_node_context(&mut self) -> Result<()> {
-        if let Some((name, children, properties)) = self.node_stack.pop() {
+        if let Some((name, children)) = self.node_stack.pop() {
             let mut node = KdlNode::new(name);
 
             // Check if there's a current_node that should be incorporated (for newtype variants)
@@ -95,12 +95,6 @@ impl Serializer {
                 }
             }
 
-            // Add properties to the node
-            for (key, value) in properties {
-                let entry = KdlEntry::new_prop(key, value);
-                node.entries_mut().push(entry);
-            }
-
             // Add children if any
             if !children.is_empty() {
                 let mut child_doc = node.children().cloned().unwrap_or_else(KdlDocument::new);
@@ -115,19 +109,6 @@ impl Serializer {
             } else {
                 self.current_node = Some(node);
             }
-        }
-        Ok(())
-    }
-
-    fn add_property_to_current(&mut self, key: &str, value: KdlValue) -> Result<()> {
-        if let Some((_name, _children, properties)) = self.node_stack.last_mut() {
-            // Add property to the current struct
-            properties.push((key.to_string(), value));
-        } else {
-            // Create a new node for this property
-            let mut node = KdlNode::new(key);
-            node.entries_mut().push(KdlEntry::new(value));
-            self.current_node = Some(node);
         }
         Ok(())
     }
@@ -225,17 +206,8 @@ impl<'a> SerializerTrait for &'a mut Serializer {
         self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::String(v.to_string()))
     }
 
-    fn serialize_bytes(self, v: &[u8]) -> Result<Self::Ok> {
-        #[cfg(feature = "bytes")]
-        {
-            let hex_string = crate::hex::encode_hex(v);
-            self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::String(hex_string))
-        }
-        #[cfg(not(feature = "bytes"))]
-        {
-            let _ = v; // Silence unused parameter warning
-            Err(Error::UnsupportedType("byte arrays".to_string()))
-        }
+    fn serialize_bytes(self, _v: &[u8]) -> Result<Self::Ok> {
+        Err(Error::UnsupportedType("byte arrays".to_string()))
     }
 
     fn serialize_none(self) -> Result<Self::Ok> {
@@ -265,10 +237,11 @@ impl<'a> SerializerTrait for &'a mut Serializer {
         _variant_index: u32,
         variant: &'static str,
     ) -> Result<Self::Ok> {
-        self.create_value_node(
-            crate::DEFAULT_NODE_NAME,
-            KdlValue::String(variant.to_string()),
-        )
+        // Create a node with type annotation for the variant
+        let mut node = KdlNode::new(crate::DEFAULT_NODE_NAME);
+        node.set_ty(kdl::KdlIdentifier::from(variant));
+        self.current_node = Some(node);
+        Ok(())
     }
 
     fn serialize_newtype_struct<T>(self, name: &'static str, value: &T) -> Result<Self::Ok>
@@ -290,29 +263,21 @@ impl<'a> SerializerTrait for &'a mut Serializer {
     where
         T: ?Sized + serde::Serialize,
     {
-        self.push_node_context(variant.to_string());
+        // Serialize the inner value first
         value.serialize(&mut *self)?;
-        self.pop_node_context()
+
+        // Add the type annotation to the current node
+        if let Some(node) = &mut self.current_node {
+            node.set_ty(kdl::KdlIdentifier::from(variant));
+        }
+        Ok(())
     }
 
     fn serialize_seq(self, len: Option<usize>) -> Result<Self::SerializeSeq> {
-        #[cfg(feature = "bytes")]
-        {
-            Ok(SerializeSeqImpl {
-                ser: self,
-                items: Vec::with_capacity(len.unwrap_or(0)),
-                child_nodes: Vec::with_capacity(len.unwrap_or(0)),
-                bytes_candidate: Some(Vec::with_capacity(len.unwrap_or(0))),
-            })
-        }
-        #[cfg(not(feature = "bytes"))]
-        {
-            Ok(SerializeSeqImpl {
-                ser: self,
-                items: Vec::with_capacity(len.unwrap_or(0)),
-                child_nodes: Vec::with_capacity(len.unwrap_or(0)),
-            })
-        }
+        Ok(SerializeSeqImpl {
+            ser: self,
+            child_nodes: Vec::with_capacity(len.unwrap_or(0)),
+        })
     }
 
     fn serialize_tuple(self, len: usize) -> Result<Self::SerializeTuple> {
@@ -341,9 +306,9 @@ impl<'a> SerializerTrait for &'a mut Serializer {
         variant: &'static str,
         len: usize,
     ) -> Result<Self::SerializeTupleVariant> {
-        self.push_node_context(variant.to_string());
         Ok(SerializeTupleVariantImpl {
             ser: self,
+            variant: variant.to_string(),
             items: Vec::with_capacity(len),
         })
     }
@@ -373,7 +338,9 @@ impl<'a> SerializerTrait for &'a mut Serializer {
         variant: &'static str,
         _len: usize,
     ) -> Result<Self::SerializeStructVariant> {
-        self.push_node_context(variant.to_string());
-        Ok(SerializeStructVariantImpl { ser: self })
+        Ok(SerializeStructVariantImpl {
+            ser: self,
+            variant: variant.to_string(),
+        })
     }
 }

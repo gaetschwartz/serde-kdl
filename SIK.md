@@ -111,7 +111,7 @@
 // OPTION<T>
 // =============================================================================
 
-// None: node omitted entirely
+// None: serialized as #null
 // Some(v): as if Option wrapper didn't exist
 //
 // struct Config { name: String, timeout: Option<u32> }
@@ -120,6 +120,7 @@
 // -->
 // Config {
 //     name "x"
+//     timeout #null
 // }
 //
 // Config { name: "x".into(), timeout: Some(30) }
@@ -363,7 +364,7 @@ servers {
 // | tuple struct           | node arg1 arg2 arg3                  |
 // | newtype struct         | field_name inner_value               |
 // | unit struct            | field_name                           |
-// | Option::None           | (omitted)                            |
+// | Option::None           | field_name #null                     |
 // | Option::Some(v)        | (as if no Option)                    |
 // | Vec<T>                 | field_name { - item; - item; ... }   |
 // | HashMap<String, V>     | field_name { key1 val; key2 val }    |

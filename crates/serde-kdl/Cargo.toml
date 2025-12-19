@@ -11,8 +11,7 @@ repository.workspace = true
 authors.workspace = true
 
 [features]
-default = ["bytes", "macros"]
-bytes = []
+default = ["macros"]
 macros = ["dep:serde-kdl-macros"]
 
 [dependencies]
