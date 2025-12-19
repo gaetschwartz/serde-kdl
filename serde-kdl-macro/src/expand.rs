@@ -237,6 +237,8 @@ mod ide_hints {
 
 #[cfg(feature = "ide-hints")]
 mod ide_hints {
+    use proc_macro2::Span;
+
     use crate::ast::KdlString;
 
     use super::*;
@@ -271,9 +273,11 @@ mod ide_hints {
                         format_ident!("{}", sanitize_ident(value), span = *span)
                     }
                 };
+                let enum_ident =
+                    format_ident!("{node_ident}_Prop_{}", ident, span = Span::call_site());
                 hints.extend(quote! {
                     #[allow(non_snake_case, non_camel_case_types, dead_code, unused)]
-                    { enum #node_ident { #ident(#SERDE_KDL_KDL_EXPORT::KdlValue) } }
+                    { enum #enum_ident { #ident(#SERDE_KDL_KDL_EXPORT::KdlValue) } }
                 });
 
                 // Generate hint for property values

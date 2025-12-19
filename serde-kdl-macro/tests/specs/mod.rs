@@ -8,6 +8,7 @@ pub mod section_3_14_numbers;
 pub mod section_3_15_booleans;
 pub mod section_3_16_null;
 pub mod section_3_2_nodes;
+pub mod section_3_6_children;
 pub mod section_3_7_values;
 pub mod section_3_8_types;
 pub mod section_3_9_strings;
