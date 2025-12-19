@@ -10,7 +10,7 @@ use proc_macro2::TokenStream as TokenStream2;
 use quote::{format_ident, quote};
 use syn::{spanned::Spanned as _, Result};
 
-pub(crate) fn generate_kdl_code(document: &KdlDocument) -> Result<TokenStream2> {
+pub fn generate_kdl_code(document: &KdlDocument) -> Result<TokenStream2> {
     let nodes = document.nodes.iter().map(expand_node_creation);
     // Generate LSP hints for IDE support
     let hints = ide_hints::write_hints(document);
@@ -56,8 +56,8 @@ fn expand_node_creation(node: &KdlNode) -> TokenStream2 {
     });
 
     // Generate children codes
-    let children_code = if node.has_children_block {
-        let child_codes = node.children.iter().map(generate_child_node_code);
+    let children_code = node.children.as_ref().map(|children| {
+        let child_codes = children.iter().map(generate_child_node_code);
         quote! {
             node.set_children({
                 let mut doc = #SERDE_KDL_KDL_EXPORT::KdlDocument::new();
@@ -65,9 +65,7 @@ fn expand_node_creation(node: &KdlNode) -> TokenStream2 {
                 doc
             });
         }
-    } else {
-        quote! {}
-    };
+    });
 
     let node_typing = node.type_annotation().map(|ty| {
         quote! { node.set_ty(#ty); }
@@ -115,8 +113,8 @@ fn generate_child_node_code(node: &KdlNode) -> TokenStream2 {
     });
 
     // Generate nested children codes
-    let nested_children_code = if node.has_children_block {
-        let nested_child_codes = node.children.iter().map(generate_child_node_code);
+    let nested_children_code = node.children.as_ref().map(|children| {
+        let nested_child_codes = children.iter().map(generate_child_node_code);
         quote! {
             child_node.set_children({
                 let mut doc = #SERDE_KDL_KDL_EXPORT::KdlDocument::new();
@@ -124,9 +122,7 @@ fn generate_child_node_code(node: &KdlNode) -> TokenStream2 {
                 doc
             });
         }
-    } else {
-        quote! {}
-    };
+    });
 
     let child_node_typing = node.type_annotation.as_ref().map(|ty| {
         quote! { child_node.set_ty(#ty); }
@@ -203,7 +199,9 @@ mod ide_hints {
             }
 
             // Recurse into children
-            write_hints_from_nodes(&node.children, hints);
+            if let Some(children) = &node.children {
+                write_hints_from_nodes(children, hints);
+            }
         }
     }
 

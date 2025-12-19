@@ -44,7 +44,7 @@ impl Parse for KdlValue {
 }
 
 #[derive(Clone)]
-pub(crate) enum KdlLit {
+pub enum KdlLit {
     Integer(i128, Span),
     Float(f64, Span),
     Boolean(bool, Span),
@@ -104,7 +104,7 @@ impl KdlLit {
         }
     }
 
-    pub(crate) fn span(&self) -> Span {
+    pub fn span(&self) -> Span {
         match self {
             KdlLit::Integer(_, span) => *span,
             KdlLit::Float(_, span) => *span,

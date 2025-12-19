@@ -15,7 +15,7 @@ use syn::Result;
 
 /// Validates type annotation against value according to Section 3.8
 #[allow(dead_code)]
-pub(crate) fn validate_type_annotation(type_annotation: &str, value: &KdlValue) -> Result<()> {
+pub fn validate_type_annotation(type_annotation: &str, value: &KdlValue) -> Result<()> {
     match value {
         KdlValue::Lit(KdlLit::Integer(_, _)) => {
             // For integers, only integer type annotations or custom (non-reserved) annotations are allowed
@@ -91,20 +91,20 @@ pub(crate) fn validate_type_annotation(type_annotation: &str, value: &KdlValue) 
 // =============================================================================
 
 #[derive(Clone, Copy, Debug, Default)]
-pub(crate) struct ValidationOptions {
+pub struct ValidationOptions {
     pub strict: bool,
 }
 
 pub const RESERVED_KEYWORDS: &[&str] = &["inf", "-inf", "nan", "true", "false", "null"];
 
 /// Validates an identifier string with context about whether keywords should be rejected
-pub(crate) fn validate_identifier(ident: &syn::Ident, options: ValidationOptions) -> Result<()> {
+pub fn validate_identifier(ident: &syn::Ident, options: ValidationOptions) -> Result<()> {
     let ident_str = ident.to_string();
     validate_identifier_string(&ident_str, ident.span(), options)
 }
 
 /// Validates an identifier string with context about whether keywords should be rejected
-pub(crate) fn validate_identifier_string(
+pub fn validate_identifier_string(
     ident_str: &str,
     span: Span,
     options: ValidationOptions,
@@ -157,10 +157,7 @@ mod strict {
     use super::*;
 
     /// Checks if a character is valid as the initial character of an identifier (Section 3.10.1)
-    pub(crate) fn is_valid_initial_character(
-        ch: char,
-        remaining_chars: &mut std::str::Chars,
-    ) -> bool {
+    pub fn is_valid_initial_character(ch: char, remaining_chars: &mut std::str::Chars) -> bool {
         // Cannot start with decimal digit
         if ch.is_ascii_digit() {
             return false;
@@ -204,7 +201,7 @@ mod strict {
     }
 
     /// Checks if an identifier looks like a number and should be rejected
-    pub(crate) fn looks_like_number(identifier: &str) -> bool {
+    pub fn looks_like_number(identifier: &str) -> bool {
         // Check for "almost a number" pattern: decimal point without leading digit (like ".1")
         if identifier.starts_with('.') && identifier.len() > 1 {
             if let Some(second_char) = identifier.chars().nth(1) {
@@ -251,7 +248,7 @@ mod strict {
     }
 
     /// Checks if a character is valid anywhere in an identifier (Section 3.10.2)
-    pub(crate) fn is_valid_identifier_character(ch: char) -> bool {
+    pub fn is_valid_identifier_character(ch: char) -> bool {
         // Cannot use specific punctuation characters
         if matches!(
             ch,
@@ -282,7 +279,7 @@ mod strict {
     // =============================================================================
 
     /// Checks if a character is whitespace according to Section 3.17
-    pub(crate) fn is_whitespace(ch: char) -> bool {
+    pub fn is_whitespace(ch: char) -> bool {
         match ch as u32 {
         0x0009 |  // Character Tabulation
         0x0020 |  // Space
@@ -308,7 +305,7 @@ mod strict {
     }
 
     /// Checks if a character is a newline according to Section 3.18
-    pub(crate) fn is_newline(ch: char) -> bool {
+    pub fn is_newline(ch: char) -> bool {
         match ch as u32 {
         0x000A |  // LF - Line Feed
         0x000B |  // VT - Vertical Tab
@@ -323,7 +320,7 @@ mod strict {
     }
 
     /// Checks if a character is a disallowed literal code point according to Section 3.19
-    pub(crate) fn is_disallowed_code_point(ch: char) -> bool {
+    pub fn is_disallowed_code_point(ch: char) -> bool {
         let code_point = ch as u32;
 
         // U+0000-0008 control characters
@@ -353,7 +350,7 @@ mod strict {
         use super::*;
 
         /// Validates an identifier string with context about whether keywords should be rejected
-        pub(crate) fn validate_identifier_string_test(ident_str: &str) -> syn::Result<()> {
+        pub fn validate_identifier_string_test(ident_str: &str) -> syn::Result<()> {
             validate_identifier_string(
                 ident_str,
                 Span::call_site(),

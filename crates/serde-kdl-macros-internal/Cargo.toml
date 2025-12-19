@@ -1,5 +1,5 @@
 [package]
-name = "serde-kdl-macros"
+name = "serde-kdl-macros-internal"
 description = "Procedural macros for serde-kdl"
 documentation = "https://docs.rs/serde-kdl-macros"
 keywords = ["kdl", "serde", "serialization", "config", "parser", "macro"]
@@ -11,15 +11,13 @@ repository.workspace = true
 authors.workspace = true
 
 [features]
-default = ["serde-kdl-macros-internal/ide-hints"]
+default = ["ide-hints"]
 ide-hints = []
-
-[lib]
-proc-macro = true
 
 [dependencies]
 kdl.workspace = true
-serde-kdl-macros-internal = { path = "../serde-kdl-macros-internal" }
+syn = { version = "2.0", features = ["full"] }
+quote = "1.0"
 proc-macro2 = { version = "1.0", features = ["span-locations"] }
 
 [dev-dependencies]
@@ -31,4 +29,3 @@ insta = "1.44.3"
 pretty_assertions = "1.4.1"
 bolero = { version = "0.13.4", features = ["arbitrary"] }
 arbitrary = { version = "1.4.2", features = ["derive"] }
-syn = { version = "2.0", features = ["full"] }

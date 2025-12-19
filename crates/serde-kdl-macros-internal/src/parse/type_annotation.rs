@@ -9,18 +9,18 @@ use std::ops::Deref;
 use syn::{parse::ParseStream, spanned::Spanned, token::Paren, Result};
 
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) struct MaybeAnnotated<T> {
-    pub(crate) type_annotation: Option<KdlIdentifier>,
-    pub(crate) item: T,
+pub struct MaybeAnnotated<T> {
+    pub type_annotation: Option<KdlIdentifier>,
+    pub item: T,
 }
 
 #[allow(dead_code)]
 impl<T> MaybeAnnotated<T> {
-    pub(crate) fn type_annotation(&self) -> Option<&KdlIdentifier> {
+    pub fn type_annotation(&self) -> Option<&KdlIdentifier> {
         self.type_annotation.as_ref()
     }
 
-    pub(crate) fn new(item: T, type_annotation: Option<KdlIdentifier>) -> Self {
+    pub fn new(item: T, type_annotation: Option<KdlIdentifier>) -> Self {
         Self {
             type_annotation,
             item,

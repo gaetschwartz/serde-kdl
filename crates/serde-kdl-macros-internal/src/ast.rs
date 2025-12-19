@@ -4,24 +4,24 @@
 //! nodes, values, and related structures in memory.
 
 use crate::parse::{type_annotation::MaybeAnnotated, value::KdlLit};
-pub(crate) use kdl_string::KdlIdentifier;
+pub use kdl_string::KdlIdentifier;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{format_ident, quote, quote_spanned, ToTokens};
 use syn::spanned::Spanned as _;
 
 /// Reserved type annotations for numbers without decimals (Section 3.8.1)
 #[allow(dead_code)]
-pub(crate) const RESERVED_INTEGER_TYPES: &[&str] = &[
+pub const RESERVED_INTEGER_TYPES: &[&str] = &[
     "i8", "i16", "i32", "i64", "i128", "u8", "u16", "u32", "u64", "u128", "isize", "usize",
 ];
 
 /// Reserved type annotations for numbers with decimals (Section 3.8.2)
 #[allow(dead_code)]
-pub(crate) const RESERVED_FLOAT_TYPES: &[&str] = &["f32", "f64", "decimal64", "decimal128"];
+pub const RESERVED_FLOAT_TYPES: &[&str] = &["f32", "f64", "decimal64", "decimal128"];
 
 /// Reserved type annotations for strings (Section 3.8.3)
 #[allow(dead_code)]
-pub(crate) const RESERVED_STRING_TYPES: &[&str] = &[
+pub const RESERVED_STRING_TYPES: &[&str] = &[
     "date-time",
     "time",
     "date",
@@ -47,36 +47,35 @@ pub(crate) const RESERVED_STRING_TYPES: &[&str] = &[
     "base64",
 ];
 
-pub(crate) const SERDE_KDL_KDL_EXPORT: ConstPath = ConstPath(&["kdl"]);
-pub(crate) const KDL_NODE: ConstPath = ConstPath(&["kdl", "KdlNode"]);
+pub const SERDE_KDL_KDL_EXPORT: ConstPath = ConstPath(&["kdl"]);
+pub const KDL_NODE: ConstPath = ConstPath(&["kdl", "KdlNode"]);
 
 /// Represents a complete KDL document containing multiple nodes
 #[derive(Debug, Clone)]
-pub(crate) struct KdlDocument {
-    pub(crate) nodes: Vec<KdlNode>,
+pub struct KdlDocument {
+    pub nodes: Vec<KdlNode>,
 }
 
 /// Represents a single KDL node with optional properties, arguments, and children
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
-pub(crate) struct KdlNode {
-    pub(crate) name: KdlIdentifier,
-    pub(crate) type_annotation: Option<KdlIdentifier>, // Type annotation for node name
-    pub(crate) properties: Vec<KdlProperty>,
-    pub(crate) arguments: Vec<MaybeAnnotated<KdlValue>>,
-    pub(crate) children: Vec<KdlNode>,
-    pub(crate) has_children_block: bool,
-    pub(crate) terminator: Terminator,
+pub struct KdlNode {
+    pub name: KdlIdentifier,
+    pub type_annotation: Option<KdlIdentifier>, // Type annotation for node name
+    pub properties: Vec<KdlProperty>,
+    pub arguments: Vec<MaybeAnnotated<KdlValue>>,
+    pub children: Option<Vec<KdlNode>>,
+    pub terminator: Terminator,
 }
 
 impl KdlNode {
-    pub(crate) fn type_annotation(&self) -> Option<&KdlIdentifier> {
+    pub fn type_annotation(&self) -> Option<&KdlIdentifier> {
         self.type_annotation.as_ref()
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) enum Terminator {
+pub enum Terminator {
     Brace,
     Semicolon,
     Eol,
@@ -85,15 +84,15 @@ pub(crate) enum Terminator {
 
 /// Represents a KDL property (key="value" pair)
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) struct KdlProperty {
-    pub(crate) key: KdlIdentifier, // According to Section 3.7, property keys must be String values
-    pub(crate) value: MaybeAnnotated<KdlValue>,
+pub struct KdlProperty {
+    pub key: KdlIdentifier, // According to Section 3.7, property keys must be String values
+    pub value: MaybeAnnotated<KdlValue>,
 }
 
 #[cfg(test)]
 impl KdlProperty {
     /// Create a new `KdlProperty`
-    pub(crate) fn new(key: impl Into<KdlIdentifier>, value: impl Into<KdlValue>) -> Self {
+    pub fn new(key: impl Into<KdlIdentifier>, value: impl Into<KdlValue>) -> Self {
         KdlProperty {
             key: key.into(),
             value: MaybeAnnotated {
@@ -106,14 +105,14 @@ impl KdlProperty {
 
 /// Represents a KDL value (string, number, boolean, etc.)
 #[derive(Clone, PartialEq)]
-pub(crate) enum KdlValue {
+pub enum KdlValue {
     String(KdlIdentifier),
     Variable(syn::Ident),
     Lit(KdlLit),
 }
 
 impl KdlValue {
-    pub(crate) fn span(&self) -> proc_macro2::Span {
+    pub fn span(&self) -> proc_macro2::Span {
         match self {
             KdlValue::String(s) => s.span(),
             KdlValue::Variable(ident) => ident.span(),
@@ -192,7 +191,7 @@ mod kdl_string {
     #[allow(dead_code)]
     impl KdlIdentifier {
         /// Get the string value regardless of the string type
-        pub(crate) fn value(&self) -> Cow<'_, str> {
+        pub fn value(&self) -> Cow<'_, str> {
             match &self {
                 KdlIdentifier::Identifier { ident } => ident.to_string().into(),
                 KdlIdentifier::Quoted { value, .. } => value.into(),
@@ -200,7 +199,7 @@ mod kdl_string {
         }
 
         /// Get the span for error reporting
-        pub(crate) fn span(&self) -> proc_macro2::Span {
+        pub fn span(&self) -> proc_macro2::Span {
             match &self {
                 KdlIdentifier::Identifier { ident } => ident.span(),
                 KdlIdentifier::Quoted { span, .. } => *span,
@@ -208,7 +207,7 @@ mod kdl_string {
         }
 
         /// Get the identifier if this is an Identifier variant
-        pub(crate) fn as_ident(&self) -> Option<&syn::Ident> {
+        pub fn as_ident(&self) -> Option<&syn::Ident> {
             match &self {
                 KdlIdentifier::Identifier { ident } => Some(ident),
                 KdlIdentifier::Quoted { .. } => None,
@@ -216,26 +215,26 @@ mod kdl_string {
         }
 
         /// Get the quoted string if this is a Quoted variant
-        pub(crate) fn as_quoted(&self) -> Option<(&str, proc_macro2::Span)> {
+        pub fn as_quoted(&self) -> Option<(&str, proc_macro2::Span)> {
             match &self {
                 KdlIdentifier::Quoted { value, span } => Some((value, *span)),
                 KdlIdentifier::Identifier { .. } => None,
             }
         }
 
-        pub(crate) fn new_identifier(ident: syn::Ident) -> syn::Result<Self> {
+        pub fn new_identifier(ident: syn::Ident) -> syn::Result<Self> {
             validation::validate_identifier(&ident, ValidationOptions::default())?;
             Ok(KdlIdentifier::Identifier { ident })
         }
 
         #[cfg(test)]
-        pub(crate) fn ident(ident: impl AsRef<str>) -> Self {
+        pub fn ident(ident: impl AsRef<str>) -> Self {
             KdlIdentifier::Identifier {
                 ident: syn::Ident::new(ident.as_ref(), proc_macro2::Span::call_site()),
             }
         }
 
-        pub(crate) fn new_quoted(value: String, span: proc_macro2::Span) -> Self {
+        pub fn new_quoted(value: String, span: proc_macro2::Span) -> Self {
             KdlIdentifier::Quoted { value, span }
         }
     }
@@ -345,6 +344,12 @@ mod kdl_string {
         }
     }
 
+    impl PartialEq<kdl::KdlIdentifier> for KdlIdentifier {
+        fn eq(&self, other: &kdl::KdlIdentifier) -> bool {
+            self.value() == other.value()
+        }
+    }
+
     #[cfg(test)]
     mod test {
         use super::*;
@@ -407,19 +412,117 @@ impl std::fmt::Debug for KdlValue {
 
 /// Checks if a type annotation is a reserved type
 #[allow(dead_code)]
-pub(crate) fn is_reserved_type(type_annotation: &str) -> bool {
+pub fn is_reserved_type(type_annotation: &str) -> bool {
     RESERVED_INTEGER_TYPES.contains(&type_annotation)
         || RESERVED_FLOAT_TYPES.contains(&type_annotation)
         || RESERVED_STRING_TYPES.contains(&type_annotation)
 }
 
-pub(crate) struct ConstPath<'a>(&'a [&'static str]);
+pub struct ConstPath<'a>(&'a [&'static str]);
 
 impl ToTokens for ConstPath<'_> {
     fn to_tokens(&self, tokens: &mut TokenStream2) {
         for segment in self.0 {
             let ident = format_ident!("{}", segment);
             tokens.extend(quote! { :: #ident });
+        }
+    }
+}
+
+impl PartialEq<kdl::KdlDocument> for KdlDocument {
+    fn eq(&self, other: &kdl::KdlDocument) -> bool {
+        if self.nodes.len() != other.nodes().len() {
+            return false;
+        }
+
+        self.nodes == other.nodes()
+    }
+}
+impl PartialEq<kdl::KdlNode> for KdlNode {
+    fn eq(&self, other: &kdl::KdlNode) -> bool {
+        if &self.name != other.name() {
+            return false;
+        }
+
+        match (&self.type_annotation, other.ty()) {
+            (Some(a), Some(b)) if a != b => return false,
+            (None, Some(_)) | (Some(_), None) => return false,
+            _ => {}
+        }
+
+        let mut my_props = self.properties.iter();
+        let mut other_props = other.entries().iter().filter(|e| e.name().is_some());
+
+        while let (Some(my_prop), Some(other_prop)) = (my_props.next(), other_props.next()) {
+            if &my_prop.key != other_prop.name().unwrap() {
+                return false;
+            }
+            if &my_prop.value.item != other_prop.value() {
+                return false;
+            }
+        }
+        if my_props.next().is_some() || other_props.next().is_some() {
+            return false;
+        }
+
+        let mut my_args = self.arguments.iter();
+        let mut other_args = other
+            .entries()
+            .iter()
+            .filter(|e| e.name().is_none())
+            .map(|e| e.value());
+
+        while let (Some(my_arg), Some(other_arg)) = (my_args.next(), other_args.next()) {
+            if &my_arg.item != other_arg {
+                return false;
+            }
+        }
+        if my_args.next().is_some() || other_args.next().is_some() {
+            return false;
+        }
+
+        match (&self.children, other.children()) {
+            (Some(my_children), Some(other_children)) => {
+                if my_children.len() != other_children.nodes().len() {
+                    return false;
+                }
+                let mut my_child_iter = my_children.iter();
+                let mut other_child_iter = other_children.nodes().iter();
+                while let (Some(my_child), Some(other_child)) =
+                    (my_child_iter.next(), other_child_iter.next())
+                {
+                    if my_child != other_child {
+                        return false;
+                    }
+                }
+                if my_child_iter.next().is_some() || other_child_iter.next().is_some() {
+                    return false;
+                }
+            }
+            (None, None) => {}
+            _ => return false,
+        }
+
+        true
+    }
+}
+
+impl PartialEq<kdl::KdlValue> for KdlValue {
+    fn eq(&self, other: &kdl::KdlValue) -> bool {
+        match (self, other) {
+            (KdlValue::String(a), kdl::KdlValue::String(b)) => &*a.value() == b,
+            (KdlValue::Lit(KdlLit::Integer(a, _)), kdl::KdlValue::Integer(b)) => a == b,
+            (KdlValue::Lit(KdlLit::Float(a, _)), kdl::KdlValue::Float(b)) => a == b,
+            (KdlValue::Lit(KdlLit::Boolean(a, _)), kdl::KdlValue::Bool(b)) => a == b,
+            (KdlValue::Lit(KdlLit::Null(_)), kdl::KdlValue::Null) => true,
+            (KdlValue::Lit(KdlLit::Nan(_)), kdl::KdlValue::Float(b)) => b.is_nan(),
+            (KdlValue::Lit(KdlLit::Infinity(_)), kdl::KdlValue::Float(b)) => {
+                b.is_infinite() && b.is_sign_positive()
+            }
+            (KdlValue::Lit(KdlLit::NegInfinity(_)), kdl::KdlValue::Float(b)) => {
+                b.is_infinite() && b.is_sign_negative()
+            }
+            _ => false,
         }
     }
 }

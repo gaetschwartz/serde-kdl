@@ -28,8 +28,7 @@ impl Parse for KdlNode {
 
         let mut properties = Vec::new();
         let mut arguments = Vec::new();
-        let mut children = Vec::new();
-        let mut has_children_block = false;
+        let mut children = None;
         let mut terminator = None;
 
         // Parse arguments and properties
@@ -84,12 +83,14 @@ impl Parse for KdlNode {
         let terminator = if let Some(t) = terminator {
             t
         } else if input.peek(Brace) {
-            has_children_block = true;
             let content;
             syn::braced!(content in input);
 
+            let children = children.get_or_insert_with(Vec::new);
+
             while !content.is_empty() {
-                children.push(content.parse::<KdlNode>()?);
+                let node = content.parse::<KdlNode>()?;
+                children.push(node);
             }
             Terminator::Brace
         } else if input.peek(Token![;]) {
@@ -112,7 +113,6 @@ impl Parse for KdlNode {
             properties,
             arguments,
             children,
-            has_children_block,
             terminator,
         };
 

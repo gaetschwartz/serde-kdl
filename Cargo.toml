@@ -11,4 +11,4 @@ authors = ["Gaëtan Schwartz"]
 
 [workspace.dependencies]
 serde = { version = "1.0", features = ["derive"] }
-kdl = "6.5"
+kdl = "6.5.0"

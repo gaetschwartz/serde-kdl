@@ -5,15 +5,7 @@
 //! and generates the corresponding kdl crate data structures.
 
 use proc_macro::TokenStream;
-use proc_macro2::TokenStream as TokenStream2;
-
-use crate::{ast::KdlDocument, expand::generate_kdl_code};
-
-// Module declarations
-mod ast;
-mod expand;
-mod parse;
-mod validation;
+use serde_kdl_macros_internal::kdl_impl;
 
 /// A KDL macro that allows writing KDL syntax directly in Rust code.
 ///
@@ -43,8 +35,38 @@ pub fn kdl(input: TokenStream) -> TokenStream {
     }
 }
 
-pub(crate) fn kdl_impl(input: TokenStream2) -> syn::Result<TokenStream2> {
-    let document = syn::parse2::<KdlDocument>(input)?;
-    // eprintln!("Parsed KDL Document: {:#?}", document);
-    generate_kdl_code(&document)
-}
+// #[cfg(test)]
+// mod tests {
+//     use bolero::check;
+//     use serde_kdl_macros_internal::ast;
+
+//     const _: () = {
+//         const fn impls_arbitrary<'a, T: arbitrary::Arbitrary<'a>>() {}
+//         impls_arbitrary::<kdl::KdlDocument>();
+//     };
+
+//     #[test]
+//     fn test_sip_parsing_roundtrip() {
+//         check!()
+//             .with_arbitrary::<kdl::KdlDocument>()
+//             .for_each(|packet| {
+//                 let kdl_str = packet.to_string();
+//                 let visible_count = kdl_str.chars().filter(|c| c.is_ascii_graphic()).count();
+//                 if visible_count == 0 || visible_count > 10_000 {
+//                     // Skip too small or too large inputs
+//                     return;
+//                 }
+//                 let tokenstream = match syn::parse_str::<proc_macro2::TokenStream>(&kdl_str) {
+//                     Ok(tokenstream) => tokenstream,
+//                     Err(e) => {
+//                         eprintln!("Failed to parse generated KDL string into TokenStream: {e}\nSource:\n{kdl_str}",);
+//                         return;
+//                     }
+//                 };
+//                 let parsed = syn::parse2::<ast::KdlDocument>(tokenstream).unwrap_or_else(|e| {
+//                     panic!("Failed to parse generated KDL string: {e}\nSource:\n{kdl_str}",)
+//                 });
+//                 assert_eq!(&parsed, packet, "Roundtrip mismatch for KDL string:\n{kdl_str}");
+//             });
+//     }
+// }

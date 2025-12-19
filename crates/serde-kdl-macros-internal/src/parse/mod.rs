@@ -9,16 +9,16 @@
 //! - `number`: Number parsing (Section 3.14)
 
 #[allow(unused)]
-pub(crate) mod comments;
-pub(crate) mod document;
-pub(crate) mod node;
-pub(crate) mod type_annotation;
-pub(crate) mod value;
+pub mod comments;
+pub mod document;
+pub mod node;
+pub mod type_annotation;
+pub mod value;
 #[allow(unused)]
-pub(crate) mod whitespace;
+pub mod whitespace;
 
 #[allow(dead_code)]
-pub(crate) struct SpanDisplay(pub proc_macro2::Span);
+pub struct SpanDisplay(pub proc_macro2::Span);
 
 impl std::fmt::Display for SpanDisplay {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
