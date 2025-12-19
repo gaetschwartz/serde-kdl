@@ -34,6 +34,12 @@ pub enum Error {
 
     #[error("invalid sequence index: {0}")]
     InvalidSequenceIndex(usize),
+
+    #[error("Map keys must serialize to strings in KDL. Found: {0:?}")]
+    InvalidMapKey(Box<kdl::KdlNode>),
+
+    #[error("missing key when serializing map")]
+    KeyMissingInMapSerialization,
 }
 
 impl serde::ser::Error for Error {

@@ -1,17 +1,21 @@
-use crate::error::{Error, Result};
+use std::mem;
+
+use crate::{
+    error::{Error, Result},
+    DEFAULT_NODE_NAME,
+};
 use kdl::{KdlDocument, KdlEntry, KdlNode, KdlValue};
 use serde::Serializer as SerializerTrait;
-use std::collections::BTreeMap;
 
-mod seq;
-mod tuple;
 mod map;
+mod seq;
 mod structs;
+mod tuple;
 
-pub use seq::SerializeSeqImpl;
-pub use tuple::{SerializeTupleImpl, SerializeTupleStructImpl, SerializeTupleVariantImpl};
 pub use map::SerializeMapImpl;
+pub use seq::SerializeSeqImpl;
 pub use structs::{SerializeStructImpl, SerializeStructVariantImpl};
+pub use tuple::{SerializeTupleImpl, SerializeTupleStructImpl, SerializeTupleVariantImpl};
 
 /// Node context for serialization: (`node_name`, children)
 type NodeContext = (String, Vec<KdlNode>);
@@ -74,22 +78,22 @@ impl Serializer {
             let mut node = KdlNode::new(name);
 
             // Check if there's a current_node that should be incorporated (for newtype variants)
-            if let Some(current) = self.current_node.take() {
+            if let Some(mut current) = self.current_node.take() {
                 // If the current node has entries, copy them to our node
-                for entry in current.entries() {
+                for entry in current.entries_mut() {
                     if entry.name().is_none() {
                         // This is a value entry, add it directly
-                        node.entries_mut().push(entry.clone());
+                        node.entries_mut()
+                            .push(mem::replace(entry, KdlEntry::new(KdlValue::Null)));
                     }
                 }
                 // If the current node has children, add them
-                if let Some(current_children) = current.children() {
+                if let Some(current_children) = current.children_mut() {
                     if !current_children.nodes().is_empty() {
-                        let mut child_doc =
-                            node.children().cloned().unwrap_or_else(KdlDocument::new);
-                        for child in current_children.nodes() {
-                            child_doc.nodes_mut().push(child.clone());
-                        }
+                        let mut child_doc = node.children_mut().take().unwrap_or_default();
+                        child_doc
+                            .nodes_mut()
+                            .extend(mem::take(current_children.nodes_mut()));
                         *node.children_mut() = Some(child_doc);
                     }
                 }
@@ -133,51 +137,51 @@ impl<'a> SerializerTrait for &'a mut Serializer {
     type SerializeStructVariant = SerializeStructVariantImpl<'a>;
 
     fn serialize_bool(self, v: bool) -> Result<Self::Ok> {
-        self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::Bool(v))
+        self.create_value_node(DEFAULT_NODE_NAME, KdlValue::Bool(v))
     }
 
     fn serialize_i8(self, v: i8) -> Result<Self::Ok> {
-        self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::Integer(i128::from(v)))
+        self.create_value_node(DEFAULT_NODE_NAME, KdlValue::Integer(i128::from(v)))
     }
 
     fn serialize_i16(self, v: i16) -> Result<Self::Ok> {
-        self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::Integer(i128::from(v)))
+        self.create_value_node(DEFAULT_NODE_NAME, KdlValue::Integer(i128::from(v)))
     }
 
     fn serialize_i32(self, v: i32) -> Result<Self::Ok> {
-        self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::Integer(i128::from(v)))
+        self.create_value_node(DEFAULT_NODE_NAME, KdlValue::Integer(i128::from(v)))
     }
 
     fn serialize_i64(self, v: i64) -> Result<Self::Ok> {
-        self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::Integer(i128::from(v)))
+        self.create_value_node(DEFAULT_NODE_NAME, KdlValue::Integer(i128::from(v)))
     }
 
     fn serialize_u8(self, v: u8) -> Result<Self::Ok> {
-        self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::Integer(i128::from(v)))
+        self.create_value_node(DEFAULT_NODE_NAME, KdlValue::Integer(i128::from(v)))
     }
 
     fn serialize_u16(self, v: u16) -> Result<Self::Ok> {
-        self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::Integer(i128::from(v)))
+        self.create_value_node(DEFAULT_NODE_NAME, KdlValue::Integer(i128::from(v)))
     }
 
     fn serialize_u32(self, v: u32) -> Result<Self::Ok> {
-        self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::Integer(i128::from(v)))
+        self.create_value_node(DEFAULT_NODE_NAME, KdlValue::Integer(i128::from(v)))
     }
 
     fn serialize_u64(self, v: u64) -> Result<Self::Ok> {
         // KDL 6.5 now supports i128 natively
-        self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::Integer(i128::from(v)))
+        self.create_value_node(DEFAULT_NODE_NAME, KdlValue::Integer(i128::from(v)))
     }
 
     fn serialize_i128(self, v: i128) -> Result<Self::Ok> {
         // KDL 6.5 now supports i128 natively
-        self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::Integer(v))
+        self.create_value_node(DEFAULT_NODE_NAME, KdlValue::Integer(v))
     }
 
     fn serialize_u128(self, v: u128) -> Result<Self::Ok> {
         // KDL 6.5 now supports i128 natively, but u128 can exceed i128::MAX
         if v <= i128::MAX as u128 {
-            self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::Integer(v as i128))
+            self.create_value_node(DEFAULT_NODE_NAME, KdlValue::Integer(v as i128))
         } else {
             Err(Error::UnsupportedType(format!(
                 "u128 value {} exceeds KDL's supported integer range (i128::MAX = {})",
@@ -188,22 +192,22 @@ impl<'a> SerializerTrait for &'a mut Serializer {
     }
 
     fn serialize_f32(self, v: f32) -> Result<Self::Ok> {
-        self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::Float(f64::from(v)))
+        self.create_value_node(DEFAULT_NODE_NAME, KdlValue::Float(f64::from(v)))
     }
 
     fn serialize_f64(self, v: f64) -> Result<Self::Ok> {
         // Note: KDL specification mentions #inf, #-inf, and #nan for special values,
         // but kdl crate 4.7 doesn't support parsing these. For now, serialize
         // special float values as regular floats (which will be inf, -inf, NaN in text).
-        self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::Float(v))
+        self.create_value_node(DEFAULT_NODE_NAME, KdlValue::Float(v))
     }
 
     fn serialize_char(self, v: char) -> Result<Self::Ok> {
-        self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::String(v.to_string()))
+        self.create_value_node(DEFAULT_NODE_NAME, KdlValue::String(v.to_string()))
     }
 
     fn serialize_str(self, v: &str) -> Result<Self::Ok> {
-        self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::String(v.to_string()))
+        self.create_value_node(DEFAULT_NODE_NAME, KdlValue::String(v.to_string()))
     }
 
     fn serialize_bytes(self, _v: &[u8]) -> Result<Self::Ok> {
@@ -211,7 +215,7 @@ impl<'a> SerializerTrait for &'a mut Serializer {
     }
 
     fn serialize_none(self) -> Result<Self::Ok> {
-        self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::Null)
+        self.create_value_node(DEFAULT_NODE_NAME, KdlValue::Null)
     }
 
     fn serialize_some<T>(self, value: &T) -> Result<Self::Ok>
@@ -222,7 +226,7 @@ impl<'a> SerializerTrait for &'a mut Serializer {
     }
 
     fn serialize_unit(self) -> Result<Self::Ok> {
-        self.create_value_node(crate::DEFAULT_NODE_NAME, KdlValue::Null)
+        self.create_value_node(DEFAULT_NODE_NAME, KdlValue::Null)
     }
 
     fn serialize_unit_struct(self, name: &'static str) -> Result<Self::Ok> {
@@ -238,7 +242,7 @@ impl<'a> SerializerTrait for &'a mut Serializer {
         variant: &'static str,
     ) -> Result<Self::Ok> {
         // Create a node with type annotation for the variant
-        let mut node = KdlNode::new(crate::DEFAULT_NODE_NAME);
+        let mut node = KdlNode::new(DEFAULT_NODE_NAME);
         node.set_ty(kdl::KdlIdentifier::from(variant));
         self.current_node = Some(node);
         Ok(())
@@ -313,11 +317,11 @@ impl<'a> SerializerTrait for &'a mut Serializer {
         })
     }
 
-    fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap> {
+    fn serialize_map(self, len: Option<usize>) -> Result<Self::SerializeMap> {
         Ok(SerializeMapImpl {
             ser: self,
             pending_key: None,
-            items: BTreeMap::new(),
+            items: Vec::with_capacity(len.unwrap_or(0)),
         })
     }
 
@@ -342,5 +346,33 @@ impl<'a> SerializerTrait for &'a mut Serializer {
             ser: self,
             variant: variant.to_string(),
         })
+    }
+}
+
+pub(crate) trait SerializeFieldValue<T> {
+    fn into_option_node(self) -> Result<Option<KdlNode>>;
+
+    fn into_node(self) -> Result<KdlNode>
+    where
+        Self: Sized,
+    {
+        let opt_node = self.into_option_node()?;
+        Ok(opt_node.unwrap_or_else(|| KdlNode::new(crate::DEFAULT_NODE_NAME)))
+    }
+}
+
+impl<T> SerializeFieldValue<T> for T
+where
+    T: Sized + serde::Serialize,
+{
+    fn into_option_node(self) -> Result<Option<KdlNode>> {
+        let mut serializer = Serializer::new_for_field();
+        self.serialize(&mut serializer)?;
+        let mut document = serializer.into_document();
+        if let Some(node) = document.nodes_mut().pop() {
+            Ok(Some(node))
+        } else {
+            Ok(None)
+        }
     }
 }

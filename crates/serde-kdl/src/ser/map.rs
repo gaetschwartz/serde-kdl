@@ -1,14 +1,19 @@
-use crate::error::{Error, Result};
-use kdl::{KdlDocument, KdlEntry, KdlNode, KdlValue};
-use serde::ser::SerializeMap;
-use std::collections::BTreeMap;
+use std::mem;
+
 use super::Serializer;
+use crate::{
+    error::{Error, Result},
+    ser::SerializeFieldValue,
+    DEFAULT_NODE_NAME,
+};
+use kdl::{KdlDocument, KdlNode, KdlValue};
+use serde::ser::SerializeMap;
 
 // Map serializer
 pub struct SerializeMapImpl<'a> {
     pub(crate) ser: &'a mut Serializer,
     pub(crate) pending_key: Option<String>,
-    pub(crate) items: BTreeMap<String, KdlNode>,
+    pub(crate) items: Vec<KdlNode>,
 }
 
 impl SerializeMap for SerializeMapImpl<'_> {
@@ -19,18 +24,18 @@ impl SerializeMap for SerializeMapImpl<'_> {
     where
         T: ?Sized + serde::Serialize,
     {
-        let mut key_serializer = Serializer::new_for_field();
-        key.serialize(&mut key_serializer)?;
-
-        let document = key_serializer.into_document();
-        if let Some(node) = document.nodes().first() {
-            if let Some(entry) = node.entries().first() {
-                match entry.value() {
-                    KdlValue::String(s) => self.pending_key = Some(s.clone()),
-                    other => self.pending_key = Some(format!("{other}")),
+        let node = key.into_option_node()?;
+        if let Some(mut node) = node {
+            if let Some(mut entry) = node.entries_mut().pop() {
+                if entry.name().is_some_and(|e| e.value() != DEFAULT_NODE_NAME) {
+                    return Err(Error::InvalidMapKey(Box::new(node)));
                 }
+                let KdlValue::String(s) = entry.value_mut() else {
+                    return Err(Error::InvalidMapKey(Box::new(node)));
+                };
+                self.pending_key = Some(mem::take(s))
             } else {
-                self.pending_key = Some(node.name().value().to_string());
+                return Err(Error::InvalidMapKey(Box::new(node)));
             }
         }
 
@@ -41,52 +46,36 @@ impl SerializeMap for SerializeMapImpl<'_> {
     where
         T: ?Sized + serde::Serialize,
     {
-        let key = self
-            .pending_key
-            .take()
-            .unwrap_or_else(|| "unknown".to_string());
+        let Some(key) = self.pending_key.take() else {
+            return Err(Error::KeyMissingInMapSerialization);
+        };
 
-        let mut value_serializer = Serializer::new_for_field();
-        value.serialize(&mut value_serializer)?;
-
-        let document = value_serializer.into_document();
-        if let Some(node) = document.nodes().first() {
-            // Create a new node with the map key as name
-            let mut key_node = KdlNode::new(key.clone());
-
-            // Copy all entries (values and properties)
-            for entry in node.entries() {
-                key_node.entries_mut().push(entry.clone());
-            }
-
-            // Copy children if any
-            if let Some(children) = node.children() {
-                if !children.nodes().is_empty() {
-                    *key_node.children_mut() = Some(children.clone());
-                }
-            }
-
-            self.items.insert(key, key_node);
-        } else {
-            // Empty document - create node with null value
-            let mut key_node = KdlNode::new(key.clone());
-            key_node.entries_mut().push(KdlEntry::new(KdlValue::Null));
-            self.items.insert(key, key_node);
-        }
+        let mut node = value.into_node()?;
+        node.set_name(key);
+        self.items.push(node);
 
         Ok(())
     }
 
-    fn end(self) -> Result<Self::Ok> {
-        let mut node = KdlNode::new(crate::DEFAULT_NODE_NAME);
-        if !self.items.is_empty() {
-            let mut child_doc = KdlDocument::new();
-            for (_key, child_node) in self.items {
-                child_doc.nodes_mut().push(child_node);
+    fn end(mut self) -> Result<Self::Ok> {
+        self.items
+            .sort_by(|a, b| a.name().value().cmp(b.name().value()));
+        // Check if we're at the root level (no wrapper needed for flatten)
+        let is_root = self.ser.is_root_serializer && self.ser.node_stack.is_empty();
+
+        if is_root {
+            // Root-level flatten: add items directly to document
+            self.ser.document.nodes_mut().extend(self.items);
+        } else {
+            // Non-root: create wrapper node
+            let mut node = KdlNode::new(DEFAULT_NODE_NAME);
+            if !self.items.is_empty() {
+                let mut child_doc = KdlDocument::new();
+                child_doc.nodes_mut().extend(self.items);
+                *node.children_mut() = Some(child_doc);
             }
-            *node.children_mut() = Some(child_doc);
+            self.ser.current_node = Some(node);
         }
-        self.ser.current_node = Some(node);
         Ok(())
     }
 }

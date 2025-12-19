@@ -56,9 +56,18 @@ impl<'de> DeserializerTrait<'de> for NodeDeserializer<'de> {
             if children.nodes().is_empty() {
                 visitor.visit_unit()
             } else {
-                // If the node has children, treat it as a map
-                let map_de = MapDeserializer::new(children.nodes());
-                visitor.visit_map(map_de)
+                // Check if all children are sequence items (named "-")
+                let is_sequence = children.nodes().iter().all(|n| n.name().value() == crate::DEFAULT_NODE_NAME);
+                
+                if is_sequence {
+                    // Sequence with "-" wrapper nodes
+                    let seq_de = SeqDeserializer::from_children(children.nodes());
+                    visitor.visit_seq(seq_de)
+                } else {
+                    // Struct/map - children are named fields
+                    let map_de = MapDeserializer::new(children.nodes());
+                    visitor.visit_map(map_de)
+                }
             }
         } else {
             // Empty node - treat as unit
@@ -148,10 +157,10 @@ impl<'de> DeserializerTrait<'de> for NodeDeserializer<'de> {
             }
         }
 
-        // No type annotation found - error
-        Err(Error::Serde(
-            "enum requires type annotation, e.g., (Variant)field_name".to_string(),
-        ))
+        // Use node name as variant for externally tagged enums
+        // This handles: path "./" -> Enum::Path("./")
+        let variant_name = self.node.name().value();
+        visitor.visit_enum(EnumDeserializer::new(variant_name, self.node))
     }
 
     fn deserialize_option<V>(self, visitor: V) -> Result<V::Value>

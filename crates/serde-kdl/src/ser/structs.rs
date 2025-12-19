@@ -1,7 +1,12 @@
-use crate::error::{Error, Result};
+use std::mem;
+
+use super::Serializer;
+use crate::{
+    error::{Error, Result},
+    ser::SerializeFieldValue,
+};
 use kdl::{KdlDocument, KdlNode};
 use serde::ser::{SerializeStruct, SerializeStructVariant};
-use super::Serializer;
 
 // Struct serializer
 pub struct SerializeStructImpl<'a> {
@@ -20,36 +25,15 @@ impl SerializeStruct for SerializeStructImpl<'_> {
         // Serialize the field value using a temporary serializer
         let mut field_serializer = Serializer::new_for_field();
         value.serialize(&mut field_serializer)?;
-        let field_doc = field_serializer.into_document();
-
-        // If the field serialized to nothing (empty document), skip it
-        // This handles Option::None which should be skipped
-        if field_doc.nodes().is_empty() {
-            return Ok(());
-        }
+        let mut field_doc = field_serializer.into_document();
 
         // Get the first node from the serialized field value
-        let node = field_doc.nodes().first().unwrap();
+        let Some(mut field_node) = field_doc.nodes_mut().pop() else {
+            // If the field serialized to nothing, skip it
+            return Ok(());
+        };
 
-        // Create a child node with the field name
-        let mut field_node = KdlNode::new(key);
-
-        // Copy all entries (arguments) from the serialized value
-        for entry in node.entries() {
-            field_node.entries_mut().push(entry.clone());
-        }
-
-        // Copy children if any (for complex structures)
-        if let Some(node_children) = node.children() {
-            if !node_children.nodes().is_empty() {
-                *field_node.children_mut() = Some(node_children.clone());
-            }
-        }
-
-        // Copy type annotation if present (for enum variants)
-        if let Some(ty) = node.ty() {
-            field_node.set_ty(ty.clone());
-        }
+        field_node.set_name(key);
 
         // Add the field node to the appropriate location
         if self.is_root {
@@ -91,40 +75,17 @@ impl SerializeStructVariant for SerializeStructVariantImpl<'_> {
         T: ?Sized + serde::Serialize,
     {
         // Serialize the field value using a temporary serializer
-        let mut field_serializer = Serializer::new_for_field();
-        value.serialize(&mut field_serializer)?;
-        let field_doc = field_serializer.into_document();
-
-        // If the field serialized to nothing, skip it
-        if field_doc.nodes().is_empty() {
-            return Ok(());
-        }
+        let field_doc = value.into_option_node()?;
 
         // Get the first node from the serialized field value
-        let node = field_doc.nodes().first().unwrap();
-
-        // Create a child node with the field name
-        let mut field_node = KdlNode::new(key);
-
-        // Copy all entries (arguments) from the serialized value
-        for entry in node.entries() {
-            field_node.entries_mut().push(entry.clone());
-        }
-
-        // Copy children if any (for complex structures)
-        if let Some(node_children) = node.children() {
-            if !node_children.nodes().is_empty() {
-                *field_node.children_mut() = Some(node_children.clone());
-            }
-        }
-
-        // Copy type annotation if present (for enum variants)
-        if let Some(ty) = node.ty() {
-            field_node.set_ty(ty.clone());
-        }
+        let Some(mut node) = field_doc else {
+            // If the field serialized to nothing, skip it
+            return Ok(());
+        };
+        node.set_name(key);
 
         // Add to the document directly (will be wrapped with variant type annotation at end)
-        self.ser.document.nodes_mut().push(field_node);
+        self.ser.document.nodes_mut().push(node);
 
         Ok(())
     }
@@ -132,17 +93,14 @@ impl SerializeStructVariant for SerializeStructVariantImpl<'_> {
     fn end(self) -> Result<Self::Ok> {
         // Create a node with "-" as name and the variant as type annotation
         let mut node = KdlNode::new(crate::DEFAULT_NODE_NAME);
-        node.set_ty(kdl::KdlIdentifier::from(self.variant.as_str()));
+        node.set_ty(self.variant);
 
         // Move all the field nodes we added to the document into this node's children
         let mut child_doc = KdlDocument::new();
-        for field_node in self.ser.document.nodes() {
-            child_doc.nodes_mut().push(field_node.clone());
-        }
-        self.ser.document.nodes_mut().clear();
-
+        mem::swap(self.ser.document.nodes_mut(), child_doc.nodes_mut());
         *node.children_mut() = Some(child_doc);
         self.ser.current_node = Some(node);
+
         Ok(())
     }
 }
