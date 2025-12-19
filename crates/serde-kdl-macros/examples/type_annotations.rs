@@ -15,7 +15,7 @@ fn main() {
 
         // Nested nodes with type annotations
         parent {
-            (child-type)child "value"
+            ("child-type")child "value"
         }
     };
 

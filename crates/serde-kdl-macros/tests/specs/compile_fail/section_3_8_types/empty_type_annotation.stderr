@@ -1,7 +1,5 @@
-error: Type annotation cannot be empty
- --> tests/specs/compile_fail/section_3_8_types/empty_type_annotation.rs:5:13
+error: unexpected end of input, expected string literal
+ --> tests/specs/compile_fail/section_3_8_types/empty_type_annotation.rs:5:26
   |
 5 |     let _ = kdl! { node ()"value" };
-  |             ^^^^^^^^^^^^^^^^^^^^^^^
-  |
-  = note: this error originates in the macro `kdl` (in Nightly builds, run with -Z macro-backtrace for more info)
+  |                          ^

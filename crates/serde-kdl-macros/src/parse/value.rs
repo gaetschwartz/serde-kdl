@@ -5,7 +5,7 @@
 
 use std::ops::RangeBounds;
 
-use crate::ast::{KdlString, KdlValue};
+use crate::ast::{KdlIdentifier, KdlValue};
 use crate::parse::type_annotation::parse_type_annotation;
 use proc_macro2::Span;
 use syn::spanned::Spanned;
@@ -44,7 +44,7 @@ impl Parse for KdlValue {
         // Check for other literals (bool, str - numbers are handled above)
         if input.peek(syn::LitStr) {
             let lit_str: syn::LitStr = input.parse()?;
-            return Ok(KdlValue::String(KdlString::from(lit_str)));
+            return Ok(KdlValue::String(KdlIdentifier::from(lit_str)));
         }
         // Check for identifiers - treat as Rust variable references
         if input.peek(Ident) {

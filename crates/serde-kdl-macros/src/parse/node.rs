@@ -3,7 +3,7 @@
 //! This module handles parsing of KDL nodes including node names,
 //! properties, arguments, and children.
 
-use crate::ast::{KdlNode, KdlProperty, KdlString, KdlValue};
+use crate::ast::{KdlIdentifier, KdlNode, KdlProperty, KdlValue};
 use crate::parse::type_annotation::parse_type_annotation;
 use syn::{
     parse::{discouraged::Speculative, Parse, ParseStream},
@@ -32,7 +32,7 @@ impl Parse for KdlNode {
             // We need more sophisticated lookahead for hyphenated identifiers
             if is_property_ahead(input) {
                 // Parse property key (must be a String value according to Section 3.7)
-                let key: KdlString = input.parse()?;
+                let key: KdlIdentifier = input.parse()?;
                 let _eq: Token![=] = input.parse()?;
                 let value: KdlValue = input.parse()?;
 
@@ -126,7 +126,9 @@ impl Parse for KdlNode {
 
 // Helper function to parse node names with optional type annotations
 // Supports: (type)name or name
-fn parse_node_name_with_type_annotation(input: ParseStream) -> Result<(Option<String>, KdlString)> {
+fn parse_node_name_with_type_annotation(
+    input: ParseStream,
+) -> Result<(Option<KdlIdentifier>, KdlIdentifier)> {
     // Check for type annotation: (type)name
     if input.peek(syn::token::Paren) {
         let type_annotation = parse_type_annotation(input)?;
@@ -137,7 +139,7 @@ fn parse_node_name_with_type_annotation(input: ParseStream) -> Result<(Option<St
         let name = input.parse()?;
         Ok((Some(type_annotation), name))
     } else {
-        let name: KdlString = input.parse()?;
+        let name: KdlIdentifier = input.parse()?;
         Ok((None, name))
     }
 }

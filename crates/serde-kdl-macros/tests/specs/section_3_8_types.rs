@@ -24,7 +24,7 @@ fn test_value_type_annotations() {
         strings (email)"test@example.com" (url)"https://example.com" (uuid)"550e8400-e29b-41d4-a716-446655440000"
         properties int=(i32)42 float=(f64)3.14 text=(regex)".*"
         whitespace ( u8 )123 (f32) 2.71 key = ( email ) "user@test.com"
-        custom (MyType)"value" (custom-type)42 flag=(AppBoolean)#true
+        custom (MyType)"value" ("custom-type")42 flag=(AppBoolean)#true
     };
 
     assert_snapshot!(doc_to_string(doc), @r#"
@@ -74,8 +74,8 @@ fn test_reserved_type_annotations_comprehensive() {
         decimals (decimal64)123.456 (decimal128)789.012345
 
         // Section 3.8.3: String types
-        datetime (date-time)"2023-01-01T12:00:00Z" (time)"12:00:00" (date)"2023-01-01" (duration)"P1D"
-        location (country-2)"US" (country-3)"USA" (country-subdivision)"US-CA"
+        datetime ("date-time")"2023-01-01T12:00:00Z" (time)"12:00:00" (date)"2023-01-01" (duration)"P1D"
+        location ("country-2")"US" ("country-3")"USA" ("country-subdivision")"US-CA"
         network (email)"test@example.com" (hostname)"example.com" (ipv4)"192.168.1.1" (ipv6)"2001:0db8:85a3::8a2e:0370:7334"
         urls (url)"https://example.com" (irl)"https://example.org" (hostname)"test.com"
         other (decimal)"123.456" (currency)"USD" (uuid)"550e8400-e29b-41d4-a716-446655440000" (regex)".*" (base64)"SGVsbG8gV29ybGQ="

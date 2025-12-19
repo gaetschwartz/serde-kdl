@@ -1,4 +1,4 @@
-error: Expected identifier, 'type' keyword, number, or '-' in type annotation
+error: unexpected token, expected `)`
  --> tests/specs/compile_fail/section_3_8_types/invalid_type_annotation_chars.rs:5:28
   |
 5 |     let _ = kdl! { node (my@type)"value" };

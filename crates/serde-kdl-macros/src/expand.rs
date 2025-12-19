@@ -3,9 +3,7 @@
 //! This module handles the generation of Rust code from parsed KDL AST structures.
 
 use crate::{
-    ast::{
-        extract_type_annotation, KdlDocument, KdlNode, KdlValue, KDL_NODE, SERDE_KDL_KDL_EXPORT,
-    },
+    ast::{KdlDocument, KdlNode, KdlValue, KDL_NODE, SERDE_KDL_KDL_EXPORT},
     parse::value::KdlLit,
 };
 use proc_macro2::TokenStream as TokenStream2;
@@ -31,7 +29,7 @@ fn expand_node_creation(node: &KdlNode) -> TokenStream2 {
     let name = node.name.value();
     // Generate argument codes with type annotation handling
     let args = node.arguments.iter().map(|value| {
-        if let Some(type_str) = extract_type_annotation(value) {
+        if let Some(type_str) = value.type_annotation() {
             quote! { {
                 let mut entry = #SERDE_KDL_KDL_EXPORT::KdlEntry::new(#value);
                 entry.set_ty(#type_str);
@@ -46,7 +44,7 @@ fn expand_node_creation(node: &KdlNode) -> TokenStream2 {
     let props = node.properties.iter().map(|prop| {
         let key = prop.key.value();
         let value = &prop.value;
-        if let Some(type_str) = extract_type_annotation(&prop.value) {
+        if let Some(type_str) = prop.value.type_annotation() {
             quote! { {
                 let mut entry = #SERDE_KDL_KDL_EXPORT::KdlEntry::new_prop(#key, #value);
                 entry.set_ty(#type_str);
@@ -71,7 +69,7 @@ fn expand_node_creation(node: &KdlNode) -> TokenStream2 {
         quote! {}
     };
 
-    let node_typing = node.type_annotation.as_deref().map(|ty| {
+    let node_typing = node.type_annotation().map(|ty| {
         quote! { node.set_ty(#ty); }
     });
 
@@ -90,7 +88,7 @@ fn generate_child_node_code(node: &KdlNode) -> TokenStream2 {
     let name = node.name.value();
     // Generate argument codes with type annotation handling
     let args = node.arguments.iter().map(|value| {
-        if let Some(type_str) = extract_type_annotation(value) {
+        if let Some(type_str) = value.type_annotation() {
             quote! { {
                 let mut entry = #SERDE_KDL_KDL_EXPORT::KdlEntry::new(#value);
                 entry.set_ty(#type_str);
@@ -105,7 +103,7 @@ fn generate_child_node_code(node: &KdlNode) -> TokenStream2 {
     let props = node.properties.iter().map(|prop| {
         let key = prop.key.value();
         let value = &prop.value;
-        if let Some(type_str) = extract_type_annotation(&prop.value) {
+        if let Some(type_str) = prop.value.type_annotation() {
             quote! { {
                 let mut entry = #SERDE_KDL_KDL_EXPORT::KdlEntry::new_prop(#key, #value);
                 entry.set_ty(#type_str);
@@ -154,7 +152,7 @@ mod ide_hints {
 mod ide_hints {
     use proc_macro2::Span;
 
-    use crate::ast::KdlString;
+    use crate::ast::KdlIdentifier;
 
     use super::*;
     /// Generate phantom const bindings for LSP/IDE support.
@@ -170,8 +168,8 @@ mod ide_hints {
         for node in nodes {
             // Generate hint for node names that are identifiers
             let node_ident = match &node.name {
-                KdlString::Identifier { ident } => ident.clone(),
-                KdlString::Quoted { value, span } => {
+                KdlIdentifier::Identifier { ident } => ident.clone(),
+                KdlIdentifier::Quoted { value, span } => {
                     format_ident!("{}", sanitize_ident(value), span = *span)
                 }
             };
@@ -183,8 +181,8 @@ mod ide_hints {
             // Generate hint for property keys that are identifiers
             for prop in &node.properties {
                 let ident = match &prop.key {
-                    KdlString::Identifier { ident } => ident.clone(),
-                    KdlString::Quoted { value, span } => {
+                    KdlIdentifier::Identifier { ident } => ident.clone(),
+                    KdlIdentifier::Quoted { value, span } => {
                         format_ident!("{}", sanitize_ident(value), span = *span)
                     }
                 };

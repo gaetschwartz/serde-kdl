@@ -62,7 +62,7 @@ mod tests {
         assert_eq!(parsed.item.name.value(), "node");
         assert_eq!(
             parsed.item.properties,
-            vec![KdlProperty::new(KdlString::ident("key"), "value")]
+            vec![KdlProperty::new(KdlIdentifier::ident("key"), "value")]
         );
 
         assert_eq!(parsed.item.arguments, vec![KdlValue::from(42)]);
