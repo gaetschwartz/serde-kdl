@@ -18,11 +18,11 @@ fn test_string_types_and_contexts() {
     // Test all string types in various contexts: quoted strings with special characters,
     // strings as node names, property keys, arguments, property values, and with type annotations
     let doc = kdl! {
-        node1 "hello world" "with, punctuation!" ""
-        "dash-separated" "identifier-value"
-        "quoted-node" "arg1" "arg2" key="value" "prop-key"="prop-value"
-        unicode "Hello 世界" "🌍" "Здравствуй мир" "مرحبا بالعالم"
-        typed url=(url)"https://example.com" email=(email)"test@example.com"
+        node1 "hello world" "with, punctuation!" "";
+        "dash-separated" "identifier-value";
+        "quoted-node" "arg1" "arg2" key="value" "prop-key"="prop-value";
+        unicode "Hello 世界" "🌍" "Здравствуй мир" "مرحبا بالعالم";
+        typed url=(url)"https://example.com" email=(email)"test@example.com";
     };
 
     assert_snapshot!(doc_to_string(doc), @r#"
@@ -40,12 +40,12 @@ fn test_unicode_escapes_and_disallowed_codepoints() {
     // multiple escapes, edge cases (min/max code points), and disallowed code points
     // (control characters) that must be represented via \u{...} escapes per Section 3.19
     let doc = kdl! {
-        basic "\u{41}" "\u{48}\u{65}\u{6C}\u{6C}\u{6F}"
-        emoji "\u{1F30D}" "\u{1F4DD}"
-        cjk "\u{4E16}" "\u{754C}"
-        mixed "Hello \u{1F30D} World" "Test \u{2713} \u{2717}"
-        edges "\u{ABCD}" "\u{abcd}" "\u{10FFFF}"
-        bidi "\u{200E}" "\u{200F}"
+        basic "\u{41}" "\u{48}\u{65}\u{6C}\u{6C}\u{6F}";
+        emoji "\u{1F30D}" "\u{1F4DD}";
+        cjk "\u{4E16}" "\u{754C}";
+        mixed "Hello \u{1F30D} World" "Test \u{2713} \u{2717}";
+        edges "\u{ABCD}" "\u{abcd}" "\u{10FFFF}";
+        bidi "\u{200E}" "\u{200F}";
     };
 
     assert_snapshot!(doc_to_string(doc), @r#"
