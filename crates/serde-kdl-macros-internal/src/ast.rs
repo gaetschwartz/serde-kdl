@@ -3,10 +3,12 @@
 //! This module contains all the type definitions for representing KDL documents,
 //! nodes, values, and related structures in memory.
 
+use std::borrow::Cow;
+
 use crate::parse::{type_annotation::MaybeAnnotated, value::KdlLit};
 pub use kdl_string::KdlIdentifier;
 use proc_macro2::TokenStream as TokenStream2;
-use quote::{format_ident, quote, quote_spanned, ToTokens};
+use quote::{ToTokens, format_ident, quote, quote_spanned};
 use syn::spanned::Spanned as _;
 
 /// Reserved type annotations for numbers without decimals (Section 3.8.1)
@@ -56,20 +58,33 @@ pub struct KdlDocument {
     pub nodes: Vec<KdlNode>,
 }
 
+impl KdlDocument {
+    pub fn nodes(&self) -> &[KdlNode] {
+        &self.nodes
+    }
+
+    pub fn nodes_mut(&mut self) -> &mut Vec<KdlNode> {
+        &mut self.nodes
+    }
+
+    pub fn from_nodes(nodes: Vec<KdlNode>) -> Self {
+        KdlDocument { nodes }
+    }
+}
+
 /// Represents a single KDL node with optional properties, arguments, and children
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct KdlNode {
     pub name: KdlIdentifier,
     pub type_annotation: Option<KdlIdentifier>, // Type annotation for node name
-    pub properties: Vec<KdlProperty>,
-    pub arguments: Vec<MaybeAnnotated<KdlValue>>,
-    pub children: Option<Vec<KdlNode>>,
+    pub entries: Vec<KdlEntry>,
+    pub children: Option<KdlDocument>,
     pub terminator: Terminator,
 }
 
 impl KdlNode {
-    pub fn type_annotation(&self) -> Option<&KdlIdentifier> {
+    pub fn ty(&self) -> Option<&KdlIdentifier> {
         self.type_annotation.as_ref()
     }
 }
@@ -84,22 +99,63 @@ pub enum Terminator {
 
 /// Represents a KDL property (key="value" pair)
 #[derive(Debug, Clone, PartialEq)]
-pub struct KdlProperty {
-    pub key: KdlIdentifier, // According to Section 3.7, property keys must be String values
+pub struct KdlEntry {
+    pub name: Option<KdlIdentifier>, // According to Section 3.7, property keys must be String values
     pub value: MaybeAnnotated<KdlValue>,
 }
 
-#[cfg(test)]
-impl KdlProperty {
-    /// Create a new `KdlProperty`
-    pub fn new(key: impl Into<KdlIdentifier>, value: impl Into<KdlValue>) -> Self {
-        KdlProperty {
-            key: key.into(),
+impl KdlEntry {
+    pub fn new_prop(name: impl Into<KdlIdentifier>, value: impl Into<KdlValue>) -> KdlEntry {
+        KdlEntry {
+            name: Some(name.into()),
+            value: MaybeAnnotated::new(value.into()),
+        }
+    }
+
+    pub fn new(value: impl Into<KdlValue>) -> KdlEntry {
+        KdlEntry {
+            name: None,
+            value: MaybeAnnotated::new(value.into()),
+        }
+    }
+
+    pub fn new_typed_prop(
+        name: impl Into<KdlIdentifier>,
+        value: MaybeAnnotated<impl Into<KdlValue>>,
+    ) -> KdlEntry {
+        KdlEntry {
+            name: Some(name.into()),
             value: MaybeAnnotated {
-                type_annotation: None,
-                item: value.into(),
+                item: value.item.into(),
+                type_annotation: value.type_annotation,
             },
         }
+    }
+
+    pub fn new_typed_arg(value: MaybeAnnotated<impl Into<KdlValue>>) -> KdlEntry {
+        KdlEntry {
+            name: None,
+            value: MaybeAnnotated {
+                item: value.item.into(),
+                type_annotation: value.type_annotation,
+            },
+        }
+    }
+
+    pub fn set_ty(&mut self, type_annotation: KdlIdentifier) {
+        self.value.type_annotation = Some(type_annotation);
+    }
+
+    pub fn ty(&self) -> Option<&KdlIdentifier> {
+        self.value.type_annotation.as_ref()
+    }
+
+    pub fn name(&self) -> Option<&KdlIdentifier> {
+        self.name.as_ref()
+    }
+
+    pub fn name_str(&self) -> Option<Cow<'_, str>> {
+        self.name.as_ref().map(|n| n.value())
     }
 }
 
@@ -172,7 +228,7 @@ impl ToTokens for KdlValue {
 mod kdl_string {
     use super::*;
     use crate::validation::{self, ValidationOptions};
-    use quote::{quote_spanned, ToTokens};
+    use quote::{ToTokens, quote_spanned};
     use std::borrow::Cow;
 
     /// Represents different types of KDL strings as per Section 3.9
@@ -186,6 +242,26 @@ mod kdl_string {
             value: String,
             span: proc_macro2::Span,
         },
+    }
+
+    impl syn::parse::Parse for KdlIdentifier {
+        fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+            let lookahead = input.lookahead1();
+            // Check if it's a string literal first (quoted strings)
+            if lookahead.peek(syn::LitStr) {
+                let lit_str: syn::LitStr = input.parse()?;
+                let kdl_string = KdlIdentifier::from(lit_str);
+                // eprintln!("[kdl_string] Parsed quoted string: {}", kdl_string.value());
+                Ok(kdl_string)
+            } else if input.peek(syn::Ident) {
+                let ident: syn::Ident = input.parse()?;
+                let kdl_string = KdlIdentifier::new_identifier(ident)?;
+                // eprintln!("[kdl_string] Parsed identifier: {}", kdl_string.value());
+                Ok(kdl_string)
+            } else {
+                Err(lookahead.error())
+            }
+        }
     }
 
     #[allow(dead_code)]
@@ -228,7 +304,7 @@ mod kdl_string {
         }
 
         #[cfg(test)]
-        pub fn ident(ident: impl AsRef<str>) -> Self {
+        pub fn ident_test(ident: impl AsRef<str>) -> Self {
             KdlIdentifier::Identifier {
                 ident: syn::Ident::new(ident.as_ref(), proc_macro2::Span::call_site()),
             }
@@ -323,24 +399,6 @@ mod kdl_string {
                 ));
             }
             Ok(item)
-        }
-    }
-
-    impl syn::parse::Parse for KdlIdentifier {
-        fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-            let lookahead = input.lookahead1();
-            // Check if it's a string literal first (quoted strings)
-            if lookahead.peek(syn::LitStr) {
-                let lit_str: syn::LitStr = input.parse()?;
-                let kdl_string = KdlIdentifier::from(lit_str);
-                Ok(kdl_string)
-            } else if input.peek(syn::Ident) {
-                let ident: syn::Ident = input.parse()?;
-                let kdl_string = KdlIdentifier::new_identifier(ident)?;
-                Ok(kdl_string)
-            } else {
-                Err(lookahead.error())
-            }
         }
     }
 
@@ -450,57 +508,17 @@ impl PartialEq<kdl::KdlNode> for KdlNode {
             _ => {}
         }
 
-        let mut my_props = self.properties.iter();
-        let mut other_props = other.entries().iter().filter(|e| e.name().is_some());
+        let my_entries = &self.entries;
+        let other_entries = other.entries();
 
-        while let (Some(my_prop), Some(other_prop)) = (my_props.next(), other_props.next()) {
-            if &my_prop.key != other_prop.name().unwrap() {
-                return false;
-            }
-            if &my_prop.value.item != other_prop.value() {
-                return false;
-            }
-        }
-        if my_props.next().is_some() || other_props.next().is_some() {
-            return false;
-        }
-
-        let mut my_args = self.arguments.iter();
-        let mut other_args = other
-            .entries()
-            .iter()
-            .filter(|e| e.name().is_none())
-            .map(|e| e.value());
-
-        while let (Some(my_arg), Some(other_arg)) = (my_args.next(), other_args.next()) {
-            if &my_arg.item != other_arg {
-                return false;
-            }
-        }
-        if my_args.next().is_some() || other_args.next().is_some() {
+        if my_entries != other_entries {
             return false;
         }
 
         match (&self.children, other.children()) {
-            (Some(my_children), Some(other_children)) => {
-                if my_children.len() != other_children.nodes().len() {
-                    return false;
-                }
-                let mut my_child_iter = my_children.iter();
-                let mut other_child_iter = other_children.nodes().iter();
-                while let (Some(my_child), Some(other_child)) =
-                    (my_child_iter.next(), other_child_iter.next())
-                {
-                    if my_child != other_child {
-                        return false;
-                    }
-                }
-                if my_child_iter.next().is_some() || other_child_iter.next().is_some() {
-                    return false;
-                }
-            }
-            (None, None) => {}
-            _ => return false,
+            (Some(a), Some(b)) if a != b => return false,
+            (None, Some(_)) | (Some(_), None) => return false,
+            _ => {}
         }
 
         true
@@ -524,5 +542,24 @@ impl PartialEq<kdl::KdlValue> for KdlValue {
             }
             _ => false,
         }
+    }
+}
+
+impl PartialEq<kdl::KdlEntry> for KdlEntry {
+    fn eq(&self, other: &kdl::KdlEntry) -> bool {
+        match (&self.name, other.name()) {
+            (Some(a), Some(b)) if a != b => return false,
+            (None, Some(_)) | (Some(_), None) => return false,
+            _ => {}
+        }
+        if &self.value.item != other.value() {
+            return false;
+        }
+        match (&self.value.type_annotation, other.ty()) {
+            (Some(a), Some(b)) if a != b => return false,
+            (None, Some(_)) | (Some(_), None) => return false,
+            _ => {}
+        }
+        true
     }
 }

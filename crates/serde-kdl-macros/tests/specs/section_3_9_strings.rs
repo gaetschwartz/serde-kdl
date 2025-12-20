@@ -28,7 +28,7 @@ fn test_string_types_and_contexts() {
     assert_snapshot!(doc_to_string(doc), @r#"
     node1 "hello world" "with, punctuation!" ""
     dash-separated identifier-value
-    quoted-node key=value prop-key=prop-value arg1 arg2
+    quoted-node arg1 arg2 key=value prop-key=prop-value
     unicode "Hello 世界" 🌍 "Здравствуй мир" "مرحبا بالعالم"
     typed url=(url)"https://example.com" email=(email)test@example.com
     "#);
@@ -88,8 +88,8 @@ fn test_strings_in_nested_structures() {
     root {
         config environment=production app_name="My Application" version="1.0.0"
         localization {
-            lang greeting="Hello 👋" en
-            lang greeting="你好 👋" zh
+            lang en greeting="Hello 👋"
+            lang zh greeting="你好 👋"
         }
         database {
             connection host=localhost port=5432

@@ -22,13 +22,13 @@ fn test_booleans_in_various_contexts() {
     let doc = kdl! {
         server #true "localhost" 8080 enabled=#false debug=#true
     };
-    assert_snapshot!(doc_to_string(doc), @"server enabled=#false debug=#true #true localhost 8080");
+    assert_snapshot!(doc_to_string(doc), @"server #true localhost 8080 enabled=#false debug=#true");
 
     // Test booleans with type annotations
     let doc = kdl! {
         config (bool)#true (boolean)#false value=(Flag)#true
     };
-    assert_snapshot!(doc_to_string(doc), @"config value=(Flag)#true (bool)#true (boolean)#false");
+    assert_snapshot!(doc_to_string(doc), @"config (bool)#true (boolean)#false value=(Flag)#true");
 
     // Test booleans in nested nodes
     let doc = kdl! {
@@ -39,7 +39,7 @@ fn test_booleans_in_various_contexts() {
     };
     assert_snapshot!(doc_to_string(doc), @r"
     parent enabled=#true {
-        child active=#true #false
+        child #false active=#true
         sibling readonly=#false
     }
     ");

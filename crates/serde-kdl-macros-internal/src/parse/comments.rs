@@ -61,13 +61,11 @@ mod tests {
         assert_eq!(parsed.comments[0].content, " This is a comment");
         assert_eq!(parsed.item.name.value(), "node");
         assert_eq!(
-            parsed.item.properties,
-            vec![KdlProperty::new(KdlIdentifier::ident("key"), "value")]
-        );
-
-        assert_eq!(
-            parsed.item.arguments,
-            vec![MaybeAnnotated::new(KdlValue::from(42), None)]
+            parsed.item.entries,
+            vec![
+                KdlEntry::new_prop(KdlIdentifier::ident_test("key"), "value"),
+                KdlEntry::new(KdlValue::from(42))
+            ]
         );
     }
 }

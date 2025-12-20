@@ -172,7 +172,7 @@ mod basic_usage_tests {
             database "postgres" version=13 ssl=#true
         };
 
-        assert_snapshot!(doc, @"database version=13 ssl=#true postgres");
+        assert_snapshot!(doc, @"database postgres version=13 ssl=#true");
     }
 }
 

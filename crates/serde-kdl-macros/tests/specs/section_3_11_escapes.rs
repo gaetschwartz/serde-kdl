@@ -58,9 +58,9 @@ fn test_escapes_in_all_contexts() {
     };
 
     assert_snapshot!(doc_to_string(doc), @r#"
-    "node\nname" key="value\nhere" prop=😀 "arg\ttab" "quote\"here"
+    "node\nname" "arg\ttab" "quote\"here" key="value\nhere" prop=😀
     escaped_node {
-        childA "property\tkey"="backslash\\test" "nested\narg"
+        childA "nested\narg" "property\tkey"="backslash\\test"
     }
     "#);
 }

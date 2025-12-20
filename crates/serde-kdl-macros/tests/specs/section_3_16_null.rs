@@ -19,8 +19,8 @@ fn test_null_as_arguments_and_properties() {
     };
 
     assert_snapshot!(doc_to_string(doc), @r"
-    my-node key=#null #null
-    server port=8080 ssl=#null #null localhost
+    my-node #null key=#null
+    server #null localhost port=8080 ssl=#null
     config value=(String)#null data=(Option)#null
     ");
 }
@@ -58,13 +58,13 @@ fn test_null_in_nested_structures() {
 
     assert_snapshot!(doc_to_string(doc), @r"
     parent value=#null {
-        child1 enabled=#true #null
+        child1 #null enabled=#true
         child2 data=test cache=#null {
-            grandchild active=#null #null
+            grandchild #null active=#null
         }
     }
     root #null {
-        nested prop=#null #null
+        nested #null prop=#null
     }
     ");
 }

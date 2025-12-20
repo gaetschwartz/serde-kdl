@@ -730,6 +730,7 @@ dependencies = [
  "serde_json",
  "syn",
  "trybuild",
+ "unicode-ident",
 ]
 
 [[package]]

@@ -4,7 +4,7 @@
 //! properties, arguments, and children.
 
 use crate::{
-    ast::{KdlIdentifier, KdlNode, KdlProperty, KdlValue, Terminator},
+    ast::{KdlDocument, KdlEntry, KdlIdentifier, KdlNode, KdlValue, Terminator},
     parse::type_annotation::MaybeAnnotated,
 };
 use syn::{
@@ -26,8 +26,7 @@ impl Parse for KdlNode {
         // FIXME: This doesn't work in rust-analyzer since it returns dummy spans (1:0)
         let node_line = name.span().end().line;
 
-        let mut properties = Vec::new();
-        let mut arguments = Vec::new();
+        let mut entries = Vec::new();
         let mut children = None;
         let mut terminator = None;
 
@@ -69,13 +68,13 @@ impl Parse for KdlNode {
                     ));
                 }
 
-                properties.push(KdlProperty {
-                    key,
+                entries.push(KdlEntry {
+                    name: Some(key),
                     value: prop_value,
                 });
             } else {
                 // It's an argument
-                arguments.push(value);
+                entries.push(KdlEntry { name: None, value });
             }
         }
 
@@ -107,11 +106,12 @@ impl Parse for KdlNode {
             let _sep: Token![;] = input.parse()?;
         }
 
+        let children = children.map(KdlDocument::from_nodes);
+
         let kdl_node = KdlNode {
             name,
             type_annotation,
-            properties,
-            arguments,
+            entries,
             children,
             terminator,
         };

@@ -3,8 +3,8 @@
 //! This module handles parsing of KDL type annotations according to Section 3.8
 //! of the KDL specification.
 
-use crate::ast::KdlIdentifier;
-use quote::ToTokens;
+use crate::ast::{KdlEntry, KdlIdentifier, KdlNode};
+use quote::{quote, ToTokens};
 use std::ops::Deref;
 use syn::{parse::ParseStream, spanned::Spanned, token::Paren, Result};
 
@@ -20,11 +20,52 @@ impl<T> MaybeAnnotated<T> {
         self.type_annotation.as_ref()
     }
 
-    pub fn new(item: T, type_annotation: Option<KdlIdentifier>) -> Self {
+    pub fn new(item: T) -> Self {
         Self {
-            type_annotation,
+            type_annotation: None,
             item,
         }
+    }
+
+    pub fn new_typed(item: T, type_annotation: KdlIdentifier) -> Self {
+        Self {
+            type_annotation: Some(type_annotation),
+            item,
+        }
+    }
+}
+
+pub trait IntoSetTypeAnnotation {
+    fn as_set_ty<I: ToTokens>(&self, ident: I) -> Option<SetTy<'_, I>>;
+}
+
+impl<T> IntoSetTypeAnnotation for MaybeAnnotated<T> {
+    fn as_set_ty<I: ToTokens>(&self, ident: I) -> Option<SetTy<'_, I>> {
+        self.type_annotation.as_ref().map(|ty| SetTy { ty, ident })
+    }
+}
+impl IntoSetTypeAnnotation for KdlNode {
+    fn as_set_ty<I: ToTokens>(&self, ident: I) -> Option<SetTy<'_, I>> {
+        self.ty().as_ref().map(|ty| SetTy { ty, ident })
+    }
+}
+impl IntoSetTypeAnnotation for KdlEntry {
+    fn as_set_ty<I: ToTokens>(&self, ident: I) -> Option<SetTy<'_, I>> {
+        self.ty().as_ref().map(|ty| SetTy { ty, ident })
+    }
+}
+pub struct SetTy<'a, I: ToTokens> {
+    ty: &'a KdlIdentifier,
+    ident: I,
+}
+
+impl<I: ToTokens> ToTokens for SetTy<'_, I> {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let ty = &self.ty;
+        let ident = &self.ident;
+        tokens.extend(quote! {
+            #ident.set_ty(#ty);
+        });
     }
 }
 
