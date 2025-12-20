@@ -4,11 +4,8 @@
 //! identifier string validation, and type annotation validation according to the KDL specification.
 
 use crate::{
-    ast::{
-        KdlValue, RESERVED_FLOAT_TYPES, RESERVED_INTEGER_TYPES, RESERVED_STRING_TYPES,
-        is_reserved_type,
-    },
-    parse::value::KdlLit,
+    ast::{RESERVED_FLOAT_TYPES, RESERVED_INTEGER_TYPES, RESERVED_STRING_TYPES, is_reserved_type},
+    parse::value::{KdlLit, KdlValue},
 };
 use proc_macro2::Span;
 use syn::Result;

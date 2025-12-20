@@ -3,21 +3,28 @@
 //! This module handles parsing of KDL values including strings, numbers,
 //! booleans, null, and type-annotated values.
 
+use crate::{ast::SERDE_KDL_KDL_EXPORT, parse::identifier::KdlIdentifier};
+use proc_macro2::{Span, TokenStream as TokenStream2};
+use quote::{ToTokens, quote};
 use std::ops::RangeBounds;
-
-use crate::ast::{KdlIdentifier, KdlValue};
-use proc_macro2::Span;
-use syn::Token;
-use syn::spanned::Spanned;
 use syn::{
-    Ident, Result,
+    Ident, Result, Token,
     parse::{Parse, ParseStream},
+    spanned::Spanned,
 };
 
 pub mod bare_identifiers {
     syn::custom_keyword!(inf);
     syn::custom_keyword!(nan);
     syn::custom_keyword!(null);
+}
+
+/// Represents a KDL value (string, number, boolean, etc.)
+#[derive(Clone, PartialEq)]
+pub enum KdlValue {
+    String(KdlIdentifier),
+    Variable(syn::Ident),
+    Lit(KdlLit),
 }
 
 impl Parse for KdlValue {
@@ -39,6 +46,75 @@ impl Parse for KdlValue {
                 e.span(),
                 format!("Expected a KDL value (string, number, boolean, null, or variable). ({e})"),
             )),
+        }
+    }
+}
+
+impl ToTokens for KdlValue {
+    fn to_tokens(&self, tokens: &mut TokenStream2) {
+        match self {
+            KdlValue::String(kdl_string) => {
+                let s = kdl_string.value();
+                quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::String(#s.to_string()) }
+            }
+            KdlValue::Lit(KdlLit::Integer(i, _)) => {
+                quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Integer(#i) }
+            }
+            KdlValue::Lit(KdlLit::Float(f, _)) => {
+                quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Float(#f) }
+            }
+            KdlValue::Lit(KdlLit::Boolean(b, _)) => {
+                quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Bool(#b) }
+            }
+            KdlValue::Lit(KdlLit::Null(_)) => quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Null },
+            KdlValue::Lit(KdlLit::Nan(_)) => {
+                quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::NAN) }
+            }
+            KdlValue::Lit(KdlLit::Infinity(_)) => {
+                quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::INFINITY) }
+            }
+            KdlValue::Lit(KdlLit::NegInfinity(_)) => {
+                quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::NEG_INFINITY) }
+            }
+            KdlValue::Variable(ident) => {
+                // Use KdlValue::from() - user's variable type must implement Into<KdlValue>
+                // kdl::KdlValue implements From for: i128, f64, &str, String, bool, Option<T>
+                quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::from(#ident) }
+            }
+        }
+        .to_tokens(tokens);
+    }
+}
+
+impl KdlValue {
+    #[must_use]
+    pub fn span(&self) -> proc_macro2::Span {
+        match self {
+            KdlValue::String(s) => s.span(),
+            KdlValue::Variable(ident) => ident.span(),
+            KdlValue::Lit(lit) => lit.span(),
+        }
+    }
+}
+
+impl From<(&str, proc_macro2::Span)> for KdlValue {
+    fn from((s, span): (&str, proc_macro2::Span)) -> Self {
+        KdlValue::String(KdlIdentifier::from((s, span)))
+    }
+}
+
+impl From<(String, proc_macro2::Span)> for KdlValue {
+    fn from((s, span): (String, proc_macro2::Span)) -> Self {
+        KdlValue::String(KdlIdentifier::from((s, span)))
+    }
+}
+
+impl std::fmt::Debug for KdlValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            KdlValue::String(s) => write!(f, "String({})", s.value()),
+            KdlValue::Variable(ident) => write!(f, "Variable({ident})"),
+            KdlValue::Lit(lit) => write!(f, "Lit({lit:?})"),
         }
     }
 }
@@ -174,6 +250,26 @@ impl PartialEq for KdlLit {
             (KdlLit::Infinity(_), KdlLit::Infinity(_)) => true,
             (KdlLit::NegInfinity(_), KdlLit::NegInfinity(_)) => true,
             (KdlLit::Null(_), KdlLit::Null(_)) => true,
+            _ => false,
+        }
+    }
+}
+
+impl PartialEq<kdl::KdlValue> for KdlValue {
+    fn eq(&self, other: &kdl::KdlValue) -> bool {
+        match (self, other) {
+            (KdlValue::String(a), kdl::KdlValue::String(b)) => &*a.value() == b,
+            (KdlValue::Lit(KdlLit::Integer(a, _)), kdl::KdlValue::Integer(b)) => a == b,
+            (KdlValue::Lit(KdlLit::Float(a, _)), kdl::KdlValue::Float(b)) => a == b,
+            (KdlValue::Lit(KdlLit::Boolean(a, _)), kdl::KdlValue::Bool(b)) => a == b,
+            (KdlValue::Lit(KdlLit::Null(_)), kdl::KdlValue::Null) => true,
+            (KdlValue::Lit(KdlLit::Nan(_)), kdl::KdlValue::Float(b)) => b.is_nan(),
+            (KdlValue::Lit(KdlLit::Infinity(_)), kdl::KdlValue::Float(b)) => {
+                b.is_infinite() && b.is_sign_positive()
+            }
+            (KdlValue::Lit(KdlLit::NegInfinity(_)), kdl::KdlValue::Float(b)) => {
+                b.is_infinite() && b.is_sign_negative()
+            }
             _ => false,
         }
     }

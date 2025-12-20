@@ -1,7 +1,7 @@
 use std::ops::Bound;
 
 use bolero::{Driver, TypeGenerator, check};
-use serde_kdl_macros_internal::ast;
+use serde_kdl_macros_internal::parse::document::KdlDocument;
 
 #[test]
 fn test_parse_any_kdl_doc() {
@@ -18,7 +18,7 @@ fn test_parse_any_kdl_doc() {
                 }
             };
 
-            let parsed = syn::parse2::<ast::KdlDocument>(tokenstream).unwrap_or_else(|e| {
+            let parsed = syn::parse2::<KdlDocument>(tokenstream).unwrap_or_else(|e| {
                 panic!("Failed to parse generated KDL string: {e}\nSource:\n{kdl_str}",)
             });
             assert_eq!(

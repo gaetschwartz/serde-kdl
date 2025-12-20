@@ -11,6 +11,8 @@
 #[allow(unused)]
 pub mod comments;
 pub mod document;
+pub mod entry;
+pub mod identifier;
 pub mod node;
 pub mod type_annotation;
 pub mod value;

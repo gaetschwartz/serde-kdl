@@ -3,8 +3,11 @@
 //! This module handles the generation of Rust code from parsed KDL AST structures.
 
 use crate::{
-    ast::{KDL_NODE, KdlDocument, KdlNode, KdlValue, SERDE_KDL_KDL_EXPORT},
-    parse::{type_annotation::IntoSetTypeAnnotation as _, value::KdlLit},
+    ast::{KDL_NODE, SERDE_KDL_KDL_EXPORT},
+    parse::{
+        document::KdlDocument, node::KdlNode, type_annotation::IntoSetTypeAnnotation as _,
+        value::KdlLit,
+    },
 };
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{format_ident, quote};
@@ -129,6 +132,8 @@ mod ide_hints {
 
 #[cfg(feature = "ide-hints")]
 mod ide_hints {
+    use crate::parse::value::KdlValue;
+
     use super::*;
     use proc_macro2::Span;
     use quote::quote_spanned;

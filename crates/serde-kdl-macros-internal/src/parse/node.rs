@@ -3,15 +3,41 @@
 //! This module handles parsing of KDL nodes including node names,
 //! properties, arguments, and children.
 
-use crate::{
-    ast::{KdlDocument, KdlEntry, KdlIdentifier, KdlNode, KdlValue, Terminator},
-    parse::type_annotation::MaybeAnnotated,
+use crate::parse::{
+    document::KdlDocument, entry::KdlEntry, identifier::KdlIdentifier,
+    type_annotation::MaybeAnnotated, value::KdlValue,
 };
 use syn::{
     Result, Token,
     parse::{Parse, ParseStream, discouraged::Speculative as _},
     token::Brace,
 };
+
+/// Represents a single KDL node with optional properties, arguments, and children
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+pub struct KdlNode {
+    pub name: KdlIdentifier,
+    pub type_annotation: Option<KdlIdentifier>, // Type annotation for node name
+    pub entries: Vec<KdlEntry>,
+    pub children: Option<KdlDocument>,
+    pub terminator: Terminator,
+}
+
+impl KdlNode {
+    #[must_use]
+    pub fn ty(&self) -> Option<&KdlIdentifier> {
+        self.type_annotation.as_ref()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Terminator {
+    Brace,
+    Semicolon,
+    Eol,
+    Eof,
+}
 
 impl Parse for KdlNode {
     fn parse(input: ParseStream) -> Result<Self> {
@@ -117,5 +143,34 @@ impl Parse for KdlNode {
         };
 
         Ok(kdl_node)
+    }
+}
+
+impl PartialEq<kdl::KdlNode> for KdlNode {
+    fn eq(&self, other: &kdl::KdlNode) -> bool {
+        if &self.name != other.name() {
+            return false;
+        }
+
+        match (&self.type_annotation, other.ty()) {
+            (Some(a), Some(b)) if a != b => return false,
+            (None, Some(_)) | (Some(_), None) => return false,
+            _ => {}
+        }
+
+        let my_entries = &self.entries;
+        let other_entries = other.entries();
+
+        if my_entries != other_entries {
+            return false;
+        }
+
+        match (&self.children, other.children()) {
+            (Some(a), Some(b)) if a != b => return false,
+            (None, Some(_)) | (Some(_), None) => return false,
+            _ => {}
+        }
+
+        true
     }
 }

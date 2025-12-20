@@ -3,7 +3,7 @@
 //! This module handles parsing of KDL type annotations according to Section 3.8
 //! of the KDL specification.
 
-use crate::ast::{KdlEntry, KdlIdentifier, KdlNode};
+use crate::parse::{entry::KdlEntry, identifier::KdlIdentifier, node::KdlNode};
 use quote::{ToTokens, quote};
 use std::ops::Deref;
 use syn::{Result, parse::ParseStream, spanned::Spanned, token::Paren};

@@ -44,7 +44,13 @@ impl<T: syn::parse::Parse> syn::parse::Parse for Commented<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ast::*, parse::type_annotation::MaybeAnnotated};
+    use crate::{
+        ast::*,
+        parse::{
+            entry::KdlEntry, identifier::KdlIdentifier, node::KdlNode,
+            type_annotation::MaybeAnnotated, value::KdlValue,
+        },
+    };
     use quote::quote;
 
     #[test]
@@ -54,8 +60,7 @@ mod tests {
             node key="value" 42
         };
 
-        let parsed: Commented<crate::ast::KdlNode> =
-            syn::parse2(kdl_input).expect("Failed to parse");
+        let parsed: Commented<KdlNode> = syn::parse2(kdl_input).expect("Failed to parse");
 
         assert_eq!(parsed.comments.len(), 1);
         assert_eq!(parsed.comments[0].content, " This is a comment");

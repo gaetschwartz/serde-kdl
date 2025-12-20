@@ -6,7 +6,7 @@
 
 use proc_macro2::TokenStream as TokenStream2;
 
-use crate::{ast::KdlDocument, expand::generate_kdl_code};
+use crate::expand::generate_kdl_code;
 
 // Module declarations
 pub mod ast;
@@ -15,7 +15,7 @@ pub mod parse;
 pub mod validation;
 
 pub fn kdl_impl(input: TokenStream2) -> syn::Result<TokenStream2> {
-    let document = syn::parse2::<KdlDocument>(input)?;
+    let document = syn::parse2::<parse::document::KdlDocument>(input)?;
     // eprintln!("Parsed KDL Document: {:#?}", document);
     generate_kdl_code(&document)
 }
