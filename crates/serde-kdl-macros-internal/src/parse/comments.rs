@@ -1,6 +1,32 @@
 use proc_macro2::Span;
 use syn::Token;
 
+/// Represents a KDL slash-dash comment marker (`/-`)
+///
+/// This handles both joint tokens (from actual macro invocations) and
+/// separate tokens (from `quote!` macro in tests).
+#[derive(Clone, Copy)]
+pub struct SlashDash {
+    pub slash: Token![/],
+    pub dash: Token![-],
+}
+
+impl SlashDash {
+    /// Check if the next tokens are `/-`
+    pub fn peek(input: syn::parse::ParseStream) -> bool {
+        input.peek(Token![/]) && input.peek2(Token![-])
+    }
+}
+
+impl syn::parse::Parse for SlashDash {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        Ok(SlashDash {
+            slash: input.parse()?,
+            dash: input.parse()?,
+        })
+    }
+}
+
 struct Commented<T> {
     pub comments: Vec<Comment>,
     pub item: T,
@@ -52,15 +78,14 @@ pub enum MaybeSlashed<T> {
 
 impl<T: syn::parse::Parse> syn::parse::Parse for MaybeSlashed<T> {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let slashed = if input.peek(Token![/]) && input.peek2(Token![-]) {
-            let _slash: Token![/] = input.parse()?;
-            let _dash: Token![-] = input.parse()?;
-            Some(())
+        let slashed = if SlashDash::peek(input) {
+            let _: SlashDash = input.parse()?;
+            true
         } else {
-            None
+            false
         };
         let item = input.parse::<T>()?;
-        if slashed.is_some() {
+        if slashed {
             Ok(MaybeSlashed::Slashed)
         } else {
             Ok(MaybeSlashed::Item(item))

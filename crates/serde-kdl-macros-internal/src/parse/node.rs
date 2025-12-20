@@ -4,7 +4,10 @@
 //! properties, arguments, and children.
 
 use crate::parse::{
-    comments::MaybeSlashed, document::KdlDocument, entry::KdlEntry, identifier::KdlIdentifier,
+    comments::{MaybeSlashed, SlashDash},
+    document::KdlDocument,
+    entry::KdlEntry,
+    identifier::KdlIdentifier,
     type_annotation::MaybeAnnotated,
 };
 use syn::{
@@ -58,6 +61,12 @@ impl Parse for KdlNode {
 
         // Parse arguments and properties
         while !input.is_empty() && !input.peek(Brace) && !input.peek(Token![;]) {
+            // Check if this is a slashed children block (/-{ ... })
+            // If so, break and let the children parsing handle it
+            if SlashDash::peek(input) && input.peek3(Brace) {
+                break;
+            }
+
             // Try to parse as argument (literal value or identifier)
             let fork = input.fork();
             let entry = match fork.parse::<MaybeSlashed<KdlEntry>>()? {

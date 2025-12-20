@@ -1,9 +1,10 @@
-//! Tests for KDL Section 3.16: Null
+//! Tests for KDL slash-dash comments (`/-`)
 //!
-//! This module tests KDL null values (`#null`):
-//! - Null as arguments and properties
-//! - Null with type annotations
-//! - Null mixed with other value types
+//! This module tests slash-dash comment functionality:
+//! - Slash-dash on arguments
+//! - Slash-dash on properties
+//! - Slash-dash on entire nodes
+//! - Slash-dash on children blocks
 
 use super::doc_to_string;
 use insta::assert_snapshot;
@@ -42,6 +43,26 @@ fn test_slash_dashes() {
         serde_kdl path="./" optional=#true {
             "this should be ignored"
         }
+    }
+    "#);
+}
+
+#[test]
+fn test_slash_dash_children_block() {
+    // Test slash-dashing a children block directly (node keeps its arguments/properties)
+    let doc = kdl! {
+        node arg1="value" /-{
+            child1
+            child2 key="ignored"
+        }
+        another_node {
+            child3
+        }
+    };
+    assert_snapshot!(doc_to_string(doc), @r#"
+    node arg1=value
+    another_node {
+        child3
     }
     "#);
 }
