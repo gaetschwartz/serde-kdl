@@ -2,7 +2,7 @@
 //!
 //! This module handles parsing of complete KDL documents.
 
-use crate::parse::node::KdlNode;
+use crate::parse::{comments::MaybeSlashed, node::KdlNode};
 use syn::{
     Result,
     parse::{Parse, ParseStream},
@@ -35,7 +35,12 @@ impl Parse for KdlDocument {
         let mut nodes = Vec::new();
 
         while !input.is_empty() {
-            let node = input.parse::<KdlNode>()?;
+            let node = match input.parse::<MaybeSlashed<KdlNode>>()? {
+                MaybeSlashed::Item(n) => n,
+                MaybeSlashed::Slashed => {
+                    continue;
+                }
+            };
             nodes.push(node);
         }
 

@@ -67,6 +67,10 @@ impl KdlEntry {
     pub fn name_str(&self) -> Option<Cow<'_, str>> {
         self.name.as_ref().map(|n| n.value())
     }
+
+    pub fn span(&self) -> proc_macro2::Span {
+        self.value.span()
+    }
 }
 
 impl syn::parse::Parse for KdlEntry {
