@@ -8,9 +8,9 @@ use crate::{
     parse::type_annotation::MaybeAnnotated,
 };
 use syn::{
-    parse::{discouraged::Speculative as _, Parse, ParseStream},
-    token::Brace,
     Result, Token,
+    parse::{Parse, ParseStream, discouraged::Speculative as _},
+    token::Brace,
 };
 
 impl Parse for KdlNode {

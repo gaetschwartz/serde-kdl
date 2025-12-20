@@ -4,8 +4,8 @@
 
 use crate::ast::{KdlDocument, KdlNode};
 use syn::{
-    parse::{Parse, ParseStream},
     Result,
+    parse::{Parse, ParseStream},
 };
 
 impl Parse for KdlDocument {

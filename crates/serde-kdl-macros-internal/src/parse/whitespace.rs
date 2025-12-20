@@ -99,7 +99,10 @@ impl<const L: usize, const C: usize> LineColumnPredicate for Exactly<L, C> {
         } else {
             Err(syn::Error::new(
                 span,
-                format!("Expected exactly {} lines and {} columns of spacing, found {} lines and {} columns", L, C, lc.line, lc.column),
+                format!(
+                    "Expected exactly {} lines and {} columns of spacing, found {} lines and {} columns",
+                    L, C, lc.line, lc.column
+                ),
             ))
         }
     }
@@ -198,7 +201,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use syn::{parse_str, punctuated::Punctuated, LitBool, Token};
+    use syn::{LitBool, Token, parse_str, punctuated::Punctuated};
 
     #[test]
     fn test_parse_spaced() {

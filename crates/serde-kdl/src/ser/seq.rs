@@ -1,8 +1,8 @@
 use super::Serializer;
 use crate::{
+    DEFAULT_NODE_NAME,
     error::{Error, Result},
     ser::SerializeFieldValue,
-    DEFAULT_NODE_NAME,
 };
 use kdl::{KdlDocument, KdlNode};
 use serde::ser::SerializeSeq;

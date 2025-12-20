@@ -7,11 +7,11 @@ use std::ops::RangeBounds;
 
 use crate::ast::{KdlIdentifier, KdlValue};
 use proc_macro2::Span;
-use syn::spanned::Spanned;
 use syn::Token;
+use syn::spanned::Spanned;
 use syn::{
-    parse::{Parse, ParseStream},
     Ident, Result,
+    parse::{Parse, ParseStream},
 };
 
 pub mod bare_identifiers {
@@ -89,13 +89,13 @@ impl KdlLit {
         if input.peek(syn::LitInt) {
             let lit_int: syn::LitInt = input.parse()?;
             let repr = lit_int.to_string();
-            let out = match repr.as_bytes() {
+
+            match repr.as_bytes() {
                 [b'0', b'b' | b'B', ..] => Self::from_radix(repr, 2, 2.., lit_int.span()),
                 [b'0', b'o' | b'O', ..] => Self::from_radix(repr, 8, 2.., lit_int.span()),
                 [b'0', b'x' | b'X', ..] => Self::from_radix(repr, 16, 2.., lit_int.span()),
                 _ => Ok(Self::Integer(lit_int.base10_parse()?, lit_int.span())),
-            };
-            out
+            }
         } else if input.peek(syn::LitFloat) {
             let lit_float: syn::LitFloat = input.parse()?;
             Ok(Self::Float(lit_float.base10_parse()?, lit_float.span()))
@@ -104,6 +104,7 @@ impl KdlLit {
         }
     }
 
+    #[must_use]
     pub fn span(&self) -> Span {
         match self {
             KdlLit::Integer(_, span) => *span,

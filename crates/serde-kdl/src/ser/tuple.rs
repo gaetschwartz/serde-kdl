@@ -2,9 +2,9 @@ use std::mem;
 
 use super::Serializer;
 use crate::{
+    DEFAULT_NODE_NAME,
     error::{Error, Result},
     ser::SerializeFieldValue as _,
-    DEFAULT_NODE_NAME,
 };
 use kdl::{KdlEntry, KdlNode, KdlValue};
 use serde::ser::{SerializeTuple, SerializeTupleStruct, SerializeTupleVariant};

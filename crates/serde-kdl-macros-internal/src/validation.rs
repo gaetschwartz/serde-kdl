@@ -5,8 +5,8 @@
 
 use crate::{
     ast::{
-        is_reserved_type, KdlValue, RESERVED_FLOAT_TYPES, RESERVED_INTEGER_TYPES,
-        RESERVED_STRING_TYPES,
+        KdlValue, RESERVED_FLOAT_TYPES, RESERVED_INTEGER_TYPES, RESERVED_STRING_TYPES,
+        is_reserved_type,
     },
     parse::value::KdlLit,
 };
@@ -177,22 +177,21 @@ mod strict {
                         return false;
                     }
                     // If second character is '.', third character must not be a digit
-                    if second_char == '.' {
-                        if let Some(third_char) = remaining_chars.clone().nth(1) {
-                            if third_char.is_ascii_digit() {
-                                return false;
-                            }
-                        }
+                    if second_char == '.'
+                        && let Some(third_char) = remaining_chars.clone().nth(1)
+                        && third_char.is_ascii_digit()
+                    {
+                        return false;
                     }
                 }
                 true
             }
             '.' => {
                 // Can only be initial if second character is not a digit
-                if let Some(second_char) = remaining_chars.clone().next() {
-                    if second_char.is_ascii_digit() {
-                        return false;
-                    }
+                if let Some(second_char) = remaining_chars.clone().next()
+                    && second_char.is_ascii_digit()
+                {
+                    return false;
                 }
                 true
             }
@@ -203,12 +202,12 @@ mod strict {
     /// Checks if an identifier looks like a number and should be rejected
     pub fn looks_like_number(identifier: &str) -> bool {
         // Check for "almost a number" pattern: decimal point without leading digit (like ".1")
-        if identifier.starts_with('.') && identifier.len() > 1 {
-            if let Some(second_char) = identifier.chars().nth(1) {
-                if second_char.is_ascii_digit() {
-                    return true;
-                }
-            }
+        if identifier.starts_with('.')
+            && identifier.len() > 1
+            && let Some(second_char) = identifier.chars().nth(1)
+            && second_char.is_ascii_digit()
+        {
+            return true;
         }
 
         // Check for identifiers that appear to start with a number
@@ -237,10 +236,10 @@ mod strict {
         // If it starts with a dot after a sign, it might look like a number
         if effective_first_char == '.' && first_char != effective_first_char {
             // This is "+." or "-." - check if followed by digit
-            if let Some(third_char) = chars.next() {
-                if third_char.is_ascii_digit() {
-                    return true;
-                }
+            if let Some(third_char) = chars.next()
+                && third_char.is_ascii_digit()
+            {
+                return true;
             }
         }
 

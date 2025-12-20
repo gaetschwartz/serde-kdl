@@ -4,9 +4,9 @@
 //! of the KDL specification.
 
 use crate::ast::{KdlEntry, KdlIdentifier, KdlNode};
-use quote::{quote, ToTokens};
+use quote::{ToTokens, quote};
 use std::ops::Deref;
-use syn::{parse::ParseStream, spanned::Spanned, token::Paren, Result};
+use syn::{Result, parse::ParseStream, spanned::Spanned, token::Paren};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct MaybeAnnotated<T> {

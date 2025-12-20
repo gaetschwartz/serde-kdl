@@ -1,7 +1,7 @@
 use crate::error::{Error, Result};
 use kdl::KdlValue;
 use serde::de::Visitor;
-use serde::{forward_to_deserialize_any, Deserializer as DeserializerTrait};
+use serde::{Deserializer as DeserializerTrait, forward_to_deserialize_any};
 
 /// A deserializer that works directly with a single `KdlEntry`
 /// This is useful for deserializing sequence elements that could be enums

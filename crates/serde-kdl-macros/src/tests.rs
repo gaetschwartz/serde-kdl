@@ -1,6 +1,6 @@
 use std::ops::Bound;
 
-use bolero::{check, Driver, TypeGenerator};
+use bolero::{Driver, TypeGenerator, check};
 use serde_kdl_macros_internal::ast;
 
 #[test]
@@ -88,7 +88,7 @@ fn gen_identifier<D: Driver>(driver: &mut D) -> Option<kdl::KdlIdentifier> {
     }
     match name.parse::<kdl::KdlIdentifier>() {
         Ok(i) => Some(i),
-        Err(_) => format!("\"{}\"", name).parse::<kdl::KdlIdentifier>().ok(),
+        Err(_) => format!("\"{name}\"").parse::<kdl::KdlIdentifier>().ok(),
     }
 }
 

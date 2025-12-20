@@ -59,6 +59,7 @@ pub struct KdlDocument {
 }
 
 impl KdlDocument {
+    #[must_use]
     pub fn nodes(&self) -> &[KdlNode] {
         &self.nodes
     }
@@ -67,6 +68,7 @@ impl KdlDocument {
         &mut self.nodes
     }
 
+    #[must_use]
     pub fn from_nodes(nodes: Vec<KdlNode>) -> Self {
         KdlDocument { nodes }
     }
@@ -84,6 +86,7 @@ pub struct KdlNode {
 }
 
 impl KdlNode {
+    #[must_use]
     pub fn ty(&self) -> Option<&KdlIdentifier> {
         self.type_annotation.as_ref()
     }
@@ -146,14 +149,17 @@ impl KdlEntry {
         self.value.type_annotation = Some(type_annotation);
     }
 
+    #[must_use]
     pub fn ty(&self) -> Option<&KdlIdentifier> {
         self.value.type_annotation.as_ref()
     }
 
+    #[must_use]
     pub fn name(&self) -> Option<&KdlIdentifier> {
         self.name.as_ref()
     }
 
+    #[must_use]
     pub fn name_str(&self) -> Option<Cow<'_, str>> {
         self.name.as_ref().map(|n| n.value())
     }
@@ -168,6 +174,7 @@ pub enum KdlValue {
 }
 
 impl KdlValue {
+    #[must_use]
     pub fn span(&self) -> proc_macro2::Span {
         match self {
             KdlValue::String(s) => s.span(),
@@ -267,6 +274,7 @@ mod kdl_string {
     #[allow(dead_code)]
     impl KdlIdentifier {
         /// Get the string value regardless of the string type
+        #[must_use]
         pub fn value(&self) -> Cow<'_, str> {
             match &self {
                 KdlIdentifier::Identifier { ident } => ident.to_string().into(),
@@ -275,6 +283,7 @@ mod kdl_string {
         }
 
         /// Get the span for error reporting
+        #[must_use]
         pub fn span(&self) -> proc_macro2::Span {
             match &self {
                 KdlIdentifier::Identifier { ident } => ident.span(),
@@ -283,6 +292,7 @@ mod kdl_string {
         }
 
         /// Get the identifier if this is an Identifier variant
+        #[must_use]
         pub fn as_ident(&self) -> Option<&syn::Ident> {
             match &self {
                 KdlIdentifier::Identifier { ident } => Some(ident),
@@ -291,6 +301,7 @@ mod kdl_string {
         }
 
         /// Get the quoted string if this is a Quoted variant
+        #[must_use]
         pub fn as_quoted(&self) -> Option<(&str, proc_macro2::Span)> {
             match &self {
                 KdlIdentifier::Quoted { value, span } => Some((value, *span)),
@@ -310,6 +321,7 @@ mod kdl_string {
             }
         }
 
+        #[must_use]
         pub fn new_quoted(value: String, span: proc_macro2::Span) -> Self {
             KdlIdentifier::Quoted { value, span }
         }
@@ -470,6 +482,7 @@ impl std::fmt::Debug for KdlValue {
 
 /// Checks if a type annotation is a reserved type
 #[allow(dead_code)]
+#[must_use]
 pub fn is_reserved_type(type_annotation: &str) -> bool {
     RESERVED_INTEGER_TYPES.contains(&type_annotation)
         || RESERVED_FLOAT_TYPES.contains(&type_annotation)

@@ -283,7 +283,7 @@ mod ide_hints {
         #[case("٧", Some("_٧"))] // Arabic-Indic Digit Seven "٧"
         fn test_sanitize_ident(#[case] input: &str, #[case] expected: Option<&str>) {
             let result = sanitize_ident(input).ok().map(|id| id.to_string());
-            let expected = expected.map(|s| s.to_string());
+            let expected = expected.map(std::string::ToString::to_string);
 
             assert_eq!(result, expected);
         }

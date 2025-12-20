@@ -1,6 +1,6 @@
 use insta::assert_snapshot;
 use rstest::rstest;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use serde_kdl::{from_str, to_string};
 use std::{collections::HashMap, fmt::Debug};
 

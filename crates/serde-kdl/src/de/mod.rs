@@ -1,7 +1,7 @@
 use crate::error::{Error, Result};
 use kdl::{KdlDocument, KdlNode, KdlValue};
 use serde::de::Visitor;
-use serde::{forward_to_deserialize_any, Deserializer as DeserializerTrait};
+use serde::{Deserializer as DeserializerTrait, forward_to_deserialize_any};
 
 mod entry;
 mod map;
@@ -136,12 +136,11 @@ impl<'de> DeserializerTrait<'de> for &mut Deserializer<'de> {
         // Check for #null value indicating None
         if let Some(node) = self.current_node {
             // Check if node has a single #null entry
-            if node.entries().len() == 1 {
-                if let Some(entry) = node.entries().first() {
-                    if matches!(entry.value(), KdlValue::Null) {
-                        return visitor.visit_none();
-                    }
-                }
+            if node.entries().len() == 1
+                && let Some(entry) = node.entries().first()
+                && matches!(entry.value(), KdlValue::Null)
+            {
+                return visitor.visit_none();
             }
 
             let has_children = node.children().is_some_and(|c| !c.nodes().is_empty());
@@ -171,11 +170,11 @@ impl<'de> DeserializerTrait<'de> for &mut Deserializer<'de> {
                 return visitor.visit_seq(seq_de);
             }
             // If we have children, treat them as a sequence (Vec with "-" wrapper)
-            if let Some(children) = node.children() {
-                if !children.nodes().is_empty() {
-                    let seq_de = SeqDeserializer::from_children(children.nodes());
-                    return visitor.visit_seq(seq_de);
-                }
+            if let Some(children) = node.children()
+                && !children.nodes().is_empty()
+            {
+                let seq_de = SeqDeserializer::from_children(children.nodes());
+                return visitor.visit_seq(seq_de);
             }
             // Empty children block means empty sequence
             if node.children().is_some() {
@@ -209,24 +208,23 @@ impl<'de> DeserializerTrait<'de> for &mut Deserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        if let Some(node) = self.current_node {
-            if let Some(children) = node.children() {
-                if !children.nodes().is_empty() {
-                    let map_de = MapDeserializer::new(children.nodes());
-                    return visitor.visit_map(map_de);
-                }
-            }
+        if let Some(node) = self.current_node
+            && let Some(children) = node.children()
+            && !children.nodes().is_empty()
+        {
+            let map_de = MapDeserializer::new(children.nodes());
+            return visitor.visit_map(map_de);
         }
 
         // Try root level as map
         let nodes = self.document.nodes();
         if nodes.len() == 1 {
             let root_node = &nodes[0];
-            if let Some(children) = root_node.children() {
-                if !children.nodes().is_empty() {
-                    let map_de = MapDeserializer::new(children.nodes());
-                    return visitor.visit_map(map_de);
-                }
+            if let Some(children) = root_node.children()
+                && !children.nodes().is_empty()
+            {
+                let map_de = MapDeserializer::new(children.nodes());
+                return visitor.visit_map(map_de);
             }
         }
 
@@ -272,13 +270,12 @@ impl<'de> DeserializerTrait<'de> for &mut Deserializer<'de> {
         }
 
         // Check if this is a simple string enum variant
-        if node.entries().len() == 1 {
-            if let Some(entry) = node.entries().first() {
-                if let KdlValue::String(s) = entry.value() {
-                    use serde::de::value::StrDeserializer;
-                    return visitor.visit_enum(StrDeserializer::<Error>::new(s.as_str()));
-                }
-            }
+        if node.entries().len() == 1
+            && let Some(entry) = node.entries().first()
+            && let KdlValue::String(s) = entry.value()
+        {
+            use serde::de::value::StrDeserializer;
+            return visitor.visit_enum(StrDeserializer::<Error>::new(s.as_str()));
         }
 
         // No type annotation found - error

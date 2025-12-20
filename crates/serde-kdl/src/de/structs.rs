@@ -28,17 +28,17 @@ impl<'de> MapAccess<'de> for StructDeserializer<'de> {
         K: DeserializeSeed<'de>,
     {
         // Only look for child nodes - no properties
-        if let Some(children) = self.node.children() {
-            if self.child_index < children.nodes().len() {
-                let child = &children.nodes()[self.child_index];
-                self.child_index += 1;
+        if let Some(children) = self.node.children()
+            && self.child_index < children.nodes().len()
+        {
+            let child = &children.nodes()[self.child_index];
+            self.child_index += 1;
 
-                self.current_node = Some(child);
-                use serde::de::value::StrDeserializer;
-                return seed
-                    .deserialize(StrDeserializer::<Error>::new(child.name().value()))
-                    .map(Some);
-            }
+            self.current_node = Some(child);
+            use serde::de::value::StrDeserializer;
+            return seed
+                .deserialize(StrDeserializer::<Error>::new(child.name().value()))
+                .map(Some);
         }
 
         Ok(None)

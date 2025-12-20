@@ -4,8 +4,8 @@ use super::structs::StructDeserializer;
 use super::variants::EnumDeserializer;
 use crate::error::{Error, Result};
 use kdl::{KdlNode, KdlValue};
-use serde::de::Visitor;
 use serde::Deserializer as DeserializerTrait;
+use serde::de::Visitor;
 
 /// A deserializer that works directly with a single `KdlNode`
 pub(crate) struct NodeDeserializer<'de> {
@@ -149,15 +149,13 @@ impl<'de> DeserializerTrait<'de> for NodeDeserializer<'de> {
 
         // Check if the node has a single string value - use it as variant name
         // This handles unit enums serialized as strings
-        if self.node.entries().len() == 1 {
-            if let Some(entry) = self.node.entries().first() {
-                if entry.name().is_none() {
-                    if let KdlValue::String(s) = entry.value() {
-                        use serde::de::value::StrDeserializer;
-                        return visitor.visit_enum(StrDeserializer::<Error>::new(s.as_str()));
-                    }
-                }
-            }
+        if self.node.entries().len() == 1
+            && let Some(entry) = self.node.entries().first()
+            && entry.name().is_none()
+            && let KdlValue::String(s) = entry.value()
+        {
+            use serde::de::value::StrDeserializer;
+            return visitor.visit_enum(StrDeserializer::<Error>::new(s.as_str()));
         }
 
         // Use node name as variant for externally tagged enums
@@ -171,12 +169,11 @@ impl<'de> DeserializerTrait<'de> for NodeDeserializer<'de> {
         V: Visitor<'de>,
     {
         // Check if node has a single #null argument -> None
-        if self.node.entries().len() == 1 {
-            if let Some(entry) = self.node.entries().first() {
-                if matches!(entry.value(), KdlValue::Null) {
-                    return visitor.visit_none();
-                }
-            }
+        if self.node.entries().len() == 1
+            && let Some(entry) = self.node.entries().first()
+            && matches!(entry.value(), KdlValue::Null)
+        {
+            return visitor.visit_none();
         }
 
         // If node has entries, children, or a type annotation, treat as Some

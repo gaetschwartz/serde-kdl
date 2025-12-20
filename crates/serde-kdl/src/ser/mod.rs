@@ -1,8 +1,8 @@
 use std::mem;
 
 use crate::{
-    error::{Error, Result},
     DEFAULT_NODE_NAME,
+    error::{Error, Result},
 };
 use kdl::{KdlDocument, KdlEntry, KdlNode, KdlValue};
 use serde::Serializer as SerializerTrait;
@@ -88,14 +88,14 @@ impl Serializer {
                     }
                 }
                 // If the current node has children, add them
-                if let Some(current_children) = current.children_mut() {
-                    if !current_children.nodes().is_empty() {
-                        let mut child_doc = node.children_mut().take().unwrap_or_default();
-                        child_doc
-                            .nodes_mut()
-                            .extend(mem::take(current_children.nodes_mut()));
-                        *node.children_mut() = Some(child_doc);
-                    }
+                if let Some(current_children) = current.children_mut()
+                    && !current_children.nodes().is_empty()
+                {
+                    let mut child_doc = node.children_mut().take().unwrap_or_default();
+                    child_doc
+                        .nodes_mut()
+                        .extend(mem::take(current_children.nodes_mut()));
+                    *node.children_mut() = Some(child_doc);
                 }
             }
 
