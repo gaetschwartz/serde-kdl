@@ -13,7 +13,8 @@ use syn::{Result, spanned::Spanned as _};
 pub fn generate_kdl_code(document: &KdlDocument) -> Result<TokenStream2> {
     let nodes = document.nodes.iter().map(expand_node_creation);
     // Generate LSP hints for IDE support
-    let hints = ide_hints::write_hints(document)?;
+    let mut hints = quote! {};
+    hints.extend(ide_hints::write_hints(document)?);
 
     Ok(quote! { {
         { #hints }
@@ -129,8 +130,8 @@ mod ide_hints {
 #[cfg(feature = "ide-hints")]
 mod ide_hints {
     use super::*;
-    use crate::ast::KdlIdentifier;
     use proc_macro2::Span;
+    use quote::quote_spanned;
 
     /// Generate phantom const bindings for LSP/IDE support.
     /// This creates bindings that use the same identifiers as the KDL input,
@@ -144,33 +145,34 @@ mod ide_hints {
     fn write_hints_from_nodes(nodes: &[KdlNode], hints: &mut TokenStream2) -> syn::Result<()> {
         for node in nodes {
             // Generate hint for node names that are identifiers
-            let node_ident = match &node.name {
-                KdlIdentifier::Identifier { ident } => ident.clone(),
-                KdlIdentifier::Quoted { value, span } => {
-                    format_ident!("{}", sanitize_ident(value)?, span = *span)
-                }
-            };
+            let node_ident = node.name.to_ident()?;
             hints.extend(quote! {
-                #[allow(non_snake_case, non_camel_case_types, dead_code, unused)]
+                #[allow(non_snake_case, non_camel_case_types, unused)]
                 { struct #node_ident; }
             });
 
             // Generate hint for property keys that are identifiers
             for entry in &node.entries {
-                // Generate hint for property values
+                // Generate hint for values
                 hints.extend(value_hint(&entry.value));
 
-                let ident = match &entry.name {
-                    Some(KdlIdentifier::Identifier { ident }) => ident.clone(),
-                    Some(KdlIdentifier::Quoted { value, span }) => {
-                        format_ident!("{}", sanitize_ident(value)?, span = *span)
-                    }
-                    None => continue,
+                if let Some(ty) = entry.ty() {
+                    let type_token = quote_spanned!(ty.span()=> type);
+                    hints.extend(quote! {
+                        #[allow(unused)]
+                        { #type_token _Ty = (); }
+                    });
+                }
+
+                let Some(name) = &entry.name else {
+                    continue;
                 };
+                let ident = name.to_ident()?;
+
                 let enum_ident =
                     format_ident!("{node_ident}_Prop_{}", ident, span = Span::call_site());
                 hints.extend(quote! {
-                    #[allow(non_snake_case, non_camel_case_types, dead_code, unused)]
+                    #[allow(non_snake_case, non_camel_case_types, unused)]
                     { enum #enum_ident { #ident(#SERDE_KDL_KDL_EXPORT::KdlValue) } }
                 });
             }
@@ -178,6 +180,14 @@ mod ide_hints {
             // Recurse into children
             if let Some(children) = &node.children {
                 write_hints_from_nodes(&children.nodes, hints)?;
+            }
+
+            if let Some(ty) = node.ty() {
+                let type_token = quote_spanned!(ty.span()=> type);
+                hints.extend(quote! {
+                    #[allow(unused)]
+                    { #type_token _Ty = (); }
+                });
             }
         }
 
@@ -213,85 +223,5 @@ mod ide_hints {
             }
             _ => quote! {},
         }
-    }
-
-    const ULTRA_RESERVED: &[&str] = &["crate", "self", "super", "Self"];
-
-    fn sanitize_ident(input: &str) -> syn::Result<syn::Ident> {
-        let mut output = String::with_capacity(input.len());
-        #[inline]
-        fn to_valid_char(c: char) -> char {
-            if unicode_ident::is_xid_continue(c) {
-                c
-            } else {
-                '_'
-            }
-        }
-        let mut chars = input.chars();
-        if let Some(first_char) = chars.next() {
-            if !unicode_ident::is_xid_start(first_char) {
-                output.push('_');
-            }
-            output.push(to_valid_char(first_char));
-        }
-        for c in chars {
-            output.push(to_valid_char(c));
-        }
-        if ULTRA_RESERVED.contains(&output.as_str()) {
-            output.push('_');
-        }
-        if let Ok(ident) = syn::parse_str::<syn::Ident>(&output) {
-            // eprintln!("[ide-hints] Sanitized identifier: {} -> {}", input, output);
-            return Ok(ident);
-        }
-        output.push('_');
-        match syn::parse_str::<syn::Ident>(&output) {
-            Ok(ident) => {
-                // eprintln!(
-                //     "[ide-hints] Sanitized identifier with fallback: {} -> {}",
-                //     input, output
-                // );
-                Ok(ident)
-            }
-            Err(e) => Err(syn::Error::new(
-                Span::call_site(),
-                format!("Failed to sanitize identifier '{input}' to a valid Rust identifier: {e}"),
-            )),
-        }
-    }
-    #[cfg(test)]
-    mod tests {
-        use super::ide_hints::sanitize_ident;
-        use pretty_assertions::assert_eq;
-        use rstest::rstest;
-
-        #[rstest]
-        #[case("123", Some("_123"))]
-        #[case("foo", Some("foo"))]
-        #[case("true", Some("r#true"))]
-        #[case("self", Some("self_"))]
-        #[case("foo-bar", Some("foo_bar"))]
-        #[case("foo bar", Some("foo_bar"))]
-        #[case("foo@bar", Some("foo_bar"))]
-        #[case("foo/bar", Some("foo_bar"))]
-        // really wild cases
-        #[case("!@#$%^&*()", Some("___________"))]
-        // unicode cases
-        #[case("变量", Some("变量"))]
-        // unicode cases starting with non XID_Start but non ascii
-        #[case("\u{0667}", Some("_\u{0667}"))] // Arabic-Indic Digit Seven "٧"
-        #[case("٧", Some("_٧"))] // Arabic-Indic Digit Seven "٧"
-        fn test_sanitize_ident(#[case] input: &str, #[case] expected: Option<&str>) {
-            let result = sanitize_ident(input).ok().map(|id| id.to_string());
-            let expected = expected.map(std::string::ToString::to_string);
-
-            assert_eq!(result, expected);
-        }
-    }
-
-    #[test]
-    fn test_parse_true() {
-        let parsed: syn::Ident = syn::parse_str("true").expect("Failed to parse");
-        assert_eq!(parsed, "true");
     }
 }

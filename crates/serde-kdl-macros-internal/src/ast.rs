@@ -8,8 +8,7 @@ use std::borrow::Cow;
 use crate::parse::{type_annotation::MaybeAnnotated, value::KdlLit};
 pub use kdl_string::KdlIdentifier;
 use proc_macro2::TokenStream as TokenStream2;
-use quote::{ToTokens, format_ident, quote, quote_spanned};
-use syn::spanned::Spanned as _;
+use quote::{ToTokens, format_ident, quote};
 
 /// Reserved type annotations for numbers without decimals (Section 3.8.1)
 #[allow(dead_code)]
@@ -201,31 +200,31 @@ impl ToTokens for KdlValue {
         match self {
             KdlValue::String(kdl_string) => {
                 let s = kdl_string.value();
-                quote_spanned! {kdl_string.span()=> #SERDE_KDL_KDL_EXPORT::KdlValue::String(#s.to_string()) }
+                quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::String(#s.to_string()) }
             }
-            KdlValue::Lit(KdlLit::Integer(i, span)) => {
-                quote_spanned! {*span=> #SERDE_KDL_KDL_EXPORT::KdlValue::Integer(#i) }
+            KdlValue::Lit(KdlLit::Integer(i, _)) => {
+                quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Integer(#i) }
             }
-            KdlValue::Lit(KdlLit::Float(f, span)) => {
-                quote_spanned! {*span=> #SERDE_KDL_KDL_EXPORT::KdlValue::Float(#f) }
+            KdlValue::Lit(KdlLit::Float(f, _)) => {
+                quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Float(#f) }
             }
-            KdlValue::Lit(KdlLit::Boolean(b, span)) => {
-                quote_spanned! {*span=> #SERDE_KDL_KDL_EXPORT::KdlValue::Bool(#b) }
+            KdlValue::Lit(KdlLit::Boolean(b, _)) => {
+                quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Bool(#b) }
             }
-            KdlValue::Lit(KdlLit::Null(n)) => quote_spanned! {n.span()=> #SERDE_KDL_KDL_EXPORT::KdlValue::Null },
-            KdlValue::Lit(KdlLit::Nan(n)) => {
-                quote_spanned! {n.span()=> #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::NAN) }
+            KdlValue::Lit(KdlLit::Null(_)) => quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Null },
+            KdlValue::Lit(KdlLit::Nan(_)) => {
+                quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::NAN) }
             }
-            KdlValue::Lit(KdlLit::Infinity(n)) => {
-                quote_spanned! {n.span()=> #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::INFINITY) }
+            KdlValue::Lit(KdlLit::Infinity(_)) => {
+                quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::INFINITY) }
             }
-            KdlValue::Lit(KdlLit::NegInfinity(n)) => {
-                quote_spanned! {n.span()=> #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::NEG_INFINITY) }
+            KdlValue::Lit(KdlLit::NegInfinity(_)) => {
+                quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::NEG_INFINITY) }
             }
             KdlValue::Variable(ident) => {
                 // Use KdlValue::from() - user's variable type must implement Into<KdlValue>
                 // kdl::KdlValue implements From for: i128, f64, &str, String, bool, Option<T>
-                quote_spanned! {ident.span()=> #SERDE_KDL_KDL_EXPORT::KdlValue::from(#ident) }
+                quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::from(#ident) }
             }
         }
         .to_tokens(tokens);
@@ -235,6 +234,7 @@ impl ToTokens for KdlValue {
 mod kdl_string {
     use super::*;
     use crate::validation::{self, ValidationOptions};
+    use proc_macro2::Span;
     use quote::{ToTokens, quote_spanned};
     use std::borrow::Cow;
 
@@ -291,24 +291,6 @@ mod kdl_string {
             }
         }
 
-        /// Get the identifier if this is an Identifier variant
-        #[must_use]
-        pub fn as_ident(&self) -> Option<&syn::Ident> {
-            match &self {
-                KdlIdentifier::Identifier { ident } => Some(ident),
-                KdlIdentifier::Quoted { .. } => None,
-            }
-        }
-
-        /// Get the quoted string if this is a Quoted variant
-        #[must_use]
-        pub fn as_quoted(&self) -> Option<(&str, proc_macro2::Span)> {
-            match &self {
-                KdlIdentifier::Quoted { value, span } => Some((value, *span)),
-                KdlIdentifier::Identifier { .. } => None,
-            }
-        }
-
         pub fn new_identifier(ident: syn::Ident) -> syn::Result<Self> {
             validation::validate_identifier(&ident, ValidationOptions::default())?;
             Ok(KdlIdentifier::Identifier { ident })
@@ -324,6 +306,17 @@ mod kdl_string {
         #[must_use]
         pub fn new_quoted(value: String, span: proc_macro2::Span) -> Self {
             KdlIdentifier::Quoted { value, span }
+        }
+
+        pub fn to_ident(&self) -> syn::Result<syn::Ident> {
+            match self {
+                KdlIdentifier::Identifier { ident } => Ok(ident.clone()),
+                KdlIdentifier::Quoted { value, span } => {
+                    let mut ident = sanitize_ident(value)?;
+                    ident.set_span(*span);
+                    Ok(ident)
+                }
+            }
         }
     }
 
@@ -420,10 +413,86 @@ mod kdl_string {
         }
     }
 
+    const ULTRA_RESERVED: &[&str] = &["crate", "self", "super", "Self"];
+
+    fn sanitize_ident(input: &str) -> syn::Result<syn::Ident> {
+        let mut output = String::with_capacity(input.len());
+        #[inline]
+        fn to_valid_char(c: char) -> char {
+            if unicode_ident::is_xid_continue(c) {
+                c
+            } else {
+                '_'
+            }
+        }
+        let mut chars = input.chars();
+        if let Some(first_char) = chars.next() {
+            if !unicode_ident::is_xid_start(first_char) {
+                output.push('_');
+            }
+            output.push(to_valid_char(first_char));
+        }
+        for c in chars {
+            output.push(to_valid_char(c));
+        }
+        if ULTRA_RESERVED.contains(&output.as_str()) {
+            output.push('_');
+        }
+        if let Ok(ident) = syn::parse_str::<syn::Ident>(&output) {
+            // eprintln!("[ide-hints] Sanitized identifier: {} -> {}", input, output);
+            return Ok(ident);
+        }
+        output.push('_');
+        match syn::parse_str::<syn::Ident>(&output) {
+            Ok(ident) => {
+                // eprintln!(
+                //     "[ide-hints] Sanitized identifier with fallback: {} -> {}",
+                //     input, output
+                // );
+                Ok(ident)
+            }
+            Err(e) => Err(syn::Error::new(
+                Span::call_site(),
+                format!("Failed to sanitize identifier '{input}' to a valid Rust identifier: {e}"),
+            )),
+        }
+    }
+
     #[cfg(test)]
-    mod test {
+    mod tests {
         use super::*;
         use crate::ast::KdlValue;
+        use pretty_assertions::assert_eq;
+        use rstest::rstest;
+
+        #[rstest]
+        #[case("123", Some("_123"))]
+        #[case("foo", Some("foo"))]
+        #[case("true", Some("r#true"))]
+        #[case("self", Some("self_"))]
+        #[case("foo-bar", Some("foo_bar"))]
+        #[case("foo bar", Some("foo_bar"))]
+        #[case("foo@bar", Some("foo_bar"))]
+        #[case("foo/bar", Some("foo_bar"))]
+        // really wild cases
+        #[case("!@#$%^&*()", Some("___________"))]
+        // unicode cases
+        #[case("变量", Some("变量"))]
+        // unicode cases starting with non XID_Start but non ascii
+        #[case("\u{0667}", Some("_\u{0667}"))] // Arabic-Indic Digit Seven "٧"
+        #[case("٧", Some("_٧"))] // Arabic-Indic Digit Seven "٧"
+        fn test_sanitize_ident(#[case] input: &str, #[case] expected: Option<&str>) {
+            let result = sanitize_ident(input).ok().map(|id| id.to_string());
+            let expected = expected.map(std::string::ToString::to_string);
+
+            assert_eq!(result, expected);
+        }
+
+        #[test]
+        fn test_parse_true() {
+            let parsed: syn::Ident = syn::parse_str("true").expect("Failed to parse");
+            assert_eq!(parsed, "true");
+        }
 
         impl From<String> for KdlIdentifier {
             fn from(value: String) -> Self {
