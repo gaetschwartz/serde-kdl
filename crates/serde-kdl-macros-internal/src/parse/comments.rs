@@ -70,8 +70,8 @@ impl<T: syn::parse::Parse> syn::parse::Parse for Commented<T> {
 
 #[derive(Debug, Clone)]
 pub enum MaybeSlashed<T> {
-    /// An item preceded by `/-` so it's commented out
-    Slashed,
+    /// An item preceded by `/-` so it's commented out (but still parsed)
+    Slashed(T),
     /// A plain item without any slashing
     Item(T),
 }
@@ -86,7 +86,7 @@ impl<T: syn::parse::Parse> syn::parse::Parse for MaybeSlashed<T> {
         };
         let item = input.parse::<T>()?;
         if slashed {
-            Ok(MaybeSlashed::Slashed)
+            Ok(MaybeSlashed::Slashed(item))
         } else {
             Ok(MaybeSlashed::Item(item))
         }
@@ -96,15 +96,30 @@ impl<T: syn::parse::Parse> syn::parse::Parse for MaybeSlashed<T> {
 impl<T> From<MaybeSlashed<T>> for Option<T> {
     fn from(value: MaybeSlashed<T>) -> Self {
         match value {
-            MaybeSlashed::Slashed => None,
+            MaybeSlashed::Slashed(_) => None,
             MaybeSlashed::Item(item) => Some(item),
         }
     }
 }
 
 impl<T> MaybeSlashed<T> {
+    /// Returns true if the item is slashed (commented out with `/-`)
     pub fn is_slashed(&self) -> bool {
-        matches!(self, MaybeSlashed::Slashed)
+        matches!(self, MaybeSlashed::Slashed(_))
+    }
+
+    /// Returns a reference to the inner item, regardless of whether it's slashed
+    pub fn inner(&self) -> &T {
+        match self {
+            MaybeSlashed::Slashed(item) | MaybeSlashed::Item(item) => item,
+        }
+    }
+
+    /// Consumes self and returns the inner item, regardless of whether it's slashed
+    pub fn into_inner(self) -> T {
+        match self {
+            MaybeSlashed::Slashed(item) | MaybeSlashed::Item(item) => item,
+        }
     }
 }
 
@@ -153,6 +168,8 @@ mod tests {
         let parsed: MaybeSlashed<syn::LitStr> = syn::parse2(kdl_input).expect("Failed to parse");
 
         assert!(parsed.is_slashed());
+        // Verify we can still access the slashed content
+        assert_eq!(parsed.inner().value(), "This is a slashed value");
     }
 
     #[test]

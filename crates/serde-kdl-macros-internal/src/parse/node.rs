@@ -25,6 +25,10 @@ pub struct KdlNode {
     pub entries: Vec<KdlEntry>,
     pub children: Option<KdlDocument>,
     pub terminator: Terminator,
+    /// Entries that are commented out with `/-`
+    pub ignored_entries: Vec<KdlEntry>,
+    /// Children block that is commented out with `/-`
+    pub ignored_children: Option<KdlDocument>,
 }
 
 impl KdlNode {
@@ -56,7 +60,9 @@ impl Parse for KdlNode {
         let node_line = name.span().end().line;
 
         let mut entries = Vec::new();
+        let mut ignored_entries = Vec::new();
         let mut children = None;
+        let mut ignored_children = None;
         let mut terminator = None;
 
         // Parse arguments and properties
@@ -69,13 +75,8 @@ impl Parse for KdlNode {
 
             // Try to parse as argument (literal value or identifier)
             let fork = input.fork();
-            let entry = match fork.parse::<MaybeSlashed<KdlEntry>>()? {
-                MaybeSlashed::Item(e) => e,
-                MaybeSlashed::Slashed => {
-                    input.advance_to(&fork);
-                    continue;
-                }
-            };
+            let maybe_entry = fork.parse::<MaybeSlashed<KdlEntry>>()?;
+            let entry = maybe_entry.inner();
 
             let value_line = entry.span().start().line;
 
@@ -86,7 +87,10 @@ impl Parse for KdlNode {
             }
 
             input.advance_to(&fork);
-            entries.push(entry);
+            match maybe_entry {
+                MaybeSlashed::Item(e) => entries.push(e),
+                MaybeSlashed::Slashed(e) => ignored_entries.push(e),
+            }
         }
 
         // Parse children if present
@@ -94,9 +98,13 @@ impl Parse for KdlNode {
         let terminator = if let Some(t) = terminator {
             t
         } else if let Ok(c) = fork.parse::<MaybeSlashed<ChildrenBlock>>() {
-            children = match c {
-                MaybeSlashed::Item(c) => Some(KdlDocument::from_nodes(c.nodes)),
-                MaybeSlashed::Slashed => None,
+            match c {
+                MaybeSlashed::Item(c) => {
+                    children = Some(KdlDocument::from_nodes(c.nodes));
+                }
+                MaybeSlashed::Slashed(c) => {
+                    ignored_children = Some(KdlDocument::from_nodes(c.nodes));
+                }
             };
             input.advance_to(&fork);
 
@@ -124,6 +132,8 @@ impl Parse for KdlNode {
             entries,
             children,
             terminator,
+            ignored_entries,
+            ignored_children,
         };
 
         Ok(kdl_node)

@@ -12,6 +12,8 @@ use syn::{
 #[derive(Debug, Clone)]
 pub struct KdlDocument {
     pub nodes: Vec<KdlNode>,
+    /// Nodes that are commented out with `/-`
+    pub ignored_nodes: Vec<KdlNode>,
 }
 
 impl KdlDocument {
@@ -25,26 +27,35 @@ impl KdlDocument {
     }
 
     #[must_use]
+    pub fn ignored_nodes(&self) -> &[KdlNode] {
+        &self.ignored_nodes
+    }
+
+    #[must_use]
     pub fn from_nodes(nodes: Vec<KdlNode>) -> Self {
-        KdlDocument { nodes }
+        KdlDocument {
+            nodes,
+            ignored_nodes: Vec::new(),
+        }
     }
 }
 
 impl Parse for KdlDocument {
     fn parse(input: ParseStream) -> Result<Self> {
         let mut nodes = Vec::new();
+        let mut ignored_nodes = Vec::new();
 
         while !input.is_empty() {
-            let node = match input.parse::<MaybeSlashed<KdlNode>>()? {
-                MaybeSlashed::Item(n) => n,
-                MaybeSlashed::Slashed => {
-                    continue;
-                }
-            };
-            nodes.push(node);
+            match input.parse::<MaybeSlashed<KdlNode>>()? {
+                MaybeSlashed::Item(n) => nodes.push(n),
+                MaybeSlashed::Slashed(n) => ignored_nodes.push(n),
+            }
         }
 
-        Ok(KdlDocument { nodes })
+        Ok(KdlDocument {
+            nodes,
+            ignored_nodes,
+        })
     }
 }
 
