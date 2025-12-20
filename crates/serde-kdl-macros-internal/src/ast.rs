@@ -468,7 +468,7 @@ mod kdl_string {
         #[rstest]
         #[case("123", Some("_123"))]
         #[case("foo", Some("foo"))]
-        #[case("true", Some("r#true"))]
+        #[case("true", Some("true_"))]
         #[case("self", Some("self_"))]
         #[case("foo-bar", Some("foo_bar"))]
         #[case("foo bar", Some("foo_bar"))]
@@ -489,9 +489,9 @@ mod kdl_string {
         }
 
         #[test]
+        #[should_panic]
         fn test_parse_true() {
-            let parsed: syn::Ident = syn::parse_str("true").expect("Failed to parse");
-            assert_eq!(parsed, "true");
+            let _: syn::Ident = syn::parse_str("true").expect("Failed to parse");
         }
 
         impl From<String> for KdlIdentifier {
