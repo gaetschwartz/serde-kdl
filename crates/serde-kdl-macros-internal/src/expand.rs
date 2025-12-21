@@ -20,7 +20,7 @@ pub fn generate_kdl_code(document: &KdlDocument) -> Result<TokenStream2> {
     hints.extend(ide_hints::write_hints(document)?);
 
     Ok(quote! { {
-        { #hints }
+        { mod ide_hints { fn ide_hints() { #hints } } }
         {
             let mut document = #SERDE_KDL_KDL_EXPORT::KdlDocument::new();
             document.nodes_mut().extend([#(#nodes),*]);
@@ -237,7 +237,7 @@ mod ide_hints {
         };
         let ident = name.to_ident()?;
 
-        let enum_ident = format_ident!("{node_ident}_Prop_{}", ident, span = Span::call_site());
+        let enum_ident = format_ident!("{ident}", span = Span::call_site());
         hints.extend(quote! {
             #[allow(non_snake_case, non_camel_case_types, unused)]
             { enum #enum_ident { #ident(#SERDE_KDL_KDL_EXPORT::KdlValue) } }
@@ -320,7 +320,7 @@ mod ide_hints {
         };
         let ident = name.to_ident()?;
 
-        let enum_ident = format_ident!("{node_ident}_Prop_{}", ident, span = Span::call_site());
+        let enum_ident = format_ident!("{ident}", span = Span::call_site());
         hints.extend(quote! {
             #[deprecated(note = "slashed out with /-")]
             #[allow(non_snake_case, non_camel_case_types, unused, deprecated)]
