@@ -254,26 +254,16 @@ mod ide_hints {
 
     fn value_hint(value: &KdlValue) -> TokenStream2 {
         match value {
-            KdlValue::Lit(KdlLit::Null(PoundLiteral { value, .. })) => {
+            KdlValue::Lit(KdlLit::Null(PoundLiteral(_, value))) => {
                 to_const_kdl_value_hint(value, quote! { Null })
             }
-            KdlValue::Lit(KdlLit::Nan(PoundLiteral { value, .. })) => {
+            KdlValue::Lit(KdlLit::Nan(PoundLiteral(_, value))) => {
                 to_const_kdl_value_hint(value, quote! { Float(f64::NAN) })
             }
-            KdlValue::Lit(KdlLit::Infinity(PoundLiteral {
-                value: MaybeMinus {
-                    minus: None, value, ..
-                },
-                ..
-            })) => to_const_kdl_value_hint(value, quote! { Float(f64::INFINITY) }),
-            KdlValue::Lit(KdlLit::Infinity(PoundLiteral {
-                value:
-                    MaybeMinus {
-                        minus: Some(minus),
-                        value,
-                    },
-                ..
-            })) => {
+            KdlValue::Lit(KdlLit::Infinity(PoundLiteral(_, MaybeMinus(None, value)))) => {
+                to_const_kdl_value_hint(value, quote! { Float(f64::INFINITY) })
+            }
+            KdlValue::Lit(KdlLit::Infinity(PoundLiteral(_, MaybeMinus(Some(minus), value)))) => {
                 let minus_hint = to_const_value_hint(
                     format_ident!("minus", span = minus.span()),
                     quote! { () },

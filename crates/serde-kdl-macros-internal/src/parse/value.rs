@@ -75,7 +75,7 @@ impl ToTokens for KdlValue {
                 quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::NAN) }
             }
             KdlValue::Lit(KdlLit::Infinity(v)) => {
-                if v.minus.is_some() {
+                if v.minus().is_some() {
                     quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::NEG_INFINITY) }
                 } else {
                     quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::INFINITY) }
@@ -257,9 +257,9 @@ impl PartialEq for KdlLit {
         match (self, other) {
             (KdlLit::Integer(a, _), KdlLit::Integer(b, _)) => a == b,
             (KdlLit::Float(a, _), KdlLit::Float(b, _)) => a == b,
-            (KdlLit::Boolean(a), KdlLit::Boolean(b)) => a.value() == b.value(),
+            (KdlLit::Boolean(a), KdlLit::Boolean(b)) => a.value().value == b.value().value,
             (KdlLit::Nan(_), KdlLit::Nan(_)) => true,
-            (KdlLit::Infinity(a), KdlLit::Infinity(b)) => a.minus.is_some() == b.minus.is_some(),
+            (KdlLit::Infinity(a), KdlLit::Infinity(b)) => a.minus().is_some() == b.minus().is_some(),
             (KdlLit::Null(_), KdlLit::Null(_)) => true,
             _ => false,
         }
@@ -267,28 +267,27 @@ impl PartialEq for KdlLit {
 }
 
 #[derive(Clone)]
-pub struct PoundLiteral<T> {
-    pub pound: syn::token::Pound,
-    pub value: T,
-}
+pub struct PoundLiteral<T>(pub syn::token::Pound, pub T);
 
 impl<T> PoundLiteral<T> {
-    pub fn new(pound: syn::token::Pound, inner: T) -> Self {
-        Self {
-            pound,
-            value: inner,
-        }
+    pub fn new(pound: syn::token::Pound, value: T) -> Self {
+        Self(pound, value)
+    }
+
+    pub fn pound(&self) -> &syn::token::Pound {
+        &self.0
+    }
+
+    pub fn value(&self) -> &T {
+        &self.1
     }
 }
 
 impl<T: syn::parse::Parse> syn::parse::Parse for PoundLiteral<T> {
     fn parse(input: ParseStream) -> Result<Self> {
         let pound: Token![#] = input.parse()?;
-        let inner: T = input.parse()?;
-        Ok(PoundLiteral {
-            pound,
-            value: inner,
-        })
+        let value: T = input.parse()?;
+        Ok(PoundLiteral(pound, value))
     }
 }
 
@@ -308,8 +307,8 @@ impl<T: syn::parse::Parse> PoundLiteral<T> {
 impl<T: HasSpan> std::fmt::Debug for PoundLiteral<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PoundLiteral")
-            .field("pound", &DebugToken(&self.pound))
-            .field("inner", &DebugToken(&self.value))
+            .field("pound", &DebugToken(&self.0))
+            .field("inner", &DebugToken(&self.1))
             .finish()
     }
 }
@@ -318,33 +317,48 @@ impl<T> Deref for PoundLiteral<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        &self.value
+        &self.1
     }
 }
 
 impl<T: PartialEq> PartialEq for PoundLiteral<T> {
     fn eq(&self, other: &Self) -> bool {
-        self.value == other.value
+        self.1 == other.1
     }
 }
 
 impl<T: HasSpan> HasSpan for PoundLiteral<T> {
     fn span(&self) -> Span {
-        self.value.span()
+        self.1.span()
     }
 }
 
 #[derive(Clone)]
-pub struct MaybeMinus<T> {
-    pub minus: Option<syn::token::Minus>,
-    pub value: T,
+pub struct MaybeMinus<T>(pub Option<syn::token::Minus>, pub T);
+
+impl<T> MaybeMinus<T> {
+    pub fn minus(&self) -> Option<&syn::token::Minus> {
+        self.0.as_ref()
+    }
+
+    pub fn value(&self) -> &T {
+        &self.1
+    }
+
+    pub fn neg(minus: Token![-], value: T) -> Self {
+        Self(Some(minus), value)
+    }
+
+    pub fn pos(value: T) -> Self {
+        Self(None, value)
+    }
 }
 
 impl<T: syn::parse::Parse> syn::parse::Parse for MaybeMinus<T> {
     fn parse(input: ParseStream) -> Result<Self> {
         let minus = input.parse::<Option<Token![-]>>()?;
         let value = input.parse::<T>()?;
-        Ok(MaybeMinus { minus, value })
+        Ok(MaybeMinus(minus, value))
     }
 }
 
@@ -357,20 +371,7 @@ impl MaybeMinus<bare_identifiers::inf> {
 
 impl<T: HasSpan> HasSpan for MaybeMinus<T> {
     fn span(&self) -> Span {
-        self.value.span()
-    }
-}
-
-impl<T> MaybeMinus<T> {
-    pub fn neg(minus: Token![-], value: T) -> Self {
-        Self {
-            minus: Some(minus),
-            value,
-        }
-    }
-
-    pub fn pos(value: T) -> Self {
-        Self { minus: None, value }
+        self.1.span()
     }
 }
 
@@ -378,13 +379,13 @@ impl Deref for MaybeMinus<bare_identifiers::inf> {
     type Target = bare_identifiers::inf;
 
     fn deref(&self) -> &Self::Target {
-        &self.value
+        &self.1
     }
 }
 
 impl<T: PartialEq> PartialEq for MaybeMinus<T> {
     fn eq(&self, other: &Self) -> bool {
-        self.value == other.value && self.minus.is_some() == other.minus.is_some()
+        self.1 == other.1 && self.0.is_some() == other.0.is_some()
     }
 }
 
@@ -394,11 +395,11 @@ impl PartialEq<kdl::KdlValue> for KdlValue {
             (KdlValue::String(a), kdl::KdlValue::String(b)) => &*a.value() == b,
             (KdlValue::Lit(KdlLit::Integer(a, _)), kdl::KdlValue::Integer(b)) => a == b,
             (KdlValue::Lit(KdlLit::Float(a, _)), kdl::KdlValue::Float(b)) => a == b,
-            (KdlValue::Lit(KdlLit::Boolean(a)), kdl::KdlValue::Bool(b)) => a.value() == *b,
+            (KdlValue::Lit(KdlLit::Boolean(a)), kdl::KdlValue::Bool(b)) => a.value().value == *b,
             (KdlValue::Lit(KdlLit::Null(_)), kdl::KdlValue::Null) => true,
             (KdlValue::Lit(KdlLit::Nan(_)), kdl::KdlValue::Float(b)) => b.is_nan(),
             (KdlValue::Lit(KdlLit::Infinity(v)), kdl::KdlValue::Float(b)) => {
-                b.is_infinite() && (v.minus.is_some() == b.is_sign_negative())
+                b.is_infinite() && (v.minus().is_some() == b.is_sign_negative())
             }
             _ => false,
         }
@@ -412,12 +413,12 @@ mod tests {
     use super::*;
 
     #[rstest]
-    #[case("#inf", |r| matches!(r, KdlLit::Infinity(v) if v.minus.is_none() ) )]
-    #[case("#-inf", |r| matches!(r, KdlLit::Infinity(v) if v.minus.is_some() ) )]
+    #[case("#inf", |r| matches!(r, KdlLit::Infinity(v) if v.minus().is_none() ) )]
+    #[case("#-inf", |r| matches!(r, KdlLit::Infinity(v) if v.minus().is_some() ) )]
     #[case("#nan", |r| matches!(r, KdlLit::Nan(_)) )]
     #[case("#null", |r| matches!(r, KdlLit::Null(_)) )]
-    #[case("#true", |r| matches!(r, KdlLit::Boolean(b) if b.value() ) )]
-    #[case("#false", |r| matches!(r, KdlLit::Boolean(b) if !b.value() ) )]
+    #[case("#true", |r| matches!(r, KdlLit::Boolean(b) if b.value().value ) )]
+    #[case("#false", |r| matches!(r, KdlLit::Boolean(b) if !b.value().value ) )]
     fn test_parse_pound_literals(#[case] input: &str, #[case] expect: impl Fn(KdlLit) -> bool) {
         let parsed: KdlLit = syn::parse_str(input).expect("Failed to parse pound literal");
         assert!(expect(parsed), "Parsed value did not match expectation");
