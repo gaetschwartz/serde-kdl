@@ -229,9 +229,10 @@ fn sanitize_ident(input: &str) -> syn::Result<syn::Ident> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parse::value::KdlLit;
+    use crate::parse::value::{KdlLit, PoundLiteral};
     use pretty_assertions::assert_eq;
     use rstest::rstest;
+    use syn::{LitBool, Token};
 
     #[rstest]
     #[case("123", Some("_123"))]
@@ -301,7 +302,11 @@ mod tests {
 
     impl From<bool> for KdlValue {
         fn from(b: bool) -> Self {
-            KdlValue::Lit(KdlLit::Boolean(b, proc_macro2::Span::call_site()))
+            KdlValue::Lit(KdlLit::Boolean(PoundLiteral::new(
+                Token![#](Span::call_site()),
+                None,
+                LitBool::new(b, Span::call_site()),
+            )))
         }
     }
 }

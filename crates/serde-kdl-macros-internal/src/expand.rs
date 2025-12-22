@@ -89,7 +89,10 @@ mod ide_hints {
 #[cfg(feature = "ide-hints")]
 mod ide_hints {
     use super::*;
-    use crate::parse::{entry::KdlEntry, value::KdlValue};
+    use crate::parse::{
+        entry::KdlEntry,
+        value::{KdlValue, PoundLiteral},
+    };
     use quote::{ToTokens, quote_spanned};
 
     /// Generate phantom const bindings for LSP/IDE support.
@@ -251,14 +254,23 @@ mod ide_hints {
 
     fn value_hint(value: &KdlValue) -> TokenStream2 {
         match value {
-            KdlValue::Lit(KdlLit::Null(null)) => to_const_value_hint(null, quote! { Null }),
-            KdlValue::Lit(KdlLit::Nan(nan)) => to_const_value_hint(nan, quote! { Float(f64::NAN) }),
-            KdlValue::Lit(KdlLit::Infinity(inf)) => {
-                to_const_value_hint(inf, quote! { Float(f64::INFINITY) })
+            KdlValue::Lit(KdlLit::Null(PoundLiteral { value, .. })) => {
+                to_const_kdl_value_hint(value, quote! { Null })
             }
-            KdlValue::Lit(KdlLit::NegInfinity(inf)) => {
-                let ident = format_ident!("neg_inf", span = inf.span());
-                to_const_value_hint(ident, quote! { Float(f64::NEG_INFINITY) })
+            KdlValue::Lit(KdlLit::Nan(PoundLiteral { value, .. })) => {
+                to_const_kdl_value_hint(value, quote! { Float(f64::NAN) })
+            }
+            KdlValue::Lit(KdlLit::Infinity(PoundLiteral { value, .. })) => {
+                to_const_kdl_value_hint(value, quote! { Float(f64::INFINITY) })
+            }
+            KdlValue::Lit(KdlLit::NegInfinity(PoundLiteral { minus, value, .. })) => {
+                to_const_value_hint(
+                    quote_spanned! {minus.span()=> minus},
+                    quote! { () },
+                    quote! { () },
+                );
+                let ident = format_ident!("neg_inf", span = value.span());
+                to_const_kdl_value_hint(ident, quote! { Float(f64::NEG_INFINITY) })
             }
             _ => quote! {},
         }
@@ -293,10 +305,20 @@ mod ide_hints {
         }
     }
 
-    fn to_const_value_hint(const_ident: impl ToTokens, value: impl ToTokens) -> TokenStream2 {
+    fn to_const_kdl_value_hint(const_ident: impl ToTokens, value: impl ToTokens) -> TokenStream2 {
         quote! {
             #[allow(non_snake_case, non_upper_case_globals, unused)]
             { const #const_ident: #SERDE_KDL_KDL_EXPORT::KdlValue = #SERDE_KDL_KDL_EXPORT::KdlValue::#value; }
+        }
+    }
+    fn to_const_value_hint(
+        const_ident: impl ToTokens,
+        ty: impl ToTokens,
+        value: impl ToTokens,
+    ) -> TokenStream2 {
+        quote! {
+            #[allow(non_snake_case, non_upper_case_globals, unused)]
+            { const #const_ident: #ty = #value; }
         }
     }
 

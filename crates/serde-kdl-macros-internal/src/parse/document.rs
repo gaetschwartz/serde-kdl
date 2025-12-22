@@ -61,3 +61,17 @@ impl PartialEq<kdl::KdlDocument> for KdlDocument {
         std::iter::Iterator::eq(self.nodes(), other.nodes())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_specific_case() {
+        let input = "
+            connect #true
+        ";
+        let parsed: KdlNode = syn::parse_str(input).expect("Failed to parse");
+        eprintln!("Parsed document: {:#?}", parsed);
+    }
+}

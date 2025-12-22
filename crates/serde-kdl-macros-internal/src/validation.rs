@@ -61,7 +61,7 @@ pub fn validate_type_annotation(type_annotation: &str, value: &KdlValue) -> Resu
                 ))
             }
         }
-        KdlValue::Lit(KdlLit::Boolean(_, _) | KdlLit::Null(_)) => {
+        KdlValue::Lit(KdlLit::Boolean(_) | KdlLit::Null(_)) => {
             // Boolean and null values don't have reserved type annotations,
             // but custom annotations are allowed
             if is_reserved_type(type_annotation) {

@@ -6,16 +6,12 @@
 use std::ops::Deref;
 
 use crate::parse::{
-    comments::{MaybeSlashed, SlashDash},
-    document::KdlDocument,
-    entry::KdlEntry,
-    identifier::KdlIdentifier,
+    comments::MaybeSlashed, document::KdlDocument, entry::KdlEntry, identifier::KdlIdentifier,
     type_annotation::MaybeAnnotated,
 };
 use syn::{
     Result, Token,
     parse::{Parse, ParseStream, discouraged::Speculative as _},
-    token::Brace,
 };
 
 /// Represents a single KDL node with optional properties, arguments, and children
@@ -46,14 +42,6 @@ impl KdlNode {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum Terminator {
-    Brace,
-    Semicolon,
-    Eol,
-    Eof,
-}
-
 impl Parse for KdlNode {
     fn parse(input: ParseStream) -> Result<Self> {
         // Parse optional type annotation for node name
@@ -72,22 +60,28 @@ impl Parse for KdlNode {
         let mut terminator = None;
 
         // Parse arguments and properties
-        while !input.is_empty() && !input.peek(Brace) && !input.peek(Token![;]) {
-            // Check if this is a slashed children block (/-{ ... })
-            // If so, break and let the children parsing handle it
-            if SlashDash::peek(input) && input.peek3(Brace) {
-                break;
-            }
-
+        while !(input.is_empty()
+            || input.peek(Token![;])
+            || MaybeSlashed::<ChildrenBlock>::peek(input))
+        {
             // Try to parse as argument (literal value or identifier)
             let fork = input.fork();
             let maybe_entry = fork.parse::<MaybeSlashed<KdlEntry>>()?;
+            // eprintln!(
+            //     "[node({})] Parsed entry at span {}: {:?}\nRest of input: `{}`",
+            //     name,
+            //     SpanDisplay(maybe_entry.inner().span()),
+            //     maybe_entry,
+            //     fork
+            // );
             let entry = maybe_entry.inner();
-
             let value_line = entry.span().start().line;
-
             if value_line != node_line {
                 // Different line = new node
+                // eprintln!(
+                //     "[node({})] Entry at line {} differs from node line {}: ending entries parse",
+                //     name, value_line, node_line
+                // );
                 terminator = Some(Terminator::Eol);
                 break;
             }
@@ -96,13 +90,14 @@ impl Parse for KdlNode {
             entries.push(maybe_entry);
         }
 
+        // eprintln!("[node({})] Parsed {} entries", name, entries.len());
+
         // Parse children if present
-        let fork = input.fork();
         let terminator = if let Some(t) = terminator {
             t
-        } else if let Ok(c) = fork.parse::<MaybeSlashed<ChildrenBlock>>() {
+        } else if <MaybeSlashed<ChildrenBlock>>::peek(input) {
+            let c = input.parse::<MaybeSlashed<ChildrenBlock>>()?;
             children = Some(c);
-            input.advance_to(&fork);
 
             Terminator::Brace
         } else if input.peek(Token![;]) {
@@ -118,9 +113,7 @@ impl Parse for KdlNode {
                 ),
             ));
         };
-        while input.peek(Token![;]) {
-            let _sep: Token![;] = input.parse()?;
-        }
+        _ = input.parse::<Option<Token![;]>>()?;
 
         let kdl_node = KdlNode {
             name,
@@ -188,4 +181,12 @@ impl Deref for ChildrenBlock {
     fn deref(&self) -> &Self::Target {
         &self.0
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Terminator {
+    Brace,
+    Semicolon,
+    Eol,
+    Eof,
 }

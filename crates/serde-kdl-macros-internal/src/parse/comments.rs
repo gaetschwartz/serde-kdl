@@ -1,12 +1,8 @@
+use crate::parse::node::ChildrenBlock;
 use proc_macro2::Span;
 use syn::Token;
+use syn::parse::ParseStream;
 use syn::spanned::Spanned;
-
-impl syn::parse::Parse for SlashDash {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        Ok(SlashDash(input.parse()?, input.parse()?))
-    }
-}
 
 struct Commented<T> {
     pub comments: Vec<Comment>,
@@ -19,7 +15,7 @@ struct Comment {
 }
 
 impl<T: syn::parse::Parse> syn::parse::Parse for Commented<T> {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
         let attributes = input.call(syn::Attribute::parse_outer)?;
         let comments = attributes
             .into_iter()
@@ -58,14 +54,21 @@ pub enum MaybeSlashed<T> {
 }
 
 impl<T: syn::parse::Parse> syn::parse::Parse for MaybeSlashed<T> {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
         let slash_dash = if SlashDash::peek(input) {
             Some(input.parse::<SlashDash>()?)
         } else {
             None
         };
+        let item_span_start = input.span().start();
         let item = input.parse::<T>()?;
         if let Some(slash_dash) = slash_dash {
+            if slash_dash.1.span().end().line != item_span_start.line {
+                return Err(syn::Error::new(
+                    slash_dash.1.span(),
+                    "Expected slashed item to be on the same line as `/-`",
+                ));
+            }
             Ok(MaybeSlashed::Slashed(slash_dash, item))
         } else {
             Ok(MaybeSlashed::Item(item))
@@ -103,6 +106,16 @@ impl<T> MaybeSlashed<T> {
     }
 }
 
+impl MaybeSlashed<ChildrenBlock> {
+    pub fn peek(input: ParseStream<'_>) -> bool {
+        if SlashDash::peek(input) {
+            input.peek3(syn::token::Brace)
+        } else {
+            input.peek(syn::token::Brace)
+        }
+    }
+}
+
 /// Represents a KDL slash-dash comment marker (`/-`)
 ///
 /// This handles both joint tokens (from actual macro invocations) and
@@ -112,13 +125,27 @@ pub struct SlashDash(Token![/], Token![-]);
 
 impl SlashDash {
     /// Check if the next tokens are `/-`
-    pub fn peek(input: syn::parse::ParseStream) -> bool {
+    pub fn peek(input: ParseStream<'_>) -> bool {
         input.peek(Token![/]) && input.peek2(Token![-])
     }
 
     /// Returns the span covering both the slash and dash tokens
     pub fn spans(&self) -> (Span, Span) {
         (self.0.span(), self.1.span())
+    }
+}
+
+impl syn::parse::Parse for SlashDash {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let slash = input.parse::<Token![/]>()?;
+        let dash = input.parse::<Token![-]>()?;
+        if slash.span().end().line != dash.span().start().line {
+            return Err(syn::Error::new(
+                dash.span(),
+                "Expected `/-` to be on the same line",
+            ));
+        }
+        Ok(SlashDash(slash, dash))
     }
 }
 

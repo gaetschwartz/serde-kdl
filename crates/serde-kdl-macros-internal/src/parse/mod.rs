@@ -34,3 +34,31 @@ impl std::fmt::Display for SpanDisplay {
         )
     }
 }
+
+pub struct DebugToken<'a, T>(&'a T);
+
+impl<'a, T> std::fmt::Debug for DebugToken<'a, T>
+where
+    T: HasSpan,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}({})",
+            std::any::type_name::<T>(),
+            SpanDisplay(self.0.span())
+        )
+    }
+}
+
+pub trait HasSpan {
+    fn span(&self) -> proc_macro2::Span;
+}
+impl<T> HasSpan for T
+where
+    T: syn::spanned::Spanned,
+{
+    fn span(&self) -> proc_macro2::Span {
+        self.span()
+    }
+}
