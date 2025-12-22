@@ -130,6 +130,7 @@ impl SlashDash {
     }
 
     /// Returns the span covering both the slash and dash tokens
+    #[must_use]
     pub fn spans(&self) -> (Span, Span) {
         (self.0.span(), self.1.span())
     }

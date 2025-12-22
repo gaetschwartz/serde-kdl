@@ -37,7 +37,7 @@ impl std::fmt::Display for SpanDisplay {
 
 pub struct DebugToken<'a, T>(&'a T);
 
-impl<'a, T> std::fmt::Debug for DebugToken<'a, T>
+impl<T> std::fmt::Debug for DebugToken<'_, T>
 where
     T: HasSpan,
 {

@@ -35,6 +35,7 @@ impl KdlNode {
         self.entries.iter().filter_map(|e| e.as_option())
     }
 
+    #[must_use]
     pub fn children(&self) -> Option<Option<&KdlDocument>> {
         self.children
             .as_ref()

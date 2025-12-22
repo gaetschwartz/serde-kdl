@@ -72,6 +72,6 @@ mod tests {
             connect #true
         ";
         let parsed: KdlNode = syn::parse_str(input).expect("Failed to parse");
-        eprintln!("Parsed document: {:#?}", parsed);
+        eprintln!("Parsed document: {parsed:#?}");
     }
 }

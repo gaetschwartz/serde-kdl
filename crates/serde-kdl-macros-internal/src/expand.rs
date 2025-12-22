@@ -113,7 +113,7 @@ mod ide_hints {
                 MaybeSlashed::Item(n) => write_node_hints(n, hints)?,
                 MaybeSlashed::Slashed(sd, n) => {
                     write_slashdash_hint(sd, hints)?;
-                    write_ignored_node_hints(n, hints)?
+                    write_ignored_node_hints(n, hints)?;
                 }
             }
         }
@@ -148,7 +148,7 @@ mod ide_hints {
                             MaybeSlashed::Item(n) => write_node_hints(n, hints)?,
                             MaybeSlashed::Slashed(sd, n) => {
                                 write_slashdash_hint(sd, hints)?;
-                                write_ignored_node_hints(n, hints)?
+                                write_ignored_node_hints(n, hints)?;
                             }
                         }
                     }
@@ -187,7 +187,7 @@ mod ide_hints {
         if let Some(name) = &entry.name {
             let ident = name.to_ident()?;
             hints.extend(to_enum_hint(&ident));
-        };
+        }
 
         Ok(())
     }
@@ -241,7 +241,7 @@ mod ide_hints {
         if let Some(name) = &entry.name {
             let ident = name.to_ident()?;
             hints.extend(to_arg_hint(&ident));
-        };
+        }
 
         Ok(())
     }

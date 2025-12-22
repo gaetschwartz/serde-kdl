@@ -68,6 +68,7 @@ impl KdlEntry {
         self.name.as_ref().map(|n| n.value())
     }
 
+    #[must_use]
     pub fn span(&self) -> proc_macro2::Span {
         self.value.span()
     }
