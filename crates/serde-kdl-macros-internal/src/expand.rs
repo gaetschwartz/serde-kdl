@@ -20,7 +20,10 @@ pub fn generate_kdl_code(document: &KdlDocument) -> Result<TokenStream2> {
     hints.extend(ide_hints::write_hints(document)?);
 
     Ok(quote! { {
-        { mod ide_hints { fn ide_hints() { #hints } } }
+        {
+            #[allow(dead_code)]
+            mod ide_hints { fn ide_hints() { #hints } }
+        }
         {
             let mut document = #SERDE_KDL_KDL_EXPORT::KdlDocument::new();
             document.nodes_mut().extend([#(#nodes),*]);
@@ -87,6 +90,7 @@ mod ide_hints {
 }
 
 #[cfg(feature = "ide-hints")]
+#[allow(dead_code)]
 mod ide_hints {
     use super::*;
     use crate::parse::{
@@ -98,12 +102,14 @@ mod ide_hints {
     /// Generate phantom const bindings for LSP/IDE support.
     /// This creates bindings that use the same identifiers as the KDL input,
     /// allowing IDEs to provide syntax highlighting and other features.
+    #[inline]
     pub fn write_hints(document: &KdlDocument) -> syn::Result<TokenStream2> {
         let mut hints = quote! {};
         write_hints_from_document(document, &mut hints)?;
         Ok(hints)
     }
 
+    #[inline]
     fn write_hints_from_document(
         document: &KdlDocument,
         hints: &mut TokenStream2,
@@ -121,6 +127,7 @@ mod ide_hints {
         Ok(())
     }
 
+    #[inline]
     fn write_node_hints(node: &KdlNode, hints: &mut TokenStream2) -> syn::Result<()> {
         // Generate hint for node names that are identifiers
         let node_ident = node.name.to_ident()?;
@@ -171,6 +178,7 @@ mod ide_hints {
         Ok(())
     }
 
+    #[inline]
     fn write_entry_hints(
         entry: &KdlEntry,
         _node_ident: &syn::Ident,
@@ -186,14 +194,13 @@ mod ide_hints {
 
         if let Some(name) = &entry.name {
             let ident = name.to_ident()?;
-            hints.extend(to_enum_hint(&ident));
+            hints.extend(to_fn_hint(&ident));
         }
 
         Ok(())
     }
 
-    /// Generate hints for an ignored node (slashed out with `/-`)
-    /// Uses `#[deprecated]` attribute to show strikethrough in IDEs
+    #[inline]
     fn write_ignored_node_hints(node: &KdlNode, hints: &mut TokenStream2) -> syn::Result<()> {
         let node_ident = node.name.to_ident()?;
 
@@ -223,8 +230,7 @@ mod ide_hints {
         Ok(())
     }
 
-    /// Generate hints for an ignored entry (slashed out with `/-`)
-    /// Uses `#[deprecated]` attribute to show strikethrough in IDEs
+    #[inline]
     fn write_ignored_entry_hints(
         entry: &KdlEntry,
         _node_ident: &syn::Ident,
@@ -246,33 +252,62 @@ mod ide_hints {
         Ok(())
     }
 
+    #[inline]
     fn ignored_value_hint(value: &KdlValue) -> TokenStream2 {
         let span = value.span();
         let ident = format_ident!("ignored", span = span);
         to_arg_hint(ident)
     }
 
+    #[inline]
     fn value_hint(value: &KdlValue) -> TokenStream2 {
         match value {
-            KdlValue::Lit(KdlLit::Null(PoundLiteral(_, value))) => {
-                to_const_kdl_value_hint(value, quote! { Null })
+            KdlValue::Lit(KdlLit::Null(PoundLiteral(pound, value))) => {
+                let pound = to_const_value_hint(
+                    format_ident!("pound", span = pound.span()),
+                    quote! { () },
+                    quote! { () },
+                );
+                let null_hint = to_const_kdl_value_hint(value, quote! { Null });
+                quote! {
+                    #pound
+                    #null_hint
+                }
             }
-            KdlValue::Lit(KdlLit::Nan(PoundLiteral(_, value))) => {
-                to_const_kdl_value_hint(value, quote! { Float(f64::NAN) })
+            KdlValue::Lit(KdlLit::Nan(PoundLiteral(pound, value))) => {
+                let pound = to_const_value_hint(
+                    format_ident!("pound", span = pound.span()),
+                    quote! { () },
+                    quote! { () },
+                );
+                let nan_hint = to_const_kdl_value_hint(value, quote! { Float(f64::NAN) });
+                quote! {
+                    #pound
+                    #nan_hint
+                }
             }
-            KdlValue::Lit(KdlLit::Infinity(PoundLiteral(_, MaybeMinus(None, value)))) => {
-                to_const_kdl_value_hint(value, quote! { Float(f64::INFINITY) })
+            KdlValue::Lit(KdlLit::Infinity(PoundLiteral(pound, MaybeMinus(None, value)))) => {
+                let pound = to_const_value_hint(
+                    format_ident!("pound", span = pound.span()),
+                    quote! { () },
+                    quote! { () },
+                );
+                let inf_hint = to_const_kdl_value_hint(value, quote! { Float(f64::INFINITY) });
+                quote! {
+                    #pound
+                    #inf_hint
+                }
             }
-            KdlValue::Lit(KdlLit::Infinity(PoundLiteral(_, MaybeMinus(Some(minus), value)))) => {
-                let minus_hint = to_const_value_hint(
-                    format_ident!("minus", span = minus.span()),
+            KdlValue::Lit(KdlLit::Infinity(PoundLiteral(point, MaybeMinus(_, value)))) => {
+                let point = to_const_value_hint(
+                    format_ident!("point", span = point.span()),
                     quote! { () },
                     quote! { () },
                 );
                 let ident = format_ident!("neg_inf", span = value.span());
                 let main_hint = to_const_kdl_value_hint(ident, quote! { Float(f64::NEG_INFINITY) });
                 quote! {
-                    #minus_hint
+                    #point
                     #main_hint
                 }
             }
@@ -280,6 +315,20 @@ mod ide_hints {
         }
     }
 
+    #[inline]
+    fn write_slashdash_hint(
+        slashdash: &crate::parse::comments::SlashDash,
+        hints: &mut TokenStream2,
+    ) -> syn::Result<()> {
+        let (slash_span, dash_span) = slashdash.spans();
+        let slash_ident = format_ident!("slash", span = slash_span);
+        let dash_ident = format_ident!("dash", span = dash_span);
+        hints.extend(to_arg_hint(slash_ident));
+        hints.extend(to_arg_hint(dash_ident));
+        Ok(())
+    }
+
+    #[inline]
     fn to_struct_hint(ident: impl ToTokens) -> TokenStream2 {
         quote! {
             #[allow(non_snake_case, non_camel_case_types, unused)]
@@ -287,6 +336,7 @@ mod ide_hints {
         }
     }
 
+    #[inline]
     fn to_enum_hint(variant: impl ToTokens) -> TokenStream2 {
         quote! {
             #[allow(non_snake_case, non_camel_case_types, unused)]
@@ -294,6 +344,7 @@ mod ide_hints {
         }
     }
 
+    #[inline]
     fn to_type_hint(ty: impl ToTokens) -> TokenStream2 {
         let type_token = quote_spanned!(ty.span()=> type);
         quote! {
@@ -302,6 +353,7 @@ mod ide_hints {
         }
     }
 
+    #[inline]
     fn to_arg_hint(arg: impl ToTokens) -> TokenStream2 {
         quote! {
             #[allow(non_snake_case, non_upper_case_globals, unused)]
@@ -309,12 +361,7 @@ mod ide_hints {
         }
     }
 
-    fn to_const_kdl_value_hint(const_ident: impl ToTokens, value: impl ToTokens) -> TokenStream2 {
-        quote! {
-            #[allow(non_snake_case, non_upper_case_globals, unused)]
-            { const #const_ident: #SERDE_KDL_KDL_EXPORT::KdlValue = #SERDE_KDL_KDL_EXPORT::KdlValue::#value; }
-        }
-    }
+    #[inline]
     fn to_const_value_hint(
         const_ident: impl ToTokens,
         ty: impl ToTokens,
@@ -326,15 +373,20 @@ mod ide_hints {
         }
     }
 
-    fn write_slashdash_hint(
-        slashdash: &crate::parse::comments::SlashDash,
-        hints: &mut TokenStream2,
-    ) -> syn::Result<()> {
-        let (slash_span, dash_span) = slashdash.spans();
-        let slash_ident = format_ident!("slash", span = slash_span);
-        let dash_ident = format_ident!("dash", span = dash_span);
-        hints.extend(to_arg_hint(slash_ident));
-        hints.extend(to_arg_hint(dash_ident));
-        Ok(())
+    #[inline]
+    fn to_const_kdl_value_hint(const_ident: impl ToTokens, value: impl ToTokens) -> TokenStream2 {
+        to_const_value_hint(
+            const_ident,
+            quote! { #SERDE_KDL_KDL_EXPORT::KdlValue },
+            quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::#value },
+        )
+    }
+
+    #[inline]
+    fn to_fn_hint(fn_ident: impl ToTokens) -> TokenStream2 {
+        quote! {
+            #[allow(non_snake_case, unused)]
+            { fn #fn_ident(value: #SERDE_KDL_KDL_EXPORT::KdlValue) {} }
+        }
     }
 }
