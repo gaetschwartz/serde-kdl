@@ -1,5 +1,0 @@
-{"run_id":"78e29b0c-a36f-43a2-8070-f3419ce90d47","line":62,"new":{"module_name":"macro_tests__specs__section_3_17_whitespace","snapshot_name":"slash_dash_children_block","metadata":{"source":"crates/serde-kdl-macros/tests/specs/section_3_17_whitespace.rs","assertion_line":62,"expression":"doc_to_string(doc)"},"snapshot":"node arg1=value {\n    child1\n    child2 key=ignored\n}\nanother_node {\n    child3\n}"},"old":{"module_name":"macro_tests__specs__section_3_17_whitespace","metadata":{},"snapshot":"node arg1=value\nanother_node {\n    child3\n}"}}
-{"run_id":"e757ca30-4428-4a60-9d47-953aca01bcd1","line":36,"new":null,"old":null}
-{"run_id":"e757ca30-4428-4a60-9d47-953aca01bcd1","line":62,"new":null,"old":null}
-{"run_id":"bca98c1a-13ea-4f0e-ab18-8bff89e29479","line":62,"new":null,"old":null}
-{"run_id":"bca98c1a-13ea-4f0e-ab18-8bff89e29479","line":36,"new":null,"old":null}

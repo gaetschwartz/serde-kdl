@@ -1,29 +1,10 @@
 use proc_macro2::Span;
 use syn::Token;
-
-/// Represents a KDL slash-dash comment marker (`/-`)
-///
-/// This handles both joint tokens (from actual macro invocations) and
-/// separate tokens (from `quote!` macro in tests).
-#[derive(Clone, Copy)]
-pub struct SlashDash {
-    pub slash: Token![/],
-    pub dash: Token![-],
-}
-
-impl SlashDash {
-    /// Check if the next tokens are `/-`
-    pub fn peek(input: syn::parse::ParseStream) -> bool {
-        input.peek(Token![/]) && input.peek2(Token![-])
-    }
-}
+use syn::spanned::Spanned;
 
 impl syn::parse::Parse for SlashDash {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        Ok(SlashDash {
-            slash: input.parse()?,
-            dash: input.parse()?,
-        })
+        Ok(SlashDash(input.parse()?, input.parse()?))
     }
 }
 
@@ -71,22 +52,21 @@ impl<T: syn::parse::Parse> syn::parse::Parse for Commented<T> {
 #[derive(Debug, Clone)]
 pub enum MaybeSlashed<T> {
     /// An item preceded by `/-` so it's commented out (but still parsed)
-    Slashed(T),
+    Slashed(SlashDash, T),
     /// A plain item without any slashing
     Item(T),
 }
 
 impl<T: syn::parse::Parse> syn::parse::Parse for MaybeSlashed<T> {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let slashed = if SlashDash::peek(input) {
-            let _: SlashDash = input.parse()?;
-            true
+        let slash_dash = if SlashDash::peek(input) {
+            Some(input.parse::<SlashDash>()?)
         } else {
-            false
+            None
         };
         let item = input.parse::<T>()?;
-        if slashed {
-            Ok(MaybeSlashed::Slashed(item))
+        if let Some(slash_dash) = slash_dash {
+            Ok(MaybeSlashed::Slashed(slash_dash, item))
         } else {
             Ok(MaybeSlashed::Item(item))
         }
@@ -96,7 +76,7 @@ impl<T: syn::parse::Parse> syn::parse::Parse for MaybeSlashed<T> {
 impl<T> From<MaybeSlashed<T>> for Option<T> {
     fn from(value: MaybeSlashed<T>) -> Self {
         match value {
-            MaybeSlashed::Slashed(_) => None,
+            MaybeSlashed::Slashed(_, _) => None,
             MaybeSlashed::Item(item) => Some(item),
         }
     }
@@ -105,21 +85,46 @@ impl<T> From<MaybeSlashed<T>> for Option<T> {
 impl<T> MaybeSlashed<T> {
     /// Returns true if the item is slashed (commented out with `/-`)
     pub fn is_slashed(&self) -> bool {
-        matches!(self, MaybeSlashed::Slashed(_))
+        matches!(self, MaybeSlashed::Slashed(_, _))
     }
 
     /// Returns a reference to the inner item, regardless of whether it's slashed
     pub fn inner(&self) -> &T {
         match self {
-            MaybeSlashed::Slashed(item) | MaybeSlashed::Item(item) => item,
+            MaybeSlashed::Slashed(_, item) | MaybeSlashed::Item(item) => item,
         }
     }
 
-    /// Consumes self and returns the inner item, regardless of whether it's slashed
-    pub fn into_inner(self) -> T {
+    pub fn as_option(&self) -> Option<&T> {
         match self {
-            MaybeSlashed::Slashed(item) | MaybeSlashed::Item(item) => item,
+            MaybeSlashed::Slashed(_, _) => None,
+            MaybeSlashed::Item(item) => Some(item),
         }
+    }
+}
+
+/// Represents a KDL slash-dash comment marker (`/-`)
+///
+/// This handles both joint tokens (from actual macro invocations) and
+/// separate tokens (from `quote!` macro in tests).
+#[derive(Clone, Copy)]
+pub struct SlashDash(Token![/], Token![-]);
+
+impl SlashDash {
+    /// Check if the next tokens are `/-`
+    pub fn peek(input: syn::parse::ParseStream) -> bool {
+        input.peek(Token![/]) && input.peek2(Token![-])
+    }
+
+    /// Returns the span covering both the slash and dash tokens
+    pub fn spans(&self) -> (Span, Span) {
+        (self.0.span(), self.1.span())
+    }
+}
+
+impl std::fmt::Debug for SlashDash {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SlashDash").finish()
     }
 }
 
@@ -151,10 +156,10 @@ mod tests {
         assert_eq!(parsed.comments[0].content, " This is a comment");
         assert_eq!(parsed.item.name.value(), "node");
         assert_eq!(
-            parsed.item.entries,
+            parsed.item.entries().collect::<Vec<_>>(),
             vec![
-                KdlEntry::new_prop(KdlIdentifier::ident_test("key"), "value"),
-                KdlEntry::new(KdlValue::from(42))
+                &KdlEntry::new_prop(KdlIdentifier::ident_test("key"), "value"),
+                &KdlEntry::new(KdlValue::from(42))
             ]
         );
     }

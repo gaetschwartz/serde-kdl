@@ -2,7 +2,10 @@
 //!
 //! This module handles parsing of complete KDL documents.
 
-use crate::parse::{comments::MaybeSlashed, node::KdlNode};
+use crate::parse::{
+    comments::{MaybeSlashed, SlashDash},
+    node::KdlNode,
+};
 use syn::{
     Result,
     parse::{Parse, ParseStream},
@@ -11,31 +14,28 @@ use syn::{
 /// Represents a complete KDL document containing multiple nodes
 #[derive(Debug, Clone)]
 pub struct KdlDocument {
-    pub nodes: Vec<KdlNode>,
-    /// Nodes that are commented out with `/-`
-    pub ignored_nodes: Vec<KdlNode>,
+    pub nodes: Vec<MaybeSlashed<KdlNode>>,
 }
 
 impl KdlDocument {
-    #[must_use]
-    pub fn nodes(&self) -> &[KdlNode] {
-        &self.nodes
+    pub fn nodes(&self) -> impl Iterator<Item = &KdlNode> {
+        self.nodes.iter().filter_map(|n| match n {
+            MaybeSlashed::Item(node) => Some(node),
+            MaybeSlashed::Slashed(_, _) => None,
+        })
     }
 
-    pub fn nodes_mut(&mut self) -> &mut Vec<KdlNode> {
-        &mut self.nodes
+    pub fn ignored_nodes(&self) -> impl Iterator<Item = (&SlashDash, &KdlNode)> {
+        self.nodes.iter().filter_map(|n| match n {
+            MaybeSlashed::Slashed(sd, node) => Some((sd, node)),
+            MaybeSlashed::Item(_) => None,
+        })
     }
 
     #[must_use]
-    pub fn ignored_nodes(&self) -> &[KdlNode] {
-        &self.ignored_nodes
-    }
-
-    #[must_use]
-    pub fn from_nodes(nodes: Vec<KdlNode>) -> Self {
+    pub fn from_nodes(nodes: impl IntoIterator<Item = MaybeSlashed<KdlNode>>) -> Self {
         KdlDocument {
-            nodes,
-            ignored_nodes: Vec::new(),
+            nodes: nodes.into_iter().collect(),
         }
     }
 }
@@ -43,19 +43,12 @@ impl KdlDocument {
 impl Parse for KdlDocument {
     fn parse(input: ParseStream) -> Result<Self> {
         let mut nodes = Vec::new();
-        let mut ignored_nodes = Vec::new();
 
         while !input.is_empty() {
-            match input.parse::<MaybeSlashed<KdlNode>>()? {
-                MaybeSlashed::Item(n) => nodes.push(n),
-                MaybeSlashed::Slashed(n) => ignored_nodes.push(n),
-            }
+            nodes.push(input.parse::<MaybeSlashed<KdlNode>>()?);
         }
 
-        Ok(KdlDocument {
-            nodes,
-            ignored_nodes,
-        })
+        Ok(KdlDocument { nodes })
     }
 }
 
@@ -65,6 +58,6 @@ impl PartialEq<kdl::KdlDocument> for KdlDocument {
             return false;
         }
 
-        self.nodes == other.nodes()
+        std::iter::Iterator::eq(self.nodes(), other.nodes())
     }
 }

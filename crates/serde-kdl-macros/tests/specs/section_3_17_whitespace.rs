@@ -23,7 +23,7 @@ fn test_slash_dashes() {
         thiserror version="1.0.0" {
           features "feature1" /-"ignored"
         }
-        serde_kdl path="./" optional=OPTIONAL_FEATURE {
+        serde_kdl path="./" optional=OPTIONAL_FEATURE /-{
             "this should be ignored"
         }
       }
@@ -40,9 +40,7 @@ fn test_slash_dashes() {
         thiserror version="1.0.0" {
             features feature1
         }
-        serde_kdl path="./" optional=#true {
-            "this should be ignored"
-        }
+        serde_kdl path="./" optional=#true
     }
     "#);
 }

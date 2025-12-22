@@ -3,6 +3,8 @@
 //! This module handles parsing of KDL nodes including node names,
 //! properties, arguments, and children.
 
+use std::ops::Deref;
+
 use crate::parse::{
     comments::{MaybeSlashed, SlashDash},
     document::KdlDocument,
@@ -22,19 +24,25 @@ use syn::{
 pub struct KdlNode {
     pub name: KdlIdentifier,
     pub type_annotation: Option<KdlIdentifier>, // Type annotation for node name
-    pub entries: Vec<KdlEntry>,
-    pub children: Option<KdlDocument>,
+    pub entries: Vec<MaybeSlashed<KdlEntry>>,
+    pub children: Option<MaybeSlashed<ChildrenBlock>>,
     pub terminator: Terminator,
-    /// Entries that are commented out with `/-`
-    pub ignored_entries: Vec<KdlEntry>,
-    /// Children block that is commented out with `/-`
-    pub ignored_children: Option<KdlDocument>,
 }
 
 impl KdlNode {
     #[must_use]
     pub fn ty(&self) -> Option<&KdlIdentifier> {
         self.type_annotation.as_ref()
+    }
+
+    pub fn entries(&self) -> impl Iterator<Item = &KdlEntry> {
+        self.entries.iter().filter_map(|e| e.as_option())
+    }
+
+    pub fn children(&self) -> Option<Option<&KdlDocument>> {
+        self.children
+            .as_ref()
+            .map(|c| c.as_option().map(|cb| &cb.0))
     }
 }
 
@@ -60,9 +68,7 @@ impl Parse for KdlNode {
         let node_line = name.span().end().line;
 
         let mut entries = Vec::new();
-        let mut ignored_entries = Vec::new();
         let mut children = None;
-        let mut ignored_children = None;
         let mut terminator = None;
 
         // Parse arguments and properties
@@ -87,10 +93,7 @@ impl Parse for KdlNode {
             }
 
             input.advance_to(&fork);
-            match maybe_entry {
-                MaybeSlashed::Item(e) => entries.push(e),
-                MaybeSlashed::Slashed(e) => ignored_entries.push(e),
-            }
+            entries.push(maybe_entry);
         }
 
         // Parse children if present
@@ -98,14 +101,7 @@ impl Parse for KdlNode {
         let terminator = if let Some(t) = terminator {
             t
         } else if let Ok(c) = fork.parse::<MaybeSlashed<ChildrenBlock>>() {
-            match c {
-                MaybeSlashed::Item(c) => {
-                    children = Some(KdlDocument::from_nodes(c.nodes));
-                }
-                MaybeSlashed::Slashed(c) => {
-                    ignored_children = Some(KdlDocument::from_nodes(c.nodes));
-                }
-            };
+            children = Some(c);
             input.advance_to(&fork);
 
             Terminator::Brace
@@ -132,8 +128,6 @@ impl Parse for KdlNode {
             entries,
             children,
             terminator,
-            ignored_entries,
-            ignored_children,
         };
 
         Ok(kdl_node)
@@ -152,14 +146,14 @@ impl PartialEq<kdl::KdlNode> for KdlNode {
             _ => {}
         }
 
-        let my_entries = &self.entries;
+        let my_entries = self.entries();
         let other_entries = other.entries();
 
-        if my_entries != other_entries {
+        if std::iter::Iterator::ne(my_entries, other_entries.iter()) {
             return false;
         }
 
-        match (&self.children, other.children()) {
+        match (self.children().flatten(), other.children()) {
             (Some(a), Some(b)) if a != b => return false,
             (None, Some(_)) | (Some(_), None) => return false,
             _ => {}
@@ -170,9 +164,7 @@ impl PartialEq<kdl::KdlNode> for KdlNode {
 }
 
 #[derive(Debug, Clone)]
-pub struct ChildrenBlock {
-    pub nodes: Vec<KdlNode>,
-}
+pub struct ChildrenBlock(pub KdlDocument);
 
 impl Parse for ChildrenBlock {
     fn parse(input: ParseStream) -> Result<Self> {
@@ -182,10 +174,18 @@ impl Parse for ChildrenBlock {
         let mut nodes = Vec::new();
 
         while !content.is_empty() {
-            let node = content.parse::<KdlNode>()?;
+            let node = content.parse::<MaybeSlashed<KdlNode>>()?;
             nodes.push(node);
         }
 
-        Ok(ChildrenBlock { nodes })
+        Ok(ChildrenBlock(KdlDocument::from_nodes(nodes)))
+    }
+}
+
+impl Deref for ChildrenBlock {
+    type Target = KdlDocument;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
