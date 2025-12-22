@@ -91,7 +91,7 @@ mod ide_hints {
     use super::*;
     use crate::parse::{
         entry::KdlEntry,
-        value::{KdlValue, PoundLiteral},
+        value::{KdlValue, MaybeMinus, PoundLiteral},
     };
     use quote::{ToTokens, quote_spanned};
 
@@ -260,17 +260,31 @@ mod ide_hints {
             KdlValue::Lit(KdlLit::Nan(PoundLiteral { value, .. })) => {
                 to_const_kdl_value_hint(value, quote! { Float(f64::NAN) })
             }
-            KdlValue::Lit(KdlLit::Infinity(PoundLiteral { value, .. })) => {
-                to_const_kdl_value_hint(value, quote! { Float(f64::INFINITY) })
-            }
-            KdlValue::Lit(KdlLit::NegInfinity(PoundLiteral { minus, value, .. })) => {
-                to_const_value_hint(
-                    quote_spanned! {minus.span()=> minus},
+            KdlValue::Lit(KdlLit::Infinity(PoundLiteral {
+                value: MaybeMinus {
+                    minus: None, value, ..
+                },
+                ..
+            })) => to_const_kdl_value_hint(value, quote! { Float(f64::INFINITY) }),
+            KdlValue::Lit(KdlLit::Infinity(PoundLiteral {
+                value:
+                    MaybeMinus {
+                        minus: Some(minus),
+                        value,
+                    },
+                ..
+            })) => {
+                let minus_hint = to_const_value_hint(
+                    format_ident!("minus", span = minus.span()),
                     quote! { () },
                     quote! { () },
                 );
                 let ident = format_ident!("neg_inf", span = value.span());
-                to_const_kdl_value_hint(ident, quote! { Float(f64::NEG_INFINITY) })
+                let main_hint = to_const_kdl_value_hint(ident, quote! { Float(f64::NEG_INFINITY) });
+                quote! {
+                    #minus_hint
+                    #main_hint
+                }
             }
             _ => quote! {},
         }

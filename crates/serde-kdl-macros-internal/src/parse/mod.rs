@@ -62,3 +62,16 @@ where
         self.span()
     }
 }
+
+pub trait DisplaySpanTrait {
+    fn display_span(&self) -> SpanDisplay;
+}
+
+impl<T> DisplaySpanTrait for T
+where
+    T: HasSpan,
+{
+    fn display_span(&self) -> SpanDisplay {
+        SpanDisplay(self.span())
+    }
+}

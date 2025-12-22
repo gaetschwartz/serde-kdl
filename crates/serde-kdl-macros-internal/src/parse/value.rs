@@ -74,11 +74,12 @@ impl ToTokens for KdlValue {
             KdlValue::Lit(KdlLit::Nan(_)) => {
                 quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::NAN) }
             }
-            KdlValue::Lit(KdlLit::Infinity(_)) => {
-                quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::INFINITY) }
-            }
-            KdlValue::Lit(KdlLit::NegInfinity(_)) => {
-                quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::NEG_INFINITY) }
+            KdlValue::Lit(KdlLit::Infinity(v)) => {
+                if v.minus.is_some() {
+                    quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::NEG_INFINITY) }
+                } else {
+                    quote! { #SERDE_KDL_KDL_EXPORT::KdlValue::Float(f64::INFINITY) }
+                }
             }
             KdlValue::Variable(ident) => {
                 // Use KdlValue::from() - user's variable type must implement Into<KdlValue>
@@ -129,8 +130,7 @@ pub enum KdlLit {
     Float(f64, Span),
     Boolean(PoundLiteral<LitBool>),
     Nan(PoundLiteral<bare_identifiers::nan>),
-    Infinity(PoundLiteral<bare_identifiers::inf>),
-    NegInfinity(PoundLiteral<bare_identifiers::inf>),
+    Infinity(PoundLiteral<MaybeMinus<bare_identifiers::inf>>),
     Null(PoundLiteral<bare_identifiers::null>),
 }
 
@@ -179,7 +179,6 @@ impl HasSpan for KdlLit {
             KdlLit::Boolean(b) => HasSpan::span(b),
             KdlLit::Nan(nan) => HasSpan::span(nan),
             KdlLit::Infinity(inf) => HasSpan::span(inf),
-            KdlLit::NegInfinity(inf) => HasSpan::span(inf),
             KdlLit::Null(null) => HasSpan::span(null),
         }
     }
@@ -206,26 +205,18 @@ impl syn::parse::Parse for KdlLit {
                     pound_span,
                     "No whitespace allowed between `#` and the following identifier",
                 ))
-            } else if input.peek(bare_identifiers::inf) {
-                let inf: bare_identifiers::inf = input.parse()?;
-                Ok(Self::Infinity(PoundLiteral::new(pound, None, inf)))
+            } else if MaybeMinus::<bare_identifiers::inf>::peek(input) {
+                let value = input.parse::<MaybeMinus<bare_identifiers::inf>>()?;
+                Ok(Self::Infinity(PoundLiteral::new(pound, value)))
             } else if input.peek(bare_identifiers::nan) {
                 let nan: bare_identifiers::nan = input.parse()?;
-                Ok(Self::Nan(PoundLiteral::new(pound, None, nan)))
-            } else if input.peek(Token![-]) && input.peek2(bare_identifiers::inf) {
-                let minus: Token![-] = input.parse()?;
-                let inf: bare_identifiers::inf = input.parse()?;
-                Ok(Self::NegInfinity(PoundLiteral::new(
-                    pound,
-                    Some(minus),
-                    inf,
-                )))
+                Ok(Self::Nan(PoundLiteral::new(pound, nan)))
             } else if input.peek(bare_identifiers::null) {
                 let null: bare_identifiers::null = input.parse()?;
-                Ok(Self::Null(PoundLiteral::new(pound, None, null)))
+                Ok(Self::Null(PoundLiteral::new(pound, null)))
             } else if input.peek(syn::LitBool) {
                 let boolean: syn::LitBool = input.parse()?;
-                Ok(Self::Boolean(PoundLiteral::new(pound, None, boolean)))
+                Ok(Self::Boolean(PoundLiteral::new(pound, boolean)))
             } else {
                 Err(syn::Error::new(
                     input.span(),
@@ -268,8 +259,7 @@ impl PartialEq for KdlLit {
             (KdlLit::Float(a, _), KdlLit::Float(b, _)) => a == b,
             (KdlLit::Boolean(a), KdlLit::Boolean(b)) => a.value() == b.value(),
             (KdlLit::Nan(_), KdlLit::Nan(_)) => true,
-            (KdlLit::Infinity(_), KdlLit::Infinity(_)) => true,
-            (KdlLit::NegInfinity(_), KdlLit::NegInfinity(_)) => true,
+            (KdlLit::Infinity(a), KdlLit::Infinity(b)) => a.minus.is_some() == b.minus.is_some(),
             (KdlLit::Null(_), KdlLit::Null(_)) => true,
             _ => false,
         }
@@ -279,15 +269,13 @@ impl PartialEq for KdlLit {
 #[derive(Clone)]
 pub struct PoundLiteral<T> {
     pub pound: syn::token::Pound,
-    pub minus: Option<syn::token::Minus>,
     pub value: T,
 }
 
 impl<T> PoundLiteral<T> {
-    pub fn new(pound: syn::token::Pound, minus: Option<syn::token::Minus>, inner: T) -> Self {
+    pub fn new(pound: syn::token::Pound, inner: T) -> Self {
         Self {
             pound,
-            minus,
             value: inner,
         }
     }
@@ -296,11 +284,9 @@ impl<T> PoundLiteral<T> {
 impl<T: syn::parse::Parse> syn::parse::Parse for PoundLiteral<T> {
     fn parse(input: ParseStream) -> Result<Self> {
         let pound: Token![#] = input.parse()?;
-        let minus: Option<Token![-]> = input.parse()?;
         let inner: T = input.parse()?;
         Ok(PoundLiteral {
             pound,
-            minus,
             value: inner,
         })
     }
@@ -323,7 +309,6 @@ impl<T: HasSpan> std::fmt::Debug for PoundLiteral<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PoundLiteral")
             .field("pound", &DebugToken(&self.pound))
-            .field("minus", &self.minus.as_ref().map(DebugToken))
             .field("inner", &DebugToken(&self.value))
             .finish()
     }
@@ -339,13 +324,67 @@ impl<T> Deref for PoundLiteral<T> {
 
 impl<T: PartialEq> PartialEq for PoundLiteral<T> {
     fn eq(&self, other: &Self) -> bool {
-        self.value == other.value && self.minus.is_some() == other.minus.is_some()
+        self.value == other.value
     }
 }
 
 impl<T: HasSpan> HasSpan for PoundLiteral<T> {
     fn span(&self) -> Span {
         self.value.span()
+    }
+}
+
+#[derive(Clone)]
+pub struct MaybeMinus<T> {
+    pub minus: Option<syn::token::Minus>,
+    pub value: T,
+}
+
+impl<T: syn::parse::Parse> syn::parse::Parse for MaybeMinus<T> {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let minus = input.parse::<Option<Token![-]>>()?;
+        let value = input.parse::<T>()?;
+        Ok(MaybeMinus { minus, value })
+    }
+}
+
+impl MaybeMinus<bare_identifiers::inf> {
+    pub fn peek(input: ParseStream<'_>) -> bool {
+        input.peek(Token![-]) && input.peek2(bare_identifiers::inf)
+            || input.peek(bare_identifiers::inf)
+    }
+}
+
+impl<T: HasSpan> HasSpan for MaybeMinus<T> {
+    fn span(&self) -> Span {
+        self.value.span()
+    }
+}
+
+impl<T> MaybeMinus<T> {
+    pub fn neg(minus: Token![-], value: T) -> Self {
+        Self {
+            minus: Some(minus),
+            value,
+        }
+    }
+
+    pub fn pos(value: T) -> Self {
+        Self { minus: None, value }
+    }
+}
+
+impl Deref for MaybeMinus<bare_identifiers::inf> {
+    type Target = bare_identifiers::inf;
+
+    fn deref(&self) -> &Self::Target {
+        &self.value
+    }
+}
+
+impl<T: PartialEq> PartialEq for MaybeMinus<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.value == other.value && self.minus.is_some() == other.minus.is_some()
     }
 }
 
@@ -358,11 +397,8 @@ impl PartialEq<kdl::KdlValue> for KdlValue {
             (KdlValue::Lit(KdlLit::Boolean(a)), kdl::KdlValue::Bool(b)) => a.value() == *b,
             (KdlValue::Lit(KdlLit::Null(_)), kdl::KdlValue::Null) => true,
             (KdlValue::Lit(KdlLit::Nan(_)), kdl::KdlValue::Float(b)) => b.is_nan(),
-            (KdlValue::Lit(KdlLit::Infinity(_)), kdl::KdlValue::Float(b)) => {
-                b.is_infinite() && b.is_sign_positive()
-            }
-            (KdlValue::Lit(KdlLit::NegInfinity(_)), kdl::KdlValue::Float(b)) => {
-                b.is_infinite() && b.is_sign_negative()
+            (KdlValue::Lit(KdlLit::Infinity(v)), kdl::KdlValue::Float(b)) => {
+                b.is_infinite() && (v.minus.is_some() == b.is_sign_negative())
             }
             _ => false,
         }
@@ -376,8 +412,8 @@ mod tests {
     use super::*;
 
     #[rstest]
-    #[case("#inf", |r| matches!(r, KdlLit::Infinity(_)) )]
-    #[case("#-inf", |r| matches!(r, KdlLit::NegInfinity(_)) )]
+    #[case("#inf", |r| matches!(r, KdlLit::Infinity(v) if v.minus.is_none() ) )]
+    #[case("#-inf", |r| matches!(r, KdlLit::Infinity(v) if v.minus.is_some() ) )]
     #[case("#nan", |r| matches!(r, KdlLit::Nan(_)) )]
     #[case("#null", |r| matches!(r, KdlLit::Null(_)) )]
     #[case("#true", |r| matches!(r, KdlLit::Boolean(b) if b.value() ) )]

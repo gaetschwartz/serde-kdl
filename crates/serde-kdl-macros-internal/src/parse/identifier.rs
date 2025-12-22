@@ -304,7 +304,6 @@ mod tests {
         fn from(b: bool) -> Self {
             KdlValue::Lit(KdlLit::Boolean(PoundLiteral::new(
                 Token![#](Span::call_site()),
-                None,
                 LitBool::new(b, Span::call_site()),
             )))
         }

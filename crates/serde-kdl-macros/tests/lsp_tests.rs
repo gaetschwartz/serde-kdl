@@ -2,6 +2,6 @@ use serde_kdl_macros::kdl;
 
 fn main() {
     let _ = kdl! {
-        /-typed (opt)"value"
+        typed #-inf
     };
 }

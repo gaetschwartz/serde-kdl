@@ -29,9 +29,7 @@ pub fn validate_type_annotation(type_annotation: &str, value: &KdlValue) -> Resu
                 ))
             }
         }
-        KdlValue::Lit(
-            KdlLit::Float(_, _) | KdlLit::Nan(_) | KdlLit::Infinity(_) | KdlLit::NegInfinity(_),
-        ) => {
+        KdlValue::Lit(KdlLit::Float(_, _) | KdlLit::Nan(_) | KdlLit::Infinity(_)) => {
             // For floats, only float type annotations or custom (non-reserved) annotations are allowed
             if RESERVED_FLOAT_TYPES.contains(&type_annotation) {
                 Ok(())
