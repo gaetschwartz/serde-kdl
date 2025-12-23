@@ -1,6 +1,6 @@
-use rstest::rstest;
+use insta::assert_snapshot;
 use serde::{Deserialize, Serialize};
-use serde_kdl::{from_str, to_string};
+use serde_kdl::{from_str, to_string_pretty};
 
 // Test all enum variant types
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -31,10 +31,34 @@ enum Value {
     Array(Vec<Value>),
 }
 
-#[rstest]
-fn test_unit_enum_variants(#[values(Color::Red, Color::Green, Color::Blue)] color: Color) {
-    let serialized = to_string(&color).unwrap();
-    println!("Serialized color: {serialized}");
+#[test]
+fn test_unit_enum_variant_red() {
+    let color = Color::Red;
+    let serialized = to_string_pretty(&color).unwrap();
+    assert_snapshot!(serialized, @"(Red)-
+");
+
+    let deserialized: Color = from_str(&serialized).unwrap();
+    assert_eq!(color, deserialized);
+}
+
+#[test]
+fn test_unit_enum_variant_green() {
+    let color = Color::Green;
+    let serialized = to_string_pretty(&color).unwrap();
+    assert_snapshot!(serialized, @"(Green)-
+");
+
+    let deserialized: Color = from_str(&serialized).unwrap();
+    assert_eq!(color, deserialized);
+}
+
+#[test]
+fn test_unit_enum_variant_blue() {
+    let color = Color::Blue;
+    let serialized = to_string_pretty(&color).unwrap();
+    assert_snapshot!(serialized, @"(Blue)-
+");
 
     let deserialized: Color = from_str(&serialized).unwrap();
     assert_eq!(color, deserialized);
@@ -44,8 +68,9 @@ fn test_unit_enum_variants(#[values(Color::Red, Color::Green, Color::Blue)] colo
 fn test_newtype_enum_variants() {
     let msg = Message::Text("Hello, world!".to_string());
 
-    let serialized = to_string(&msg).unwrap();
-    println!("Serialized message: {serialized}");
+    let serialized = to_string_pretty(&msg).unwrap();
+    assert_snapshot!(serialized, @r#"(Text)- "Hello, world!"
+"#);
 
     let deserialized: Message = from_str(&serialized).unwrap();
     assert_eq!(msg, deserialized);
@@ -55,8 +80,9 @@ fn test_newtype_enum_variants() {
 fn test_tuple_enum_variants() {
     let msg = Message::ChangeColor(255, 128, 0);
 
-    let serialized = to_string(&msg).unwrap();
-    println!("Serialized tuple variant: {serialized}");
+    let serialized = to_string_pretty(&msg).unwrap();
+    assert_snapshot!(serialized, @"(ChangeColor)- 255 128 0
+");
 
     let deserialized: Message = from_str(&serialized).unwrap();
     assert_eq!(msg, deserialized);
@@ -66,8 +92,13 @@ fn test_tuple_enum_variants() {
 fn test_struct_enum_variants() {
     let msg = Message::Move { x: 10, y: 20 };
 
-    let serialized = to_string(&msg).unwrap();
-    println!("Serialized struct variant: {serialized}");
+    let serialized = to_string_pretty(&msg).unwrap();
+    assert_snapshot!(serialized, @r#"
+    (Move)- {
+        x 10
+        y 20
+    }
+    "#);
 
     let deserialized: Message = from_str(&serialized).unwrap();
     assert_eq!(msg, deserialized);
@@ -88,8 +119,12 @@ fn test_nested_enum_in_struct() {
         secondary_color: Some(Color::Red),
     };
 
-    let serialized = to_string(&config).unwrap();
-    println!("Serialized config with enums: {serialized}");
+    let serialized = to_string_pretty(&config).unwrap();
+    assert_snapshot!(serialized, @r#"
+    name "My App"
+    (Blue)primary_color
+    (Red)secondary_color
+    "#);
 
     let deserialized: Config = from_str(&serialized).unwrap();
     assert_eq!(config, deserialized);
@@ -99,8 +134,14 @@ fn test_nested_enum_in_struct() {
 fn test_enum_in_vec() {
     let colors = vec![Color::Red, Color::Green, Color::Blue];
 
-    let serialized = to_string(&colors).unwrap();
-    println!("Serialized enum vector: {serialized}");
+    let serialized = to_string_pretty(&colors).unwrap();
+    assert_snapshot!(serialized, @r#"
+    - {
+        (Red)-
+        (Green)-
+        (Blue)-
+    }
+    "#);
 
     let deserialized: Vec<Color> = from_str(&serialized).unwrap();
     assert_eq!(colors, deserialized);
@@ -115,8 +156,18 @@ fn test_recursive_enum() {
         Value::Array(vec![Value::Number(1.0), Value::Number(2.0)]),
     ]);
 
-    let serialized = to_string(&value).unwrap();
-    println!("Serialized recursive enum: {serialized}");
+    let serialized = to_string_pretty(&value).unwrap();
+    assert_snapshot!(serialized, @r#"
+    (Array)- {
+        (Number)- 42.0
+        (Text)- hello
+        (Boolean)- #true
+        (Array)- {
+            (Number)- 1.0
+            (Number)- 2.0
+        }
+    }
+    "#);
 
     let deserialized: Value = from_str(&serialized).unwrap();
     assert_eq!(value, deserialized);

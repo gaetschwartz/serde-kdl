@@ -1,6 +1,7 @@
+use insta::assert_snapshot;
 use rstest::rstest;
 use serde::{Deserialize, Serialize};
-use serde_kdl::{from_str, to_string};
+use serde_kdl::{from_str, to_string_pretty};
 use std::fs;
 
 /// Test that we can at least read all example KDL files and handle parsing gracefully
@@ -84,8 +85,29 @@ fn test_roundtrip_document_structure() {
         }],
     };
 
-    let serialized = to_string(&document).expect("Failed to serialize document");
-    println!("Serialized document structure: {serialized}");
+    let serialized = to_string_pretty(&document).expect("Failed to serialize document");
+    assert_snapshot!(serialized, @r#"
+    nodes {
+        - {
+            name config
+            properties {
+                enabled #true
+                port 8080
+                version "1.0"
+            }
+            children {
+                - {
+                    name server
+                    properties {
+                        host localhost
+                    }
+                    children {
+                    }
+                }
+            }
+        }
+    }
+    "#);
 
     let deserialized: DocumentTest = from_str(&serialized).expect("Failed to deserialize document");
     assert_eq!(document, deserialized);
@@ -141,8 +163,30 @@ fn test_complex_node_structures() {
         },
     };
 
-    let serialized = to_string(&config).expect("Failed to serialize complex config");
-    println!("Serialized complex config: {serialized}");
+    let serialized = to_string_pretty(&config).expect("Failed to serialize complex config");
+    assert_snapshot!(serialized, @r#"
+    package {
+        name test-package
+        version "1.0.0"
+        description "A test package"
+    }
+    dependencies {
+        - {
+            name serde
+            version "1.0"
+            optional #null
+        }
+        - {
+            name tokio
+            version "1.0"
+            optional #true
+        }
+    }
+    metadata {
+        author "Test Author"
+        license MIT
+    }
+    "#);
 
     let deserialized: ComplexConfig =
         from_str(&serialized).expect("Failed to deserialize complex config");
@@ -174,7 +218,7 @@ fn test_edge_cases() {
         optional_field: None,
     };
 
-    let serialized = to_string(&config_empty).expect("Failed to serialize empty config");
+    let serialized = to_string_pretty(&config_empty).expect("Failed to serialize empty config");
     let deserialized: EdgeCaseConfig =
         from_str(&serialized).expect("Failed to deserialize empty config");
     assert_eq!(config_empty, deserialized);
@@ -196,7 +240,7 @@ fn test_edge_cases() {
         optional_field: Some("optional value".to_string()),
     };
 
-    let serialized = to_string(&config_full).expect("Failed to serialize full config");
+    let serialized = to_string_pretty(&config_full).expect("Failed to serialize full config");
     let deserialized: EdgeCaseConfig =
         from_str(&serialized).expect("Failed to deserialize full config");
     assert_eq!(config_full, deserialized);
