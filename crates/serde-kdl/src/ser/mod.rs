@@ -18,7 +18,7 @@ pub use structs::{SerializeStructImpl, SerializeStructVariantImpl};
 pub use tuple::{SerializeTupleImpl, SerializeTupleStructImpl, SerializeTupleVariantImpl};
 
 /// Node context for serialization: (`node_name`, children)
-type NodeContext = (String, Vec<KdlNode>);
+type NodeContext = (&'static str, Vec<KdlNode>);
 
 /// A serializer that converts Rust values directly to KDL documents.
 pub struct Serializer {
@@ -69,7 +69,7 @@ impl Serializer {
         Ok(())
     }
 
-    fn push_node_context(&mut self, name: String) {
+    fn push_node_context(&mut self, name: &'static str) {
         self.node_stack.push((name, Vec::new()));
     }
 
@@ -252,7 +252,7 @@ impl<'a> SerializerTrait for &'a mut Serializer {
     where
         T: ?Sized + serde::Serialize,
     {
-        self.push_node_context(name.to_string());
+        self.push_node_context(name);
         value.serialize(&mut *self)?;
         self.pop_node_context()
     }
@@ -268,7 +268,7 @@ impl<'a> SerializerTrait for &'a mut Serializer {
         T: ?Sized + serde::Serialize,
     {
         // Push a context so inner sequences don't unwrap at root level
-        self.push_node_context(DEFAULT_NODE_NAME.to_string());
+        self.push_node_context(DEFAULT_NODE_NAME);
         value.serialize(&mut *self)?;
         self.pop_node_context()?;
 
@@ -298,7 +298,7 @@ impl<'a> SerializerTrait for &'a mut Serializer {
         name: &'static str,
         len: usize,
     ) -> Result<Self::SerializeTupleStruct> {
-        self.push_node_context(name.to_string());
+        self.push_node_context(name);
         Ok(SerializeTupleStructImpl {
             ser: self,
             items: Vec::with_capacity(len),
@@ -332,7 +332,7 @@ impl<'a> SerializerTrait for &'a mut Serializer {
         let is_root = self.is_root_serializer && self.node_stack.is_empty();
         if !is_root {
             // Nested struct - wrap in named node
-            self.push_node_context(name.to_string());
+            self.push_node_context(name);
         }
         Ok(SerializeStructImpl { ser: self, is_root })
     }
