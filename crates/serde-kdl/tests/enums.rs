@@ -170,3 +170,39 @@ fn test_recursive_enum() {
     let deserialized: Value = from_str(&serialized).unwrap();
     assert_eq!(value, deserialized);
 }
+
+#[test]
+fn test_enum_as_property_value() {
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct Wrapper {
+        message: Message,
+    }
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    struct Message {
+        content: String,
+        r#type: MessageType,
+    }
+
+    #[derive(Debug, PartialEq, Serialize, Deserialize)]
+    enum MessageType {
+        Audio,
+        Video,
+        Text,
+    }
+
+    let wrapper = Wrapper {
+        message: Message {
+            content: "Hello".to_string(),
+            r#type: MessageType::Text,
+        },
+    };
+
+    let serialized = to_string_pretty(&wrapper).unwrap();
+    assert_snapshot!(serialized, @"
+    message {
+        content Hello
+        (Text)type
+    }
+    ");
+}
