@@ -1,18 +1,21 @@
-use std::mem;
-
 use super::Serializer;
 use crate::{
     DEFAULT_NODE_NAME,
     error::{Error, Result},
-    ser::SerializeFieldValue as _,
+    ser::SerializeFieldValue,
 };
-use kdl::{KdlEntry, KdlNode, KdlValue};
+use kdl::{KdlDocument, KdlEntry, KdlNode};
 use serde::ser::{SerializeTuple, SerializeTupleStruct, SerializeTupleVariant};
+
+/// Check if a node is "simple" - can be represented as an inline entry
+fn is_simple_node(node: &KdlNode) -> bool {
+    node.entries().len() == 1 && node.children().is_none() && node.ty().is_none()
+}
 
 // Tuple serializer
 pub struct SerializeTupleImpl<'a> {
     pub(crate) ser: &'a mut Serializer,
-    pub(crate) items: Vec<KdlValue>,
+    pub(crate) child_nodes: Vec<KdlNode>,
 }
 
 impl SerializeTuple for SerializeTupleImpl<'_> {
@@ -23,26 +26,33 @@ impl SerializeTuple for SerializeTupleImpl<'_> {
     where
         T: ?Sized + serde::Serialize,
     {
-        let node = value.into_option_node()?;
-        if let Some(mut node) = node {
-            if let Some(mut entry) = node.entries_mut().pop() {
-                self.items
-                    .push(mem::replace(entry.value_mut(), KdlValue::Null));
-            } else {
-                self.items.push(KdlValue::Null);
-            }
-        } else {
-            self.items.push(KdlValue::Null);
-        }
-
+        let mut node = value.into_node()?;
+        node.set_name(DEFAULT_NODE_NAME);
+        self.child_nodes.push(node);
         Ok(())
     }
 
     fn end(self) -> Result<Self::Ok> {
         let mut node = KdlNode::new(DEFAULT_NODE_NAME);
-        for item in self.items {
-            node.entries_mut().push(KdlEntry::new(item));
+
+        // Check if all elements are simple (can be inline)
+        let all_simple = self.child_nodes.iter().all(is_simple_node);
+
+        if all_simple {
+            // Extract values as inline entries
+            for child in self.child_nodes {
+                if let Some(entry) = child.entries().first() {
+                    node.entries_mut()
+                        .push(KdlEntry::new(entry.value().clone()));
+                }
+            }
+        } else {
+            // Use children block
+            let mut child_doc = KdlDocument::new();
+            child_doc.nodes_mut().extend(self.child_nodes);
+            *node.children_mut() = Some(child_doc);
         }
+
         self.ser.current_node = Some(node);
         Ok(())
     }
@@ -51,7 +61,7 @@ impl SerializeTuple for SerializeTupleImpl<'_> {
 // Tuple struct serializer
 pub struct SerializeTupleStructImpl<'a> {
     pub(crate) ser: &'a mut Serializer,
-    pub(crate) items: Vec<KdlValue>,
+    pub(crate) child_nodes: Vec<KdlNode>,
 }
 
 impl SerializeTupleStruct for SerializeTupleStructImpl<'_> {
@@ -62,27 +72,34 @@ impl SerializeTupleStruct for SerializeTupleStructImpl<'_> {
     where
         T: ?Sized + serde::Serialize,
     {
-        let node = value.into_option_node()?;
-        if let Some(mut node) = node {
-            if let Some(mut entry) = node.entries_mut().pop() {
-                self.items
-                    .push(mem::replace(entry.value_mut(), KdlValue::Null));
-            } else {
-                self.items.push(KdlValue::Null);
-            }
-        } else {
-            self.items.push(KdlValue::Null);
-        }
-
+        let mut node = value.into_node()?;
+        node.set_name(DEFAULT_NODE_NAME);
+        self.child_nodes.push(node);
         Ok(())
     }
 
     fn end(self) -> Result<Self::Ok> {
-        // Add the tuple values as entries to the current node
+        // Check if all elements are simple (can be inline)
+        let all_simple = self.child_nodes.iter().all(is_simple_node);
+
         if let Some((_name, children)) = self.ser.node_stack.last_mut() {
             let mut node = KdlNode::new(DEFAULT_NODE_NAME);
-            node.entries_mut()
-                .extend(self.items.into_iter().map(KdlEntry::new));
+
+            if all_simple {
+                // Extract values as inline entries
+                for child in self.child_nodes {
+                    if let Some(entry) = child.entries().first() {
+                        node.entries_mut()
+                            .push(KdlEntry::new(entry.value().clone()));
+                    }
+                }
+            } else {
+                // Use children block
+                let mut child_doc = KdlDocument::new();
+                child_doc.nodes_mut().extend(self.child_nodes);
+                *node.children_mut() = Some(child_doc);
+            }
+
             children.push(node);
         }
         self.ser.pop_node_context()
@@ -93,7 +110,7 @@ impl SerializeTupleStruct for SerializeTupleStructImpl<'_> {
 pub struct SerializeTupleVariantImpl<'a> {
     pub(crate) ser: &'a mut Serializer,
     pub(crate) variant: String,
-    pub(crate) items: Vec<KdlValue>,
+    pub(crate) child_nodes: Vec<KdlNode>,
 }
 
 impl SerializeTupleVariant for SerializeTupleVariantImpl<'_> {
@@ -104,20 +121,9 @@ impl SerializeTupleVariant for SerializeTupleVariantImpl<'_> {
     where
         T: ?Sized + serde::Serialize,
     {
-        let mut item_serializer = Serializer::new_for_field();
-        value.serialize(&mut item_serializer)?;
-
-        let document = item_serializer.into_document();
-        if let Some(node) = document.nodes().first() {
-            if let Some(entry) = node.entries().first() {
-                self.items.push(entry.value().clone());
-            } else {
-                self.items.push(KdlValue::Null);
-            }
-        } else {
-            self.items.push(KdlValue::Null);
-        }
-
+        let mut node = value.into_node()?;
+        node.set_name(DEFAULT_NODE_NAME);
+        self.child_nodes.push(node);
         Ok(())
     }
 
@@ -126,9 +132,22 @@ impl SerializeTupleVariant for SerializeTupleVariantImpl<'_> {
         let mut node = KdlNode::new(DEFAULT_NODE_NAME);
         node.set_ty(kdl::KdlIdentifier::from(self.variant.as_str()));
 
-        // Add all tuple items as arguments
-        for item in self.items {
-            node.entries_mut().push(KdlEntry::new(item));
+        // Check if all elements are simple (can be inline)
+        let all_simple = self.child_nodes.iter().all(is_simple_node);
+
+        if all_simple {
+            // Extract values as inline entries (arguments)
+            for child in self.child_nodes {
+                if let Some(entry) = child.entries().first() {
+                    node.entries_mut()
+                        .push(KdlEntry::new(entry.value().clone()));
+                }
+            }
+        } else {
+            // Use children block
+            let mut child_doc = KdlDocument::new();
+            child_doc.nodes_mut().extend(self.child_nodes);
+            *node.children_mut() = Some(child_doc);
         }
 
         self.ser.current_node = Some(node);

@@ -289,7 +289,7 @@ impl<'a> SerializerTrait for &'a mut Serializer {
     fn serialize_tuple(self, len: usize) -> Result<Self::SerializeTuple> {
         Ok(SerializeTupleImpl {
             ser: self,
-            items: Vec::with_capacity(len),
+            child_nodes: Vec::with_capacity(len),
         })
     }
 
@@ -301,7 +301,7 @@ impl<'a> SerializerTrait for &'a mut Serializer {
         self.push_node_context(name);
         Ok(SerializeTupleStructImpl {
             ser: self,
-            items: Vec::with_capacity(len),
+            child_nodes: Vec::with_capacity(len),
         })
     }
 
@@ -315,7 +315,7 @@ impl<'a> SerializerTrait for &'a mut Serializer {
         Ok(SerializeTupleVariantImpl {
             ser: self,
             variant: variant.to_string(),
-            items: Vec::with_capacity(len),
+            child_nodes: Vec::with_capacity(len),
         })
     }
 
