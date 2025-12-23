@@ -29,16 +29,20 @@ impl SerializeSeq for SerializeSeqImpl<'_> {
     }
 
     fn end(self) -> Result<Self::Ok> {
-        // Create the parent node with "-" as the name
-        let mut node = KdlNode::new(DEFAULT_NODE_NAME);
+        // Check if we're at the root level (no wrapper needed)
+        let is_root = self.ser.is_root_serializer && self.ser.node_stack.is_empty();
 
-        // If we have child nodes, add them in a children block
-        // Even if empty, we still create an empty children block for empty sequences
-        let mut child_doc = KdlDocument::new();
-        child_doc.nodes_mut().extend(self.child_nodes);
-        *node.children_mut() = Some(child_doc);
-
-        self.ser.current_node = Some(node);
+        if is_root {
+            // Root-level: add sequence items directly to document
+            self.ser.document.nodes_mut().extend(self.child_nodes);
+        } else {
+            // Nested: wrap in a "-" node with children
+            let mut node = KdlNode::new(DEFAULT_NODE_NAME);
+            let mut child_doc = KdlDocument::new();
+            child_doc.nodes_mut().extend(self.child_nodes);
+            *node.children_mut() = Some(child_doc);
+            self.ser.current_node = Some(node);
+        }
         Ok(())
     }
 }

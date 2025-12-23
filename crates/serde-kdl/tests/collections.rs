@@ -94,13 +94,11 @@ fn test_serialize_simple_array() {
     let numbers = vec![1, 2, 3, 4, 5];
     let kdl_string = serde_kdl::to_string_pretty(&numbers).expect("Failed to serialize");
     assert_snapshot!(kdl_string, @r#"
-    - {
-        - 1
-        - 2
-        - 3
-        - 4
-        - 5
-    }
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
     "#);
 
     let deserialized: Vec<i32> = serde_kdl::from_str(&kdl_string).expect("Failed to deserialize");
@@ -117,12 +115,10 @@ fn test_serialize_string_array() {
     ];
     let kdl_string = serde_kdl::to_string_pretty(&words).expect("Failed to serialize");
     assert_snapshot!(kdl_string, @r#"
-    - {
-        - hello
-        - world
-        - from
-        - kdl
-    }
+    - hello
+    - world
+    - from
+    - kdl
     "#);
 
     let deserialized: Vec<String> =

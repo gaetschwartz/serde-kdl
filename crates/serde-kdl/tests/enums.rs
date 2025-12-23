@@ -136,11 +136,9 @@ fn test_enum_in_vec() {
 
     let serialized = to_string_pretty(&colors).unwrap();
     assert_snapshot!(serialized, @r#"
-    - {
-        (Red)-
-        (Green)-
-        (Blue)-
-    }
+    (Red)-
+    (Green)-
+    (Blue)-
     "#);
 
     let deserialized: Vec<Color> = from_str(&serialized).unwrap();

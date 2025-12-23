@@ -267,8 +267,10 @@ impl<'a> SerializerTrait for &'a mut Serializer {
     where
         T: ?Sized + serde::Serialize,
     {
-        // Serialize the inner value first
+        // Push a context so inner sequences don't unwrap at root level
+        self.push_node_context(DEFAULT_NODE_NAME.to_string());
         value.serialize(&mut *self)?;
+        self.pop_node_context()?;
 
         // Add the type annotation to the current node
         if let Some(node) = &mut self.current_node {

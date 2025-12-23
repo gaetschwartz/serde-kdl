@@ -184,6 +184,13 @@ impl<'de> DeserializerTrait<'de> for &mut Deserializer<'de> {
 
         // Try root level nodes as sequence
         let nodes = self.document.nodes();
+
+        // If we have multiple root nodes, treat them as a sequence
+        if nodes.len() > 1 {
+            let seq_de = SeqDeserializer::from_children(nodes);
+            return visitor.visit_seq(seq_de);
+        }
+
         if nodes.len() == 1 {
             let root_node = &nodes[0];
 
