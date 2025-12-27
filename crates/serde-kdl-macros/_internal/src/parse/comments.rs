@@ -1,8 +1,8 @@
 use crate::parse::node::ChildrenBlock;
+use crate::utils::HasSpan;
 use proc_macro2::Span;
 use syn::Token;
 use syn::parse::ParseStream;
-use syn::spanned::Spanned;
 
 struct Commented<T> {
     pub comments: Vec<Comment>,
@@ -63,9 +63,9 @@ impl<T: syn::parse::Parse> syn::parse::Parse for MaybeSlashed<T> {
         let item_span_start = input.span().start();
         let item = input.parse::<T>()?;
         if let Some(slash_dash) = slash_dash {
-            if slash_dash.1.span().end().line != item_span_start.line {
+            if syn::spanned::Spanned::span(&slash_dash.1).end().line != item_span_start.line {
                 return Err(syn::Error::new(
-                    slash_dash.1.span(),
+                    syn::spanned::Spanned::span(&slash_dash.1),
                     "Expected slashed item to be on the same line as `/-`",
                 ));
             }
@@ -116,6 +116,17 @@ impl MaybeSlashed<ChildrenBlock> {
     }
 }
 
+impl<T: HasSpan> HasSpan for MaybeSlashed<T> {
+    fn span(&self) -> Span {
+        match self {
+            MaybeSlashed::Slashed(slash_dash, item) => {
+                slash_dash.span().join(item.span()).unwrap_or(item.span())
+            }
+            MaybeSlashed::Item(item) => item.span(),
+        }
+    }
+}
+
 /// Represents a KDL slash-dash comment marker (`/-`)
 ///
 /// This handles both joint tokens (from actual macro invocations) and
@@ -132,7 +143,10 @@ impl SlashDash {
     /// Returns the span covering both the slash and dash tokens
     #[must_use]
     pub fn spans(&self) -> (Span, Span) {
-        (self.0.span(), self.1.span())
+        (
+            syn::spanned::Spanned::span(&self.0),
+            syn::spanned::Spanned::span(&self.1),
+        )
     }
 }
 
@@ -140,13 +154,22 @@ impl syn::parse::Parse for SlashDash {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let slash = input.parse::<Token![/]>()?;
         let dash = input.parse::<Token![-]>()?;
-        if slash.span().end().line != dash.span().start().line {
+        if syn::spanned::Spanned::span(&slash).end().line
+            != syn::spanned::Spanned::span(&dash).start().line
+        {
             return Err(syn::Error::new(
-                dash.span(),
+                syn::spanned::Spanned::span(&dash),
                 "Expected `/-` to be on the same line",
             ));
         }
         Ok(SlashDash(slash, dash))
+    }
+}
+
+impl HasSpan for SlashDash {
+    fn span(&self) -> Span {
+        let (start, end) = self.spans();
+        start.join(end).unwrap_or(start)
     }
 }
 

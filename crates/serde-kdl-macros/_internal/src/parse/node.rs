@@ -5,9 +5,13 @@
 
 use std::ops::Deref;
 
-use crate::parse::{
-    comments::MaybeSlashed, document::KdlDocument, entry::KdlEntry, identifier::KdlIdentifier,
-    type_annotation::MaybeAnnotated,
+use crate::{
+    parse::{
+        comments::MaybeSlashed, document::KdlDocument, entry::KdlEntry, identifier::KdlIdentifier,
+        type_annotation::MaybeAnnotated,
+    },
+    trace,
+    utils::HasSpan as _,
 };
 use syn::{
     Result, Token,
@@ -51,7 +55,12 @@ impl Parse for KdlNode {
             item: name,
         } = input.parse::<MaybeAnnotated<KdlIdentifier>>()?;
 
-        // eprintln!("[node({name})] Name span: {}", SpanDisplay(name.span()));
+        trace!(
+            name = format_args!("node({name})"),
+            value = name,
+            tt = input,
+            "Name"
+        );
 
         // FIXME: This doesn't work in rust-analyzer since it returns dummy spans (1:0)
         let node_line = name.span().end().line;
@@ -68,21 +77,22 @@ impl Parse for KdlNode {
             // Try to parse as argument (literal value or identifier)
             let fork = input.fork();
             let maybe_entry = fork.parse::<MaybeSlashed<KdlEntry>>()?;
-            // eprintln!(
-            //     "[node({})] Parsed entry at span {}: {:?}\nRest of input: `{}`",
-            //     name,
-            //     SpanDisplay(maybe_entry.inner().span()),
-            //     maybe_entry,
-            //     fork
-            // );
+            trace!(
+                name = format_args!("node({name})"),
+                value = maybe_entry,
+                tt = fork,
+                "Parsed entry"
+            );
             let entry = maybe_entry.inner();
-            let value_line = entry.span().start().line;
+            let value_line = entry.value_span().start().line;
             if value_line != node_line {
                 // Different line = new node
-                // eprintln!(
-                //     "[node({})] Entry at line {} differs from node line {}: ending entries parse",
-                //     name, value_line, node_line
-                // );
+                trace!(
+                    name = format_args!("node({name})"),
+                    "Entry at line {} differs from node line {}: ending entries parse",
+                    value_line,
+                    node_line
+                );
                 terminator = Some(Terminator::Eol);
                 break;
             }
@@ -91,7 +101,11 @@ impl Parse for KdlNode {
             entries.push(maybe_entry);
         }
 
-        // eprintln!("[node({})] Parsed {} entries", name, entries.len());
+        trace!(
+            name = format_args!("node({name})"),
+            "Parsed {} entries",
+            entries.len()
+        );
 
         // Parse children if present
         let terminator = if let Some(t) = terminator {

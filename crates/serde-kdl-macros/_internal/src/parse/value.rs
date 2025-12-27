@@ -3,9 +3,13 @@
 //! This module handles parsing of KDL values including strings, numbers,
 //! booleans, null, and type-annotated values.
 
+#[cfg(kdl_macros_debug)]
+use crate::utils::DisplaySpan;
 use crate::{
     ast::SERDE_KDL_KDL_EXPORT,
-    parse::{DebugToken, HasSpan, identifier::KdlIdentifier},
+    parse::identifier::KdlIdentifier,
+    trace,
+    utils::{DebugSynToken, DebugToken, HasSpan},
 };
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{ToTokens, quote};
@@ -13,7 +17,6 @@ use std::ops::{Deref, RangeBounds};
 use syn::{
     Ident, LitBool, Result, Token,
     parse::{Parse, ParseStream},
-    spanned::Spanned,
 };
 
 pub mod bare_identifiers {
@@ -91,9 +94,8 @@ impl ToTokens for KdlValue {
     }
 }
 
-impl KdlValue {
-    #[must_use]
-    pub fn span(&self) -> proc_macro2::Span {
+impl HasSpan for KdlValue {
+    fn span(&self) -> proc_macro2::Span {
         match self {
             KdlValue::String(s) => s.span(),
             KdlValue::Variable(ident) => ident.span(),
@@ -186,18 +188,20 @@ impl HasSpan for KdlLit {
 
 impl syn::parse::Parse for KdlLit {
     fn parse(input: ParseStream) -> Result<Self> {
-        // eprintln!(
-        //     "[kdllit] Start at span {}. Input: {}",
-        //     SpanDisplay(input.span()),
-        //     input.fork().cursor().token_stream()
-        // );
+        trace!(
+            name = "kdllit",
+            tt = input,
+            "Start at span {}",
+            input.span().display(),
+        );
         if input.peek(Token![#]) {
             let pound: Token![#] = input.parse()?;
-            let pound_span = Spanned::span(&pound);
-            // eprintln!(
-            //     "[kdllit] Detected pound literal at span {}",
-            //     SpanDisplay(pound_span)
-            // );
+            let pound_span = pound.span();
+            trace!(
+                name = "kdllit",
+                "Detected pound literal at span {}",
+                pound_span.display()
+            );
             let next_span = input.span();
             // ensure that # has no space by comparing the spans
             let pound_lit = if next_span.start() != pound_span.end() {
@@ -222,19 +226,14 @@ impl syn::parse::Parse for KdlLit {
                     input.span(),
                     "Expected one of `inf`, `-inf`, `nan`, `null`, `true`, or `false` after `#`",
                 ))
-            };
-            // eprintln!(
-            //     "[kdllit] Parsed pound literal at span {}: {:?}\nRest of input: `{}`",
-            //     SpanDisplay(
-            //         pound_lit
-            //             .as_ref()
-            //             .map(|pl| pl.span())
-            //             .unwrap_or(input.span())
-            //     ),
-            //     pound_lit,
-            //     input
-            // );
-            return pound_lit;
+            }?;
+            trace!(
+                name = "kdllit",
+                value = ?pound_lit,
+                tt = input,
+                "Parsed pound literal"
+            );
+            return Ok(pound_lit);
         }
 
         if input.peek(Token![+]) {
@@ -242,12 +241,13 @@ impl syn::parse::Parse for KdlLit {
         }
 
         let out = Self::parse_number(input)?;
-        // eprintln!(
-        //     "[kdllit] Parsed numeric literal at span {}: {:?}\nRest of input: {}",
-        //     SpanDisplay(out.span()),
-        //     out,
-        //     input
-        // );
+        trace!(
+            name = "kdllit",
+            tt = input,
+            "Parsed numeric literal at span {}: {:?}",
+            out.span().display(),
+            out,
+        );
         Ok(out)
     }
 }
@@ -259,7 +259,9 @@ impl PartialEq for KdlLit {
             (KdlLit::Float(a, _), KdlLit::Float(b, _)) => a == b,
             (KdlLit::Boolean(a), KdlLit::Boolean(b)) => a.value().value == b.value().value,
             (KdlLit::Nan(_), KdlLit::Nan(_)) => true,
-            (KdlLit::Infinity(a), KdlLit::Infinity(b)) => a.minus().is_some() == b.minus().is_some(),
+            (KdlLit::Infinity(a), KdlLit::Infinity(b)) => {
+                a.minus().is_some() == b.minus().is_some()
+            }
             (KdlLit::Null(_), KdlLit::Null(_)) => true,
             _ => false,
         }
@@ -306,9 +308,9 @@ impl<T: syn::parse::Parse> PoundLiteral<T> {
 
 impl<T: HasSpan> std::fmt::Debug for PoundLiteral<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("PoundLiteral")
-            .field("pound", &DebugToken(&self.0))
-            .field("inner", &DebugToken(&self.1))
+        f.debug_tuple("PoundLiteral")
+            .field(&DebugSynToken(&self.0))
+            .field(&DebugToken(&self.1))
             .finish()
     }
 }
@@ -421,6 +423,7 @@ mod tests {
     #[case("#false", |r| matches!(r, KdlLit::Boolean(b) if !b.value().value ) )]
     fn test_parse_pound_literals(#[case] input: &str, #[case] expect: impl Fn(KdlLit) -> bool) {
         let parsed: KdlLit = syn::parse_str(input).expect("Failed to parse pound literal");
+        eprintln!("Parsed: {:?}", parsed);
         assert!(expect(parsed), "Parsed value did not match expectation");
     }
 }

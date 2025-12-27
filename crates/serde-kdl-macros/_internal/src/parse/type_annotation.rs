@@ -3,10 +3,14 @@
 //! This module handles parsing of KDL type annotations according to Section 3.8
 //! of the KDL specification.
 
-use crate::parse::{entry::KdlEntry, identifier::KdlIdentifier, node::KdlNode};
+use crate::{
+    parse::{entry::KdlEntry, identifier::KdlIdentifier, node::KdlNode},
+    trace,
+    utils::HasSpan,
+};
 use quote::{ToTokens, quote};
 use std::ops::Deref;
-use syn::{Result, parse::ParseStream, spanned::Spanned, token::Paren};
+use syn::{Result, parse::ParseStream, token::Paren};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct MaybeAnnotated<T> {
@@ -83,27 +87,29 @@ impl<T> Deref for MaybeAnnotated<T> {
     }
 }
 
-impl<T: syn::parse::Parse + Spanned + std::fmt::Debug> syn::parse::Parse for MaybeAnnotated<T> {
+impl<T: syn::parse::Parse + std::fmt::Debug + HasSpan> syn::parse::Parse for MaybeAnnotated<T> {
     fn parse(input: ParseStream) -> Result<Self> {
         let type_annotation = if input.peek(Paren) {
             let content;
             syn::parenthesized!(content in input);
             let ident = content.parse::<KdlIdentifier>()?;
-            // eprintln!(
-            //     "[type_annotation] Parsed type annotation: {} at {}",
-            //     ident,
-            //     SpanDisplay(ident.span()),
-            // );
+            trace!(
+                name = "type_annotation",
+                value = ident,
+                tt = input,
+                "Parsed"
+            );
             Some(ident)
         } else {
             None
         };
         let item: T = input.parse()?;
-        // eprintln!(
-        //     "[type_annotation] Parsed item {:?} at {}",
-        //     item,
-        //     SpanDisplay(item.span()),
-        // );
+        trace!(
+            name = "maybe_annotated_item",
+            value = item,
+            tt = input,
+            "Parsed item"
+        );
 
         Ok(MaybeAnnotated {
             type_annotation,

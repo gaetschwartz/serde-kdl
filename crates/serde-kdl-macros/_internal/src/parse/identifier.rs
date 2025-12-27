@@ -1,5 +1,7 @@
 use crate::parse::type_annotation::MaybeAnnotated;
 use crate::parse::value::KdlValue;
+use crate::trace;
+use crate::utils::HasSpan;
 use crate::validation::{self, ValidationOptions};
 use proc_macro2::Span;
 use proc_macro2::TokenStream as TokenStream2;
@@ -26,12 +28,20 @@ impl syn::parse::Parse for KdlIdentifier {
         if lookahead.peek(syn::LitStr) {
             let lit_str: syn::LitStr = input.parse()?;
             let kdl_string = KdlIdentifier::from(lit_str);
-            // eprintln!("[kdl_string] Parsed quoted string: {}", kdl_string.value());
+            trace!(
+                name = "kdl_string",
+                "Parsed quoted string: {}",
+                kdl_string.value()
+            );
             Ok(kdl_string)
         } else if input.peek(syn::Ident) {
             let ident: syn::Ident = input.parse()?;
             let kdl_string = KdlIdentifier::new_identifier(ident)?;
-            // eprintln!("[kdl_string] Parsed identifier: {}", kdl_string.value());
+            trace!(
+                name = "kdl_string",
+                "Parsed identifier: {}",
+                kdl_string.value()
+            );
             Ok(kdl_string)
         } else {
             Err(lookahead.error())
@@ -47,15 +57,6 @@ impl KdlIdentifier {
         match &self {
             KdlIdentifier::Identifier { ident } => ident.to_string().into(),
             KdlIdentifier::Quoted { value, .. } => value.into(),
-        }
-    }
-
-    /// Get the span for error reporting
-    #[must_use]
-    pub fn span(&self) -> proc_macro2::Span {
-        match &self {
-            KdlIdentifier::Identifier { ident } => ident.span(),
-            KdlIdentifier::Quoted { span, .. } => *span,
         }
     }
 
@@ -88,6 +89,15 @@ impl KdlIdentifier {
     }
 }
 
+impl HasSpan for KdlIdentifier {
+    fn span(&self) -> proc_macro2::Span {
+        match &self {
+            KdlIdentifier::Identifier { ident } => ident.span(),
+            KdlIdentifier::Quoted { span, .. } => *span,
+        }
+    }
+}
+
 impl PartialEq for KdlIdentifier {
     fn eq(&self, other: &Self) -> bool {
         self.value() == other.value()
@@ -103,10 +113,7 @@ impl std::fmt::Display for KdlIdentifier {
 impl ToTokens for KdlIdentifier {
     fn to_tokens(&self, tokens: &mut TokenStream2) {
         let value = self.value();
-        quote_spanned! {self.span()=>
-            #value
-        }
-        .to_tokens(tokens);
+        tokens.extend(quote_spanned!(self.span()=> #value));
     }
 }
 
@@ -207,16 +214,19 @@ fn sanitize_ident(input: &str) -> syn::Result<syn::Ident> {
         output.push('_');
     }
     if let Ok(ident) = syn::parse_str::<syn::Ident>(&output) {
-        // eprintln!("[ide-hints] Sanitized identifier: {} -> {}", input, output);
+        trace!(
+            name = "ide-hints",
+            "Sanitized identifier: {} -> {}", input, output
+        );
         return Ok(ident);
     }
     output.push('_');
     match syn::parse_str::<syn::Ident>(&output) {
         Ok(ident) => {
-            // eprintln!(
-            //     "[ide-hints] Sanitized identifier with fallback: {} -> {}",
-            //     input, output
-            // );
+            trace!(
+                name = "ide-hints",
+                "Sanitized identifier with fallback: {} -> {}", input, output
+            );
             Ok(ident)
         }
         Err(e) => Err(syn::Error::new(

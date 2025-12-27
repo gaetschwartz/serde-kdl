@@ -2,7 +2,11 @@ use std::borrow::Cow;
 
 use syn::Token;
 
-use crate::parse::{identifier::KdlIdentifier, type_annotation::MaybeAnnotated, value::KdlValue};
+use crate::{
+    parse::{identifier::KdlIdentifier, type_annotation::MaybeAnnotated, value::KdlValue},
+    trace,
+    utils::HasSpan,
+};
 
 /// Represents a KDL property (key="value" pair)
 #[derive(Debug, Clone, PartialEq)]
@@ -69,7 +73,7 @@ impl KdlEntry {
     }
 
     #[must_use]
-    pub fn span(&self) -> proc_macro2::Span {
+    pub fn value_span(&self) -> proc_macro2::Span {
         self.value.span()
     }
 }
@@ -84,7 +88,7 @@ impl syn::parse::Parse for KdlEntry {
         // Check if it's a property (key=value) or argument (value)
         if input.peek(Token![=]) {
             let _: Token![=] = input.parse()?;
-            // eprintln!("[node({name})] Found '=' token ");
+            trace!(name = "kdl_entry", "Found '=' token ");
             // It's a property
             let key = value.try_into()?;
             let prop_value = input.parse::<MaybeAnnotated<KdlValue>>()?;
@@ -103,6 +107,15 @@ impl syn::parse::Parse for KdlEntry {
         } else {
             // It's an argument
             Ok(KdlEntry { name: None, value })
+        }
+    }
+}
+
+impl HasSpan for KdlEntry {
+    fn span(&self) -> proc_macro2::Span {
+        match &self.name {
+            Some(name) => name.span().join(self.value.span()).unwrap_or(name.span()),
+            None => self.value.span(),
         }
     }
 }
